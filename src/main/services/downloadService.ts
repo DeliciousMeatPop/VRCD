@@ -993,6 +993,50 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     }
   }
 
+  private async installSingleManualFolder(
+    folderPath: string,
+    deviceId: string
+  ): Promise<boolean> {
+    console.log(`[Service installManualFile] Installing folder: ${folderPath}`)
+
+    const manualId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+
+    let packageName = ''
+    try {
+      const folderContents = await fs.readdir(folderPath)
+      const apkFiles = folderContents.filter((f) => f.toLowerCase().endsWith('.apk'))
+      if (apkFiles.length > 0) {
+        const potentialPackageDirs = folderContents.filter((item) => {
+          return item.includes('.') && !item.includes(' ') && item.length > 5
+        })
+        if (potentialPackageDirs.length === 1) {
+          packageName = potentialPackageDirs[0]
+        }
+      }
+    } catch (error) {
+      console.log(`[Service installManualFile] Could not analyze folder structure: ${error}`)
+    }
+
+    const tempItem: DownloadItem = {
+      gameId: manualId,
+      releaseName: manualId,
+      packageName: packageName,
+      gameName: `Manual Install: ${folderPath.split(/[/\\]/).pop()}`,
+      status: 'Completed',
+      progress: 100,
+      extractProgress: 100,
+      addedDate: Date.now(),
+      downloadPath: folderPath
+    }
+
+    const success = await this.installationProcessor.startInstallation(tempItem, deviceId)
+    if (success) {
+      console.log(`[Service installManualFile] Successfully installed folder: ${folderPath}`)
+      this.emit('installation:success', deviceId)
+    }
+    return success
+  }
+
   public async installManualFile(filePath: string, deviceId: string): Promise<boolean> {
     console.log(`[Service] Manual install requested for ${filePath} on device ${deviceId}`)
 
@@ -1048,51 +1092,58 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         }
         return success
       } else if (stats.isDirectory()) {
-        // Folder installation - create a temporary DownloadItem to use existing installation logic
-        console.log(`[Service installManualFile] Installing folder: ${filePath}`)
+        // Folder installation. The folder may either be a single game folder
+        // (contains an APK or install.txt directly) or a parent folder
+        // containing multiple game subfolders (batch install).
+        console.log(`[Service installManualFile] Inspecting folder: ${filePath}`)
 
-        // Generate a unique identifier for this manual installation
-        const manualId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-
-        // Try to extract package name from folder structure if possible
-        let packageName = ''
-        try {
-          const folderContents = await fs.readdir(filePath)
-          const apkFiles = folderContents.filter((f) => f.toLowerCase().endsWith('.apk'))
-          if (apkFiles.length > 0) {
-            // Look for potential package directory (common pattern in extracted games)
-            const potentialPackageDirs = folderContents.filter((item) => {
-              // Common package name patterns
-              return item.includes('.') && !item.includes(' ') && item.length > 5
-            })
-            if (potentialPackageDirs.length === 1) {
-              packageName = potentialPackageDirs[0]
-            }
+        const isGameFolder = async (dir: string): Promise<boolean> => {
+          try {
+            const entries = await fs.readdir(dir, { withFileTypes: true })
+            return entries.some(
+              (e) =>
+                e.isFile() &&
+                (e.name.toLowerCase().endsWith('.apk') || e.name.toLowerCase() === 'install.txt')
+            )
+          } catch {
+            return false
           }
-        } catch (error) {
-          console.log(`[Service installManualFile] Could not analyze folder structure: ${error}`)
         }
 
-        // Create a temporary DownloadItem
-        const tempItem: DownloadItem = {
-          gameId: manualId,
-          releaseName: manualId,
-          packageName: packageName,
-          gameName: `Manual Install: ${filePath.split(/[/\\]/).pop()}`,
-          status: 'Completed',
-          progress: 100,
-          extractProgress: 100,
-          addedDate: Date.now(),
-          downloadPath: filePath
+        if (await isGameFolder(filePath)) {
+          return await this.installSingleManualFolder(filePath, deviceId)
         }
 
-        // Use the installation processor to handle the folder
-        const success = await this.installationProcessor.startInstallation(tempItem, deviceId)
-        if (success) {
-          console.log(`[Service installManualFile] Successfully installed folder: ${filePath}`)
-          this.emit('installation:success', deviceId)
+        // Not a game folder itself — look one level down for game subfolders
+        const entries = await fs.readdir(filePath, { withFileTypes: true })
+        const subfolders = entries.filter((e) => e.isDirectory()).map((e) => join(filePath, e.name))
+        const gameSubfolders: string[] = []
+        for (const sub of subfolders) {
+          if (await isGameFolder(sub)) {
+            gameSubfolders.push(sub)
+          }
         }
-        return success
+
+        if (gameSubfolders.length === 0) {
+          console.error(
+            `[Service installManualFile] No APK/install.txt found in ${filePath} or its immediate subfolders.`
+          )
+          return false
+        }
+
+        console.log(
+          `[Service installManualFile] Batch install: queuing ${gameSubfolders.length} game folder(s) from ${filePath}`
+        )
+
+        let successCount = 0
+        for (const sub of gameSubfolders) {
+          const ok = await this.installSingleManualFolder(sub, deviceId)
+          if (ok) successCount++
+        }
+        console.log(
+          `[Service installManualFile] Batch install complete: ${successCount}/${gameSubfolders.length} succeeded`
+        )
+        return successCount === gameSubfolders.length
       } else if (stats.isFile() && filePath.toLowerCase().endsWith('.zip')) {
         // ZIP installation - extract to temp dir then run through installationProcessor
         // (which checks for install.txt and falls back to standard APK+OBB install)
