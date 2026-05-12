@@ -1583,7 +1583,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: 'auto' }}>{activeTransferCount}</Badge>
                 )}
               </Button>
-              <LocalUploadDialog />
+              {isUsingVrSrcEndpoint && <LocalUploadDialog />}
               <Menu>
                 <MenuTrigger disableButtonEnhancement>
                   <Button appearance="subtle" size="small" icon={<FolderAddRegular />} disabled={isBusy || !isConnected}
