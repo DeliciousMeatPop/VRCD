@@ -6,5 +6,6 @@ out
 *.log*
 .env
 .env.*
+!.env.example
 pkg/
 *.tsbuildinfo

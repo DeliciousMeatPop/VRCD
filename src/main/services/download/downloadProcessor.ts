@@ -325,6 +325,11 @@ export class DownloadProcessor {
           '--retries',
           '5'
         ]
+
+        const apiKey = process.env.VRSRC_API_KEY
+        if (apiKey) {
+          copyArgs.push('--header', `X-API-Key: ${apiKey}`)
+        }
       }
 
       // Apply bandwidth limit if set
