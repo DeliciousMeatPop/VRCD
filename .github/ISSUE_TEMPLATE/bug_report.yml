@@ -14,11 +14,10 @@ body:
 
         **How to get your log — takes 10 seconds:**
         1. Open VR CyberDeck
-        2. Go to **Settings → Logs**
+        2. Go to **Other Settings → // Upload Logs**
         3. Click **Upload Log** → paste the **full rentry URL** below
            (a bare shortcode is not enough — needs the whole `https://rentry.co/…` link)
-        4. Or click **View Log** and paste the raw `main.log` contents
-
+           
         ---
 
   - type: dropdown
@@ -36,7 +35,7 @@ body:
     id: version
     attributes:
       label: App Version
-      placeholder: "e.g. 1.2.1  (shown in Settings → About)"
+      placeholder: "e.g. 1.2.1  (shown in Main UI (top middle of app, bottom left), Other Settings (top of app))"
     validations:
       required: true
 
@@ -44,7 +43,7 @@ body:
     id: description
     attributes:
       label: What happened?
-      placeholder: Describe the bug. "It doesn't work" is not a description.
+      placeholder: Describe the bug. "It doesn't work" is not a description. 
     validations:
       required: true
 
@@ -65,16 +64,14 @@ body:
       label: "\U0001F4CB Log Upload — REQUIRED"
       description: >
         **Paste the full rentry URL** (e.g. `https://rentry.co/abc123`)
-        from Settings → Logs → Upload Log.
-        Or paste the **raw contents of main.log**.
+        from Other Settings → // Upload Logs → Upload Log.
 
         A bare shortcode (e.g. `abc123`) is not enough — paste the whole URL.
-        "N/A", "no errors", or partial snippets will be treated as missing
+        "N/A", "no errors", or raw logs will be treated as missing
         and the issue will be closed.
       placeholder: |
-        Paste either:
+        Paste:
           • https://rentry.co/your-slug-here       ← full URL from Upload Log
-          • or raw main.log content starting with [YYYY-MM-DD HH:MM:SS.mmm] [info] …
     validations:
       required: true
 
@@ -84,6 +81,6 @@ body:
       label: Confirmation
       options:
         - label: >-
-            I have pasted my full log or an Upload Log link above.
+            I have pasted my Upload Log link above.
             I understand that issues without real logs are closed without response.
           required: true
