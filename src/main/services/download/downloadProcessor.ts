@@ -326,10 +326,6 @@ export class DownloadProcessor {
           '5'
         ]
 
-        const apiKey = process.env.VRSRC_API_KEY
-        if (apiKey) {
-          copyArgs.push('--header', `X-API-Key: ${apiKey}`)
-        }
       }
 
       // Apply bandwidth limit if set
@@ -338,15 +334,16 @@ export class DownloadProcessor {
         copyArgs.push('--bwlimit', `${downloadSpeedLimit}k`)
       }
 
-      const safeArgs = copyArgs.map((arg, i) =>
-        copyArgs[i - 1] === '--header' && arg.startsWith('X-API-Key:') ? 'X-API-Key:[REDACTED]' : arg
-      )
-      console.log(`[DownProc] Running: rclone ${safeArgs.join(' ')}`)
+      console.log(`[DownProc] Running: rclone ${copyArgs.join(' ')}`)
 
+      // Pass the API key via env var (RCLONE_HEADER) rather than --header so
+      // it never appears in process listings, logs, or ExecaError messages.
+      const apiKey = process.env.VRSRC_API_KEY
       const rcloneProcess = execa(rclonePath, copyArgs, {
         all: true,
         buffer: false,
-        windowsHide: true
+        windowsHide: true,
+        env: apiKey ? { RCLONE_HEADER: `X-API-Key: ${apiKey}` } : undefined
       })
 
       // Store download controller for cancel/pause
