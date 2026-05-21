@@ -390,14 +390,13 @@ class GameService extends EventEmitter implements GamesAPI {
               '--progress'
             ]
 
+            // Pass the API key via env var so it never appears in args or errors
             const mirrorApiKey = process.env.VRSRC_API_KEY
-            if (mirrorApiKey) {
-              rcloneArgs.push('--header', `X-API-Key: ${mirrorApiKey}`)
-            }
 
             // Execute rclone using execa with progress reporting
             const rcloneProcess = execa(rclonePath, rcloneArgs, {
-              stdio: ['ignore', 'pipe', 'pipe']
+              stdio: ['ignore', 'pipe', 'pipe'],
+              env: mirrorApiKey ? { RCLONE_HEADER: `X-API-Key: ${mirrorApiKey}` } : undefined
             })
 
             // Process stdout for progress information
@@ -486,12 +485,10 @@ class GameService extends EventEmitter implements GamesAPI {
       ]
 
       const publicApiKey = process.env.VRSRC_API_KEY
-      if (publicApiKey) {
-        publicArgs.push('--header', `X-API-Key: ${publicApiKey}`)
-      }
 
       const rcloneProcess = execa(rclonePath, publicArgs, {
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: publicApiKey ? { RCLONE_HEADER: `X-API-Key: ${publicApiKey}` } : undefined
       })
 
       // Process stdout for progress information

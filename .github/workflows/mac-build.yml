@@ -12,6 +12,9 @@ on:
       version:
         required: true
         type: string
+    secrets:
+      VRSRC_API_KEY:
+        required: true
 
 jobs:
   mac-build:
