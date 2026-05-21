@@ -224,6 +224,8 @@ const MainContent: React.FC<MainContentProps> = ({
 
   if (!dependenciesReady) {
     if (dependencyError) {
+      const isWindows = navigator.platform.startsWith('Win')
+
       // Check if this is a connectivity error
       if (dependencyError.startsWith('CONNECTIVITY_ERROR|')) {
         const failedUrls = dependencyError.replace('CONNECTIVITY_ERROR|', '').split('|')
@@ -233,7 +235,7 @@ const MainContent: React.FC<MainContentProps> = ({
             <Text weight="semibold" style={{ color: tokens.colorPaletteRedForeground1 }}>
               Network Connectivity Issues
             </Text>
-            <Text>Cannot reach the following services:</Text>
+            <Text>The app could not reach the following services required to start:</Text>
             <ul style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
               {failedUrls.map((url, index) => (
                 <li key={index} style={{ marginBottom: tokens.spacingVerticalXS }}>
@@ -241,8 +243,44 @@ const MainContent: React.FC<MainContentProps> = ({
                 </li>
               ))}
             </ul>
-            <Text style={{ marginTop: tokens.spacingVerticalM }}>
-              This is likely due to DNS or firewall restrictions. Please try:
+
+            {isWindows && (
+              <>
+                <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
+                  Common causes on Windows:
+                </Text>
+                <ul style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
+                  <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                    <Text>
+                      <strong>Antivirus / Windows Defender quarantined rclone</strong> — rclone
+                      commonly triggers false positives. Check your quarantine folder and add an
+                      exclusion for the app data folder.
+                    </Text>
+                  </li>
+                  <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                    <Text>
+                      <strong>Windows Firewall blocked the connection</strong> — a Windows Update
+                      can reset firewall rules. Check Windows Firewall settings and allow the app.
+                    </Text>
+                  </li>
+                  <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                    <Text>
+                      <strong>ISP or network blocking GitHub</strong> — your ISP or router may
+                      be temporarily blocking raw.githubusercontent.com.
+                    </Text>
+                  </li>
+                  <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                    <Text>
+                      <strong>Corporate or school network policy</strong> — managed networks
+                      often block GitHub or software download URLs.
+                    </Text>
+                  </li>
+                </ul>
+              </>
+            )}
+
+            <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
+              General fixes to try:
             </Text>
             <ol style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
               <li style={{ marginBottom: tokens.spacingVerticalXS }}>
@@ -270,20 +308,59 @@ const MainContent: React.FC<MainContentProps> = ({
         )
       }
 
-      // Handle other dependency errors
+      // Handle other dependency errors (download/binary failures)
       const errorDetails: string[] = []
       if (!dependencyStatus?.sevenZip.ready) errorDetails.push('7zip')
       if (!dependencyStatus?.rclone.ready) errorDetails.push('rclone')
       if (!dependencyStatus?.adb.ready) errorDetails.push('adb')
 
       const failedDeps = errorDetails.length > 0 ? ` (${errorDetails.join(', ')})` : ''
+      const rcloneFailed = !dependencyStatus?.rclone.ready
 
       return (
         <div className={styles.loadingOrErrorContainer}>
           <Text weight="semibold" style={{ color: tokens.colorPaletteRedForeground1 }}>
-            Dependency Error {failedDeps}
+            Dependency Setup Failed{failedDeps}
           </Text>
-          <Text>{dependencyError}</Text>
+          <Text style={{ color: tokens.colorNeutralForeground3, fontSize: '12px', fontFamily: 'monospace' }}>
+            {dependencyError}
+          </Text>
+
+          {isWindows && rcloneFailed && (
+            <>
+              <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
+                Most likely cause on Windows:
+              </Text>
+              <ul style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>
+                    <strong>Antivirus / Windows Defender quarantined rclone</strong> — rclone
+                    commonly triggers false positives. Open Windows Security → Protection History
+                    and restore the quarantined file, then add an exclusion for the app data
+                    folder (%APPDATA%\vr-cyberdeck\bin).
+                  </Text>
+                </li>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>
+                    <strong>Windows Firewall blocked the download</strong> — a Windows Update can
+                    reset firewall rules. Check Windows Firewall and allow the app through.
+                  </Text>
+                </li>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>
+                    <strong>ISP or network blocking GitHub</strong> — rclone is downloaded from
+                    GitHub. Try a VPN or switch to a mobile hotspot to test.
+                  </Text>
+                </li>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>
+                    <strong>Corporate or school network policy</strong> — managed networks often
+                    block software downloads from GitHub.
+                  </Text>
+                </li>
+              </ul>
+            </>
+          )}
         </div>
       )
     }
