@@ -303,5 +303,7 @@ jobs:
     uses: ./.github/workflows/mac-build.yml
     with:
       version: ${{ needs.create_release.outputs.version }}
+    secrets:
+      VRSRC_API_KEY: ${{ secrets.VRSRC_API_KEY }}
     permissions:
       contents: write
