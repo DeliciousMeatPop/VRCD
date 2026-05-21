@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "\U0001F4CB How to find your log file"
+    url: https://github.com/KaladinDMP/VR-CyberDeck/wiki/Exporting-Logs
+    about: "Settings → Logs → Upload Log — get a link in seconds."
+  - name: "\U0001F4AC Discussions (questions, ideas)"
+    url: https://github.com/KaladinDMP/VR-CyberDeck/discussions
+    about: "Not a bug? Start a discussion instead."

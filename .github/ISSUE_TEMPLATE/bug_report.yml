@@ -1,0 +1,89 @@
+name: "\U0001F41E Bug Report"
+description: >-
+  ⚠️  LOG FILE REQUIRED — issues submitted without logs are closed without
+  response. No exceptions.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # ⚠️ Read before submitting
+
+        **A log file is not optional.** Every bug report requires one.
+        Without it there is nothing to investigate and the issue will be closed automatically.
+
+        **How to get your log — takes 10 seconds:**
+        1. Open VR CyberDeck
+        2. Go to **Settings → Logs**
+        3. Click **Upload Log** → paste the **full rentry URL** below
+           (a bare shortcode is not enough — needs the whole `https://rentry.co/…` link)
+        4. Or click **View Log** and paste the raw `main.log` contents
+
+        ---
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App Version
+      placeholder: "e.g. 1.2.1  (shown in Settings → About)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      placeholder: Describe the bug. "It doesn't work" is not a description.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app
+        2. Click …
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "\U0001F4CB Log Upload — REQUIRED"
+      description: >
+        **Paste the full rentry URL** (e.g. `https://rentry.co/abc123`)
+        from Settings → Logs → Upload Log.
+        Or paste the **raw contents of main.log**.
+
+        A bare shortcode (e.g. `abc123`) is not enough — paste the whole URL.
+        "N/A", "no errors", or partial snippets will be treated as missing
+        and the issue will be closed.
+      placeholder: |
+        Paste either:
+          • https://rentry.co/your-slug-here       ← full URL from Upload Log
+          • or raw main.log content starting with [YYYY-MM-DD HH:MM:SS.mmm] [info] …
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: log-confirmed
+    attributes:
+      label: Confirmation
+      options:
+        - label: >-
+            I have pasted my full log or an Upload Log link above.
+            I understand that issues without real logs are closed without response.
+          required: true
