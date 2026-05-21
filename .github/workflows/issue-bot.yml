@@ -52,20 +52,14 @@ jobs:
             // Only enforce on bug reports
             if (!labels.includes('bug')) return
 
-            // Heuristics for a real VR CyberDeck log
-            const hasLogs =
-              /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(body) ||   // timestamp
-              /\[(info|error|warn|debug)\]/i.test(body)          ||   // log level
-              /ExecaError|ExitCode|rclone|GameService|DownProc|DependencyService/.test(body) || // app tokens
-              /https?:\/\/[^\s]+\.log\b/i.test(body) ||                // .log link
-              /paste\.ee\/r\/|pastebin\.com\/|hastebin\.com\//.test(body) // upload link
+            // Accept ONLY:
+            //   1. A full rentry URL (https://rentry.co/<slug> or rentry.co/<slug>)
+            //   2. Raw main.log content (bracketed timestamps from electron-log)
+            // A bare shortcode like "abc123" is not enough.
+            const hasRentryUrl   = /\b(?:https?:\/\/)?rentry\.(?:co|org)\/[a-z0-9_-]+/i.test(body)
+            const hasRawLogLines = /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\s*\[(info|error|warn|debug)\]/i.test(body)
 
-            // Placeholder / cop-out detection
-            const isFake =
-              /^(n\/a|none|no logs?|no error|nothing|see above|\-+|\.+)$/im.test(body.trim()) ||
-              body.trim().length < 100
-
-            const needsLogs = !hasLogs || isFake
+            const needsLogs = !(hasRentryUrl || hasRawLogLines)
 
             if (!needsLogs) {
               // Looks good — remove the label if it was previously set
@@ -107,21 +101,25 @@ jobs:
               body: [
                 '## ⚠️ Log File Missing — Issue Flagged',
                 '',
-                'This bug report does not appear to include a real log file.',
+                'This bug report does not include a valid log reference.',
                 '**Without logs this issue cannot be investigated and will be closed in 7 days.**',
                 '',
-                '### How to attach your log (takes 10 seconds)',
+                '### What counts as a valid log',
+                '',
+                '- A **full rentry URL** like `https://rentry.co/your-slug` (not just the slug)',
+                '- Or the **raw `main.log` contents** with bracketed timestamps',
+                '',
+                '### How to attach yours (takes 10 seconds)',
                 '',
                 '1. Open **VR CyberDeck**',
                 '2. Go to **Settings → Logs**',
-                '3. Click **Upload Log** — you\'ll get a shareable link',
-                '   — or — click **View Log** and paste the full contents here',
-                '4. **Edit this issue** and add the link or paste the log',
+                '3. Click **Upload Log** — copy the **full** `https://rentry.co/…` link',
+                '4. **Edit this issue** and paste it in the log field',
                 '',
-                '> The `needs-logs` label will be removed automatically once a real log is detected.',
+                '> The `needs-logs` label will be removed automatically once a valid log is detected.',
                 '',
                 '---',
-                '*This is an automated message. Do not reply to ask for an exception — there are none.*'
+                '*Automated message. Do not reply asking for an exception — there are none.*'
               ].join('\n')
             })
 

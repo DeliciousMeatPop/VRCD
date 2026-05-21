@@ -15,8 +15,9 @@ body:
         **How to get your log — takes 10 seconds:**
         1. Open VR CyberDeck
         2. Go to **Settings → Logs**
-        3. Click **Upload Log** → paste the link below
-           — or — click **View Log** and paste the raw text
+        3. Click **Upload Log** → paste the **full rentry URL** below
+           (a bare shortcode is not enough — needs the whole `https://rentry.co/…` link)
+        4. Or click **View Log** and paste the raw `main.log` contents
 
         ---
 
@@ -61,18 +62,19 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: "\U0001F4CB Log File — REQUIRED"
+      label: "\U0001F4CB Log Upload — REQUIRED"
       description: >
-        Paste your **full** log here, or paste the Upload Log link.
-        A partial log or "no errors in log" is not acceptable — attach the whole file.
-        Issues that contain placeholder text, "N/A", or no real log content will be
-        treated as missing and closed.
-      placeholder: |
-        Paste log content here, or paste a link from Settings → Logs → Upload Log
+        **Paste the full rentry URL** (e.g. `https://rentry.co/abc123`)
+        from Settings → Logs → Upload Log.
+        Or paste the **raw contents of main.log**.
 
-        Expected format:
-        [2026-05-21 16:58:45.150] [info]  …
-        [2026-05-21 16:58:45.151] [error] …
+        A bare shortcode (e.g. `abc123`) is not enough — paste the whole URL.
+        "N/A", "no errors", or partial snippets will be treated as missing
+        and the issue will be closed.
+      placeholder: |
+        Paste either:
+          • https://rentry.co/your-slug-here       ← full URL from Upload Log
+          • or raw main.log content starting with [YYYY-MM-DD HH:MM:SS.mmm] [info] …
     validations:
       required: true
 
