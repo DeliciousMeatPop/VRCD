@@ -3,6 +3,11 @@ import { promises as fs, promises as fsPromises } from 'fs'
 import { execa, ExecaError } from 'execa'
 import crypto from 'crypto'
 import { QueueManager } from './queueManager'
+
+function redactKey(s: string): string {
+  const k = process.env.VRSRC_API_KEY
+  return k ? s.split(k).join('[REDACTED]') : s
+}
 import dependencyService from '../dependencyService'
 import mirrorService from '../mirrorService'
 import settingsService from '../settingsService'
@@ -516,7 +521,7 @@ export class DownloadProcessor {
       const currentItemState = this.queueManager.findItem(item.releaseName)
       const statusBeforeCatch = currentItemState?.status ?? 'Unknown'
 
-      console.error(`[DownProc] rclone copy download error for ${item.releaseName}:`, error)
+      console.error(`[DownProc] rclone copy download error for ${item.releaseName}:`, redactKey(String(error)))
 
       if (this.activeDownloads.has(item.releaseName)) {
         this.activeDownloads.delete(item.releaseName)
@@ -542,7 +547,7 @@ export class DownloadProcessor {
       } else {
         errorMessage = String(error)
       }
-      errorMessage = errorMessage.substring(0, 500)
+      errorMessage = redactKey(errorMessage).substring(0, 500)
 
       // Normalise ENOSPC / "no space left" that surfaces mid-download (rclone
       // writes fail after the pre-flight disk-space check passed).

@@ -12,6 +12,11 @@ import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
 
+function redactKey(s: string): string {
+  const k = process.env.VRSRC_API_KEY
+  return k ? s.split(k).join('[REDACTED]') : s
+}
+
 interface VrpConfig {
   baseUri: string
   password: string
@@ -213,7 +218,7 @@ class GameService extends EventEmitter implements GamesAPI {
         typedWebContentsSend.send(mainWindow, 'games:background-sync-complete', this.games)
       }
     } catch (err) {
-      console.error('[GameService] Background sync failed:', err)
+      console.error('[GameService] Background sync failed:', redactKey(String(err)))
     }
   }
 
@@ -256,7 +261,7 @@ class GameService extends EventEmitter implements GamesAPI {
         await this.saveConfig()
       }
     } catch (error) {
-      console.error('Error syncing game data:', error)
+      console.error('Error syncing game data:', redactKey(String(error)))
       throw error
     }
   }
@@ -452,7 +457,7 @@ class GameService extends EventEmitter implements GamesAPI {
             }
             return // Success with mirror
           } catch (error) {
-            console.error('Failed to use mirror config file:', error)
+            console.error('Failed to use mirror config file:', redactKey(String(error)))
             // Fall through to public endpoint logic
           }
         }
@@ -464,14 +469,14 @@ class GameService extends EventEmitter implements GamesAPI {
       // Get the appropriate null config path based on platform
       const nullConfigPath = process.platform === 'win32' ? 'NUL' : '/dev/null'
 
-      // Execute rclone using execa with progress reporting.
-      // `copy <file_source> <dir_dest>` drops the file into the dir. Used here
-      // (not `sync` or `copyto`) because the rclone HTTP backend with our flag
-      // set was misclassifying source type, and `copy` is unambiguous.
+      // `copyto <file_source> <file_dest>` explicitly treats the source as a
+      // single file and writes it to the exact destination path. This avoids
+      // rclone's HTTP backend misclassifying `:http:/meta.7z` as a directory
+      // when the server returns a redirect or unexpected response.
       const publicArgs = [
-        'copy',
+        'copyto',
         `:http:/meta.7z`,
-        dirname(destination),
+        destination,
         '--config',
         nullConfigPath,
         '--http-url',
@@ -541,7 +546,7 @@ class GameService extends EventEmitter implements GamesAPI {
         })
       }
     } catch (error) {
-      console.error('Error downloading meta archive:', error)
+      console.error('Error downloading meta archive:', redactKey(String(error)))
       throw error
     }
   }
