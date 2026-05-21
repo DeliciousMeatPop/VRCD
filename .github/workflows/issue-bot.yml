@@ -1,0 +1,178 @@
+name: Issue Log Enforcer
+
+on:
+  issues:
+    types: [opened, reopened, edited]
+  schedule:
+    # Daily at 12:00 UTC — scans for stale needs-logs issues to close
+    - cron: '0 12 * * *'
+
+permissions:
+  issues: write
+
+jobs:
+  # ─── Check log presence on bug reports ───────────────────────────────────
+  check-logs:
+    name: Require log file
+    if: >
+      github.event_name == 'issues' &&
+      (github.event.action == 'opened' ||
+       github.event.action == 'reopened' ||
+       github.event.action == 'edited')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure needs-logs label exists
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'needs-logs'
+              })
+            } catch {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'needs-logs',
+                color: 'd93f0b',
+                description: 'Issue is missing required log file — will be auto-closed'
+              })
+            }
+
+      - name: Check issue body for logs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue  = context.payload.issue
+            const body   = issue.body ?? ''
+            const labels = issue.labels.map(l => l.name)
+
+            // Only enforce on bug reports
+            if (!labels.includes('bug')) return
+
+            // Heuristics for a real VR CyberDeck log
+            const hasLogs =
+              /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(body) ||   // timestamp
+              /\[(info|error|warn|debug)\]/i.test(body)          ||   // log level
+              /ExecaError|ExitCode|rclone|GameService|DownProc|DependencyService/.test(body) || // app tokens
+              /https?:\/\/[^\s]+\.log\b/i.test(body) ||                // .log link
+              /paste\.ee\/r\/|pastebin\.com\/|hastebin\.com\//.test(body) // upload link
+
+            // Placeholder / cop-out detection
+            const isFake =
+              /^(n\/a|none|no logs?|no error|nothing|see above|\-+|\.+)$/im.test(body.trim()) ||
+              body.trim().length < 100
+
+            const needsLogs = !hasLogs || isFake
+
+            if (!needsLogs) {
+              // Looks good — remove the label if it was previously set
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: 'needs-logs'
+                })
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: [
+                    '✅ **Log file detected** — thank you for including it.',
+                    'The `needs-logs` flag has been removed. This issue is now in the queue.'
+                  ].join('\n')
+                })
+              } catch { /* label wasn't there — nothing to do */ }
+              return
+            }
+
+            // Already labeled — don't spam comments on every edit
+            if (labels.includes('needs-logs') && github.event.action === 'edited') return
+
+            // Label it and drop the comment
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['needs-logs']
+            })
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: [
+                '## ⚠️ Log File Missing — Issue Flagged',
+                '',
+                'This bug report does not appear to include a real log file.',
+                '**Without logs this issue cannot be investigated and will be closed in 7 days.**',
+                '',
+                '### How to attach your log (takes 10 seconds)',
+                '',
+                '1. Open **VR CyberDeck**',
+                '2. Go to **Settings → Logs**',
+                '3. Click **Upload Log** — you\'ll get a shareable link',
+                '   — or — click **View Log** and paste the full contents here',
+                '4. **Edit this issue** and add the link or paste the log',
+                '',
+                '> The `needs-logs` label will be removed automatically once a real log is detected.',
+                '',
+                '---',
+                '*This is an automated message. Do not reply to ask for an exception — there are none.*'
+              ].join('\n')
+            })
+
+  # ─── Auto-close stale needs-logs issues ──────────────────────────────────
+  auto-close:
+    name: Auto-close missing-log issues
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close stale needs-logs issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'needs-logs',
+              state: 'open',
+              per_page: 100
+            })
+
+            for (const issue of issues) {
+              if (new Date(issue.updated_at) > sevenDaysAgo) continue
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  '## 🔒 Closed — Log File Never Provided',
+                  '',
+                  'This issue has been open for 7 days with no log file attached.',
+                  'It is being closed automatically.',
+                  '',
+                  'If the bug is still present, **open a new issue** and include your log this time.',
+                  'Issues without logs will always be closed — no exceptions.',
+                  '',
+                  '**How to get your log:** VR CyberDeck → Settings → Logs → Upload Log',
+                  '',
+                  '---',
+                  '*Closed by the VR CyberDeck issue bot.*'
+                ].join('\n')
+              })
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'not_planned'
+              })
+            }

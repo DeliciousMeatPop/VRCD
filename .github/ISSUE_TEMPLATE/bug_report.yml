@@ -1,0 +1,87 @@
+name: "\U0001F41E Bug Report"
+description: >-
+  ⚠️  LOG FILE REQUIRED — issues submitted without logs are closed without
+  response. No exceptions.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # ⚠️ Read before submitting
+
+        **A log file is not optional.** Every bug report requires one.
+        Without it there is nothing to investigate and the issue will be closed automatically.
+
+        **How to get your log — takes 10 seconds:**
+        1. Open VR CyberDeck
+        2. Go to **Settings → Logs**
+        3. Click **Upload Log** → paste the link below
+           — or — click **View Log** and paste the raw text
+
+        ---
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App Version
+      placeholder: "e.g. 1.2.1  (shown in Settings → About)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      placeholder: Describe the bug. "It doesn't work" is not a description.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app
+        2. Click …
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "\U0001F4CB Log File — REQUIRED"
+      description: >
+        Paste your **full** log here, or paste the Upload Log link.
+        A partial log or "no errors in log" is not acceptable — attach the whole file.
+        Issues that contain placeholder text, "N/A", or no real log content will be
+        treated as missing and closed.
+      placeholder: |
+        Paste log content here, or paste a link from Settings → Logs → Upload Log
+
+        Expected format:
+        [2026-05-21 16:58:45.150] [info]  …
+        [2026-05-21 16:58:45.151] [error] …
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: log-confirmed
+    attributes:
+      label: Confirmation
+      options:
+        - label: >-
+            I have pasted my full log or an Upload Log link above.
+            I understand that issues without real logs are closed without response.
+          required: true

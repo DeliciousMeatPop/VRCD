@@ -1,0 +1,35 @@
+name: "\U0001F4A1 Feature Request"
+description: Suggest a new feature or improvement for VR CyberDeck.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest something!
+        Fill out the fields below so we can understand the request properly.
+
+        ---
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like to see?
+      placeholder: Describe the feature clearly. What does it do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is this useful?
+      placeholder: What problem does it solve? Who benefits?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Current workaround (if any)
+      placeholder: How are you handling this today, if at all?
+    validations:
+      required: false
