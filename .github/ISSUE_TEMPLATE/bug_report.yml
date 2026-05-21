@@ -14,8 +14,8 @@ body:
 
         **How to get your log — takes 10 seconds:**
         1. Open VR CyberDeck
-        2. Go to **Other Settings → // Upload Logs**
-        3. Click **Upload Log** → paste the **full rentry URL** below
+        2. Go to **Other Settings → // Log Upload**
+        3. Click **Upload to Renty.co** → paste the **full rentry URL** below
            (a bare shortcode is not enough — needs the whole `https://rentry.co/…` link)
            
         ---
@@ -64,7 +64,7 @@ body:
       label: "\U0001F4CB Log Upload — REQUIRED"
       description: >
         **Paste the full rentry URL** (e.g. `https://rentry.co/abc123`)
-        from Other Settings → // Upload Logs → Upload Log.
+        from Other Settings → // Log Upload → Upload to rentry.co.
 
         A bare shortcode (e.g. `abc123`) is not enough — paste the whole URL.
         "N/A", "no errors", or raw logs will be treated as missing
@@ -81,6 +81,6 @@ body:
       label: Confirmation
       options:
         - label: >-
-            I have pasted my Upload Log link above.
+            I have pasted my log in the form of a rentry link above.
             I understand that issues without real logs are closed without response.
           required: true
