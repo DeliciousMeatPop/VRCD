@@ -15,6 +15,9 @@
 [ TARGET ] META QUEST // ALL MODELS
 [ STACK  ] ELECTRON · REACT · TYPESCRIPT
 ```
+I REMOVED DISCUSSIONS SINCE PEOPLE WERE ONLY USING IT AS A WAY TO AVOID ADDING LOGS TO AN ISSUE IT SEEMS, EVEN IF THAT WAS NOT THE INTENTION, IN ACTUALITY THAT WAS THE RESULT
+
+---
 
 VR CyberDeck is a cross-platform desktop deck for managing, sideloading, and uploading content to Meta Quest devices. It plugs into a community-run game library, runs the whole download → install → metadata → upload pipeline for you, and wraps the whole thing in a neon terminal aesthetic that doesn't feel like a 2014 sideloader.
 
@@ -150,7 +153,10 @@ That's it. The bundled server config means there's nothing to configure on first
 Found a bug? Got an idea? Want to swap notes with other CyberDeck users?
 
 - 🐛 **[Open an issue](https://github.com/KaladinDMP/VR-CyberDeck/issues/new)** for crashes, broken downloads, ADB weirdness, or anything that looks wrong. Include a log file from **Settings → Log Upload** and I can usually figure it out fast.
-- 💬 **[Start or join a Discussion](https://github.com/KaladinDMP/VR-CyberDeck/discussions)** for feature ideas, questions, "is this normal?", custom shortcut macros worth sharing, sound-effect recommendations, or anything that isn't strictly a bug.
+
+~~- 💬 **[Start or join a Discussion](https://github.com/KaladinDMP/VR-CyberDeck/discussions)** for feature ideas, questions, "is this normal?", custom shortcut macros worth sharing, sound-effect recommendations, or anything that isn't strictly a bug.~~
+
+I REMOVED DISCUSSIONS SINCE PEOPLE WERE ONLY USING IT AS A WAY TO AVOID ADDING LOGS TO AN ISSUE IT SEEMS, EVEN IF THAT WAS NOT THE INTENTION, IN ACTUALITY THAT WAS THE RESULT
 
 If you've got a sound clip you think would suit the UI (terminal click, mechanical keyboard tap, matrix-style hum), drop it in a discussion thread — happy to bundle community favourites in a later build.
 
