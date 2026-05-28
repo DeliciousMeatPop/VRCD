@@ -288,7 +288,16 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       setLastSyncTime(syncTime ? new Date(syncTime) : null)
     } catch (err) {
       console.error('Error refreshing games:', err)
-      setError('Failed to refresh games')
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('is a directory not a file')) {
+        setError(
+          'Failed to refresh games — the download was blocked or returned an unexpected response. ' +
+          'If you have antivirus or a VPN active, try whitelisting the app or disabling it temporarily. ' +
+          'Check Other Settings → // RESET APP DATA if the issue persists after a reinstall.'
+        )
+      } else {
+        setError('Failed to refresh games')
+      }
     } finally {
       setIsLoading(false)
       setDownloadProgress(0)
