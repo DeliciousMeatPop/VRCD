@@ -131,7 +131,7 @@ const translations = {
       'Removes cached files, old binaries, and stored app state from the app data folder. ' +
       'Your downloaded games are NOT deleted. Use this if the app is misbehaving after an upgrade.',
     resetAppDataConfirm: 'Reset App Data',
-    resetAppDataSuccess: 'App data cleared. Please restart the app.',
+    resetAppDataSuccess: 'Restarting…',
     resetAppDataError: 'Reset failed',
 
     // Device list
@@ -357,7 +357,7 @@ const translations = {
       'Elimina archivos en caché, binarios antiguos y el estado guardado de la app. ' +
       'Los juegos descargados NO se eliminan. Úsalo si la app falla tras una actualización.',
     resetAppDataConfirm: 'Restablecer datos',
-    resetAppDataSuccess: 'Datos de la app eliminados. Reinicia la aplicación.',
+    resetAppDataSuccess: 'Reiniciando…',
     resetAppDataError: 'Error al restablecer',
 
     // Lista de dispositivos
