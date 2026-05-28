@@ -1,4 +1,5 @@
 import { app, shell, BrowserWindow, screen, protocol, dialog, ipcMain, session } from 'electron'
+import { promises as fsPromises } from 'fs'
 // Side-effect import: must run before any service whose singleton constructor
 // reads app.getPath('userData'). ESM evaluates sibling imports in source
 // order, so keep this above the service imports below.
@@ -352,6 +353,49 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('app:get-version', () => app.getVersion())
   typedIpcMain.handle('app:get-locale', () => app.getLocale())
   typedIpcMain.handle('app:get-system-username', () => os.userInfo().username)
+
+  typedIpcMain.handle('app:reset-app-data', async () => {
+    const userData = app.getPath('userData')
+    // Subdirectories and files to wipe; downloads\ is intentionally excluded.
+    const targets = [
+      'bin',
+      'vrp-data',
+      'Cache',
+      'Code Cache',
+      'GPUCache',
+      'DawnWebGPUCache',
+      'DawnCache',
+      'Session Storage',
+      'Local Storage',
+      'IndexedDB',
+      'blob_storage',
+      'logs',
+    ]
+    const fileTargets = [
+      'Preferences',
+      'Network Persistent State',
+      'CrashpadMetrics-spare.pma',
+    ]
+    const errors: string[] = []
+    for (const name of targets) {
+      try {
+        await fsPromises.rm(join(userData, name), { recursive: true, force: true })
+      } catch (e) {
+        errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    }
+    for (const name of fileTargets) {
+      try {
+        await fsPromises.unlink(join(userData, name))
+      } catch {
+        // Silently skip missing files
+      }
+    }
+    if (errors.length > 0) {
+      return { success: false, error: errors.join('; ') }
+    }
+    return { success: true }
+  })
 
   // Look up an optional sound effect by name. Checks the user's data folder
   // first (so users can drop in their own sounds without rebuilding) and then

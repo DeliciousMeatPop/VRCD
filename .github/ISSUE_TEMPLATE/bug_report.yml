@@ -31,6 +31,29 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: download-variant
+    attributes:
+      label: Download / Install Type
+      description: >
+        Select the filename you downloaded from the GitHub releases page.
+        Check your Downloads folder or browser history if you're not sure.
+        **Windows users:** you can also check Programs & Features (installed) or just look at the .exe you ran.
+      options:
+        - "[Windows] Installer 64-bit — vr-cyberdeck-x.x.x-setup-x64.exe  ← most common"
+        - "[Windows] Installer 32-bit — vr-cyberdeck-x.x.x-setup-ia32.exe"
+        - "[Windows] Portable 64-bit — vr-cyberdeck-x.x.x-portable-x64.exe"
+        - "[Windows] Portable 32-bit — vr-cyberdeck-x.x.x-portable-ia32.exe"
+        - "[macOS] Intel — vr-cyberdeck-x.x.x-x64.dmg"
+        - "[macOS] Apple Silicon — vr-cyberdeck-x.x.x-arm64.dmg"
+        - "[Linux] AppImage 64-bit — vr-cyberdeck-x.x.x-x64.AppImage"
+        - "[Linux] AppImage ARM — vr-cyberdeck-x.x.x-arm64.AppImage"
+        - "[Linux] .deb 64-bit — vr-cyberdeck-x.x.x-x64.deb"
+        - "[Linux] .deb ARM — vr-cyberdeck-x.x.x-arm64.deb"
+        - "Not sure / not listed"
+    validations:
+      required: true
+
   - type: input
     id: version
     attributes:

@@ -54,6 +54,7 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  include: build/installer.nsh
 portable:
   artifactName: ${name}-${version}-portable-${arch}.${ext}
 afterSign: build/afterSign.cjs

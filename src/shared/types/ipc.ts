@@ -101,6 +101,7 @@ export interface IPCChannels {
   'app:get-locale': DefineChannel<[], string>
   'app:get-system-username': DefineChannel<[], string>
   'app:get-sound': DefineChannel<[name: string], string | null>
+  'app:reset-app-data': DefineChannel<[], { success: boolean; error?: string }>
 
   // Update related channels
   'update:check-for-updates': DefineChannel<[], void>
