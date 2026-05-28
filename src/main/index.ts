@@ -987,6 +987,7 @@ app.on('window-all-closed', () => {
 // Clean up ADB tracking when app is quitting
 app.on('will-quit', () => {
   adbService.stopTrackingDevices()
+  adbService.killServer()
 })
 
 // On macOS the window's close event doesn't terminate the app, so the
