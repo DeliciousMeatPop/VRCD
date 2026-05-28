@@ -37,6 +37,8 @@ const api = {
     confirmClose: (): void => typedIpcRenderer.send('app:confirm-close'),
     getSound: (name: string): Promise<string | null> =>
       typedIpcRenderer.invoke('app:get-sound', name),
+    resetAppData: (): Promise<{ success: boolean; error?: string }> =>
+      typedIpcRenderer.invoke('app:reset-app-data'),
     onCloseRequested: (callback: () => void): (() => void) => {
       const listener = (): void => callback()
       typedIpcRenderer.on('app:close-requested', listener)

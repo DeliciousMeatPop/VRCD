@@ -25,6 +25,7 @@ declare global {
         confirmClose: () => void
         onCloseRequested: (callback: () => void) => () => void
         getSound: (name: string) => Promise<string | null>
+        resetAppData: () => Promise<{ success: boolean; error?: string }>
       }
       dependency: DependencyAPIRenderer
       adb: AdbAPIRenderer

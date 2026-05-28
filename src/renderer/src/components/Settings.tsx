@@ -418,6 +418,53 @@ const LogUploadSettings: React.FC = () => {
   )
 }
 
+// ─── Reset App Data ───────────────────────────────────────────────────────────
+const ResetAppDataSettings: React.FC = () => {
+  const { t } = useLanguage()
+  const [status, setStatus] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const handleReset = async (): Promise<void> => {
+    setStatus('busy')
+    setErrorMsg(null)
+    const result = await window.api.app.resetAppData()
+    if (result.success) {
+      setStatus('done')
+    } else {
+      setStatus('error')
+      setErrorMsg(result.error ?? null)
+    }
+  }
+
+  return (
+    <Card className={styles.card}>
+      <CardHeader description={<Subtitle1>{t('resetAppData')}</Subtitle1>} />
+      <div className={styles.cardContent}>
+        <Text>{t('resetAppDataDesc')}</Text>
+        <div className={styles.formRow} style={{ gap: tokens.spacingHorizontalS }}>
+          <Button
+            appearance="primary"
+            size="medium"
+            icon={<DeleteRegular />}
+            disabled={status === 'busy' || status === 'done'}
+            onClick={handleReset}
+          >
+            {status === 'busy' ? <Spinner size="tiny" /> : t('resetAppDataConfirm')}
+          </Button>
+        </div>
+        {status === 'done' && (
+          <Text className={styles.success} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <CheckmarkCircleRegular />{t('resetAppDataSuccess')}
+          </Text>
+        )}
+        {status === 'error' && (
+          <Text className={styles.error}>{t('resetAppDataError')}{errorMsg ? `: ${errorMsg}` : ''}</Text>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 // ─── Extra Systems (consolidated) ────────────────────────────────────────────
 const switchVars = {
   '--colorBrandBackground': 'var(--vrcd-neon)',
@@ -1018,7 +1065,8 @@ const Settings: React.FC = () => {
     download: false,
     blacklist: false,
     content: false,
-    matrixId: false
+    matrixId: false,
+    resetData: false
   })
   const toggleSection = useCallback((key: string): void =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -1514,6 +1562,11 @@ const Settings: React.FC = () => {
         <div>
           <SectionHeader label="// MATRIX IDENTITIES" sectionKey="matrixId" openSections={openSections} onToggle={toggleSection} />
           {openSections.matrixId && <MatrixIdentitySettings />}
+        </div>
+
+        <div>
+          <SectionHeader label="// RESET APP DATA" sectionKey="resetData" openSections={openSections} onToggle={toggleSection} />
+          {openSections.resetData && <ResetAppDataSettings />}
         </div>
 
         {/* Credits footer */}
