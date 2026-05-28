@@ -490,6 +490,7 @@ class GameService extends EventEmitter implements GamesAPI {
       ]
 
       const publicApiKey = process.env.VRSRC_API_KEY
+      console.log('[GameService] public endpoint: api key present:', !!publicApiKey)
 
       const rcloneProcess = execa(rclonePath, publicArgs, {
         stdio: ['ignore', 'pipe', 'pipe'],
