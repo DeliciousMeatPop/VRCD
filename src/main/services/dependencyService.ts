@@ -222,14 +222,12 @@ class DependencyService {
     const target7zPath = join(this.binDir, binaryName)
     this.status.sevenZip.path = target7zPath // Update status to point to the new path
 
-    // Check if the binary needs to be copied
-    if (!existsSync(target7zPath)) {
-      console.log(`Copying 7zip from ${source7zPath} to ${target7zPath}`)
-      copyFileSync(source7zPath, target7zPath)
-      console.log(`Successfully copied 7zip to ${target7zPath}`)
-    } else {
-      console.log(`7zip already exists at target path ${target7zPath}. Skipping copy.`)
-    }
+    // Always overwrite from bundled resources so upgrades get the correct binary.
+    // Skipping this copy when the file exists caused dirty-upgrade installs to
+    // retain the old 7za.exe from a previous version.
+    console.log(`Copying 7zip from ${source7zPath} to ${target7zPath}`)
+    copyFileSync(source7zPath, target7zPath)
+    console.log(`Successfully copied 7zip to ${target7zPath}`)
 
     this.status.sevenZip.ready = true // Mark as ready (either copied or already existed)
 
