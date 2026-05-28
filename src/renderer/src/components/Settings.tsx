@@ -421,6 +421,7 @@ const LogUploadSettings: React.FC = () => {
 // ─── Reset App Data ───────────────────────────────────────────────────────────
 const ResetAppDataSettings: React.FC = () => {
   const { t } = useLanguage()
+  const styles = useStyles()
   const [status, setStatus] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
