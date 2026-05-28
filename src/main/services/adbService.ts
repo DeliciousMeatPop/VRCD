@@ -1024,6 +1024,18 @@ class AdbService extends EventEmitter implements AdbAPI {
       return { reachable: false }
     }
   }
+
+  killServer(): void {
+    try {
+      const adbPath = dependencyService.getAdbPath()
+      exec(`"${adbPath}" kill-server`, { timeout: 5000 }, (err) => {
+        if (err) console.warn('[ADB Service] kill-server error:', err.message)
+        else console.log('[ADB Service] kill-server OK')
+      })
+    } catch (e) {
+      console.warn('[ADB Service] Could not run kill-server:', e)
+    }
+  }
 }
 
 export default new AdbService()
