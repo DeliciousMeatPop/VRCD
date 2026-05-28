@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, screen, protocol, dialog, ipcMain, session } from 'electron'
-import { promises as fsPromises } from 'fs'
+import { promises as fsPromises, existsSync } from 'fs'
 // Side-effect import: must run before any service whose singleton constructor
 // reads app.getPath('userData'). ESM evaluates sibling imports in source
 // order, so keep this above the service imports below.
@@ -331,6 +331,26 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+  // If the user triggered Reset App Data last session, clean up now while
+  // nothing is locked. Runs before createWindow so no files are in use yet.
+  const userData = app.getPath('userData')
+  const resetFlag = join(userData, 'pending-data-reset')
+  if (existsSync(resetFlag)) {
+    const resetTargets = [
+      'bin', 'vrp-data', 'Cache', 'Code Cache', 'GPUCache',
+      'DawnWebGPUCache', 'DawnCache', 'Session Storage', 'Local Storage',
+      'IndexedDB', 'blob_storage', 'logs',
+    ]
+    const resetFileTargets = ['Preferences', 'Network Persistent State', 'CrashpadMetrics-spare.pma']
+    for (const name of resetTargets) {
+      try { await fsPromises.rm(join(userData, name), { recursive: true, force: true }) } catch { /* ignore */ }
+    }
+    for (const name of resetFileTargets) {
+      try { await fsPromises.unlink(join(userData, name)) } catch { /* ignore */ }
+    }
+    try { await fsPromises.unlink(resetFlag) } catch { /* ignore */ }
+  }
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.vrcyberdeck')
 
@@ -355,45 +375,15 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('app:get-system-username', () => os.userInfo().username)
 
   typedIpcMain.handle('app:reset-app-data', async () => {
-    const userData = app.getPath('userData')
-    // Subdirectories and files to wipe; downloads\ is intentionally excluded.
-    const targets = [
-      'bin',
-      'vrp-data',
-      'Cache',
-      'Code Cache',
-      'GPUCache',
-      'DawnWebGPUCache',
-      'DawnCache',
-      'Session Storage',
-      'Local Storage',
-      'IndexedDB',
-      'blob_storage',
-      'logs',
-    ]
-    const fileTargets = [
-      'Preferences',
-      'Network Persistent State',
-      'CrashpadMetrics-spare.pma',
-    ]
-    const errors: string[] = []
-    for (const name of targets) {
-      try {
-        await fsPromises.rm(join(userData, name), { recursive: true, force: true })
-      } catch (e) {
-        errors.push(`${name}: ${e instanceof Error ? e.message : String(e)}`)
-      }
+    // Files are locked while the app is running (adb.exe, Electron's Local
+    // Storage, etc.) so we can't delete them directly. Write a flag and
+    // relaunch — the cleanup runs on the next startup before anything is open.
+    try {
+      await fsPromises.writeFile(join(app.getPath('userData'), 'pending-data-reset'), '')
+    } catch (e) {
+      return { success: false, error: `Could not write reset flag: ${e instanceof Error ? e.message : String(e)}` }
     }
-    for (const name of fileTargets) {
-      try {
-        await fsPromises.unlink(join(userData, name))
-      } catch {
-        // Silently skip missing files
-      }
-    }
-    if (errors.length > 0) {
-      return { success: false, error: errors.join('; ') }
-    }
+    setTimeout(() => { app.relaunch(); app.exit(0) }, 500)
     return { success: true }
   })
 
