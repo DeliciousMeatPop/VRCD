@@ -230,6 +230,15 @@ jobs:
           echo "Contents of artifacts directory:"
           ls -laR artifacts || true
 
+      - name: Generate release name and changelog via Claude
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          node .github/scripts/ai-release-notes.js \
+            && echo "Claude generated release notes." \
+            || echo "Claude generation failed or skipped — using existing .github/release-name.txt and .github/release-changelog.md"
+
       - name: Create draft release and upload assets
         shell: bash
         env:
@@ -252,27 +261,17 @@ jobs:
           # Tag may exist independently of the release; delete if present.
           gh api -X DELETE "repos/$REPO/git/refs/tags/$TAG" >/dev/null 2>&1 || true
 
-          # Create the draft release. Skip --generate-notes here because it can
-          # fail if the previous tag is unreachable; we'll generate notes after.
+          # Generate release notes from .github/release-name.txt and .github/release-changelog.md
+          RELEASE_NAME="$(head -1 .github/release-name.txt | tr -d '\r\n')"
+          NOTES="$(node .github/scripts/generate-release-notes.js "$VERSION")"
+
           gh release create "$TAG" \
             --repo "$REPO" \
-            --title "Release $TAG" \
+            --title "Release v${VERSION} — ${RELEASE_NAME}" \
             --draft \
             --target "$TARGET_SHA" \
-            --notes "Draft release for $TAG."
+            --notes "$NOTES"
           echo "Created draft release $TAG."
-
-          # Try to upgrade the body to auto-generated notes. Don't fail the job
-          # if note generation fails for any reason.
-          set +e
-          NOTES="$(gh api -X POST "repos/$REPO/releases/generate-notes" \
-            -f tag_name="$TAG" \
-            -f target_commitish="$TARGET_SHA" \
-            --jq .body 2>/dev/null)"
-          if [ -n "$NOTES" ]; then
-            gh release edit "$TAG" --repo "$REPO" --notes "$NOTES" || true
-          fi
-          set -e
 
           # Upload artifacts. Each missing/empty dir is logged but not fatal.
           for DIR in \
