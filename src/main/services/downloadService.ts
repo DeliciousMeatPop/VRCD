@@ -1,6 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { promises as fs, existsSync } from 'fs'
 import { join, basename } from 'path'
+import { execFile } from 'child_process'
 import SevenZip from 'node-7z'
 import adbService from './adbService'
 import dependencyService from './dependencyService'
@@ -809,6 +810,76 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     return false
   }
 
+  private async findApkInFolder(folderPath: string): Promise<string | null> {
+    try {
+      const entries = await fs.readdir(folderPath, { withFileTypes: true })
+      const top = entries.find((e) => e.isFile() && e.name.toLowerCase().endsWith('.apk'))
+      if (top) return join(folderPath, top.name)
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+        try {
+          const inner = await fs.readdir(join(folderPath, entry.name), { withFileTypes: true })
+          const nested = inner.find((e) => e.isFile() && e.name.toLowerCase().endsWith('.apk'))
+          if (nested) return join(folderPath, entry.name, nested.name)
+        } catch { /* ignore unreadable subdirs */ }
+      }
+    } catch { /* ignore */ }
+    return null
+  }
+
+  private async extractPackageNameFromApk(apkPath: string): Promise<string> {
+    const candidates: Array<{ tool: string; args: string[]; parse: (out: string) => string }> = [
+      {
+        tool: 'aapt2',
+        args: ['dump', 'packagename', apkPath],
+        parse: (out) => out.trim().split('\n')[0].trim()
+      },
+      {
+        tool: 'aapt',
+        args: ['dump', 'badging', apkPath],
+        parse: (out) => out.match(/^package: name='([^']+)'/m)?.[1] ?? ''
+      }
+    ]
+    for (const { tool, args, parse } of candidates) {
+      try {
+        const stdout = await new Promise<string>((resolve, reject) => {
+          execFile(tool, args, { timeout: 10000 }, (err, out) => (err ? reject(err) : resolve(out)))
+        })
+        const name = parse(stdout)
+        if (name) {
+          console.log(`[Service] Extracted packageName '${name}' via ${tool}`)
+          return name
+        }
+      } catch { /* tool not available or failed — try next */ }
+    }
+    return ''
+  }
+
+  private async inferPackageNameFromFolder(folderPath: string): Promise<string> {
+    try {
+      const contents = await fs.readdir(folderPath)
+      if (!contents.some((f) => f.toLowerCase().endsWith('.apk'))) return ''
+      const potentials = contents.filter((f) => f.includes('.') && !f.includes(' ') && f.length > 5)
+      if (potentials.length === 1) return potentials[0]
+    } catch { /* ignore */ }
+    return ''
+  }
+
+  private async resolvePackageName(
+    dirName: string,
+    folderPath: string,
+    catalog: Map<string, string>
+  ): Promise<string> {
+    const fromCatalog = catalog.get(dirName)
+    if (fromCatalog) return fromCatalog
+    const apkPath = await this.findApkInFolder(folderPath)
+    if (apkPath) {
+      const fromApk = await this.extractPackageNameFromApk(apkPath)
+      if (fromApk) return fromApk
+    }
+    return this.inferPackageNameFromFolder(folderPath)
+  }
+
   public async scanDownloadFolder(): Promise<{ added: number; pruned: number }> {
     let subdirs: string[] = []
     try {
@@ -818,13 +889,15 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       return { added: 0, pruned: 0 }
     }
 
-    // Pull the catalog so we can prefer folders that match a known release.
-    let knownReleases = new Set<string>()
+    // Pull the catalog so we can resolve packageName for re-imported entries.
+    let catalogPackages = new Map<string, string>()
     try {
       const games = await gameService.getGames()
-      knownReleases = new Set(games.map((g) => g.releaseName).filter(Boolean))
+      for (const g of games) {
+        if (g.releaseName && g.packageName) catalogPackages.set(g.releaseName, g.packageName)
+      }
     } catch {
-      // Catalog not loaded — we'll fall through to APK detection only.
+      // Catalog not loaded — we'll fall through to APK/folder detection only.
     }
 
     const queue = this.queueManager.getQueue()
@@ -839,16 +912,17 @@ class DownloadService extends EventEmitter implements DownloadAPI {
 
       // Already in the queue → leave it alone (or revive it below).
       if (!existing) {
-        const matchesCatalog = knownReleases.has(dirName)
+        const matchesCatalog = catalogPackages.has(dirName)
         const hasApk = matchesCatalog ? true : await this.folderContainsApk(folderPath)
         if (!matchesCatalog && !hasApk) {
           skipped++
           continue
         }
+        const packageName = await this.resolvePackageName(dirName, folderPath, catalogPackages)
         this.queueManager.addItem({
           gameId: dirName,
           releaseName: dirName,
-          packageName: '',
+          packageName,
           gameName: dirName,
           status: 'Completed',
           progress: 100,
@@ -862,13 +936,18 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         existing.status === 'Error' ||
         existing.status === 'InstallError'
       ) {
-        this.queueManager.updateItem(dirName, {
+        const update: Partial<DownloadItem> = {
           status: 'Completed',
           progress: 100,
           extractProgress: 100,
           downloadPath: folderPath,
           error: undefined
-        })
+        }
+        if (!existing.packageName) {
+          const pkg = await this.resolvePackageName(dirName, folderPath, catalogPackages)
+          if (pkg) update.packageName = pkg
+        }
+        this.queueManager.updateItem(dirName, update)
         added++
       }
     }
@@ -1012,15 +1091,10 @@ class DownloadService extends EventEmitter implements DownloadAPI {
 
     let packageName = ''
     try {
-      const folderContents = await fs.readdir(folderPath)
-      const apkFiles = folderContents.filter((f) => f.toLowerCase().endsWith('.apk'))
-      if (apkFiles.length > 0) {
-        const potentialPackageDirs = folderContents.filter((item) => {
-          return item.includes('.') && !item.includes(' ') && item.length > 5
-        })
-        if (potentialPackageDirs.length === 1) {
-          packageName = potentialPackageDirs[0]
-        }
+      const apkPath = await this.findApkInFolder(folderPath)
+      if (apkPath) {
+        packageName = await this.extractPackageNameFromApk(apkPath)
+        if (!packageName) packageName = await this.inferPackageNameFromFolder(folderPath)
       }
     } catch (error) {
       console.log(`[Service installManualFile] Could not analyze folder structure: ${error}`)
