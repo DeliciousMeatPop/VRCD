@@ -23,10 +23,6 @@ VR CyberDeck is a cross-platform desktop deck for managing, sideloading, and upl
 
 ---
 
-Got ideas for features to add or bug fixes that you arent quite sure you want to make an issue for? [Discussions](https://github.com/KaladinDMP/VR-CyberDeck/discussions) are open and id love to hear from you!
-
----
-
 ## `// FORK_NOTE`
 
 VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/apprenticeVr) by **jimzrt**. The core engine — ADB control, the download/upload pipeline, rclone integration, library connection — is theirs. Everything below the surface is a heavy rewrite of the *experience*:
@@ -60,7 +56,7 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 - Built-in mirror management with public mirror fallback
 - `NEW` / `UPDATED` badges driven off real `lastUpdated` timestamps 
 
-// NOTE: New is "added in the last 30 days". So, since the server is new, everything looks new for now. This will eventually be a useful feature, but a bit confusing right now. Updated badge means it was updated in the last 7 days, Updated badges do NOT turn into New badges for the last 3 weeks. New means new to the server, as in a new game, updated means a not new game thats been updated... But i guess there could be NEW and UPDATED at the same time. Not sure if it would badge it right or only one would show. Hmm, I should probably figure that out huh?
+// NOTE: `NEW` = added to the library in the last 30 days. `UPDATED` = existing game updated in the last 7 days. Both badges can appear on the same title simultaneously.
 
 **`[ TRANSFERS ]`**
 - Up to 5 parallel downloads with live progress
@@ -158,7 +154,7 @@ Found a bug? Got an idea? Want to swap notes with other CyberDeck users?
 
 I REMOVED DISCUSSIONS SINCE PEOPLE WERE ONLY USING IT AS A WAY TO AVOID ADDING LOGS TO AN ISSUE IT SEEMS, EVEN IF THAT WAS NOT THE INTENTION, IN ACTUALITY THAT WAS THE RESULT
 
-If you've got a sound clip you think would suit the UI (terminal click, mechanical keyboard tap, matrix-style hum), drop it in a discussion thread — happy to bundle community favourites in a later build.
+If you've got a sound clip you think would suit the UI (terminal click, mechanical keyboard tap, matrix-style hum), open an issue — happy to bundle community favourites in a later build.
 
 ---
 
