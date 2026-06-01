@@ -185,21 +185,22 @@ export class ExtractionProcessor {
     )
     const availableSpace = await getAvailableDiskSpace(downloadPath)
     const downloadedSize = await getDirectorySize(downloadPath)
-    // For extraction, we need space approximately equal to the compressed size
-    // since extracted content replaces the compressed files
-    const requiredSpace = downloadedSize
+    // Extracted content is typically 2-5x larger than the compressed archive.
+    // Use 3x as a conservative estimate to catch cases where space would run out mid-extraction
+    // (archive and extracted files coexist on disk until deletion after success).
+    const requiredSpace = downloadedSize * 3
 
     if (availableSpace === null) {
       console.warn(`[ExtractProc] Could not determine available disk space for ${item.releaseName}`)
       // Continue anyway since we couldn't determine space
     } else if (availableSpace < requiredSpace) {
-      const errorMsg = `Insufficient disk space for extraction. Required: ${formatBytes(requiredSpace)}, Available: ${formatBytes(availableSpace)}`
+      const errorMsg = `Insufficient disk space for extraction. Estimated required: ${formatBytes(requiredSpace)} (3x compressed size), Available: ${formatBytes(availableSpace)}`
       console.error(`[ExtractProc] ${errorMsg} for ${item.releaseName}`)
       this.updateItemStatus(item.releaseName, 'Error', 100, errorMsg)
       return false
     } else {
       console.log(
-        `[ExtractProc] Disk space check passed for extraction of ${item.releaseName}. Downloaded: ${formatBytes(downloadedSize)}, Available: ${formatBytes(availableSpace)}, Required: ${formatBytes(requiredSpace)}`
+        `[ExtractProc] Disk space check passed for extraction of ${item.releaseName}. Downloaded: ${formatBytes(downloadedSize)}, Available: ${formatBytes(availableSpace)}, Estimated required: ${formatBytes(requiredSpace)}`
       )
     }
 
@@ -275,6 +276,7 @@ export class ExtractionProcessor {
     }
 
     let stderrContent = ''
+    let stdoutContent = ''
     try {
       const proc = execa(sevenZipPath, [
         'x', archivePath,
@@ -291,9 +293,12 @@ export class ExtractionProcessor {
       console.log(`[ExtractProc] 7zip started for ${item.releaseName}`)
 
       // Parse progress from stdout (-bsp1 routes progress there)
+      // Also retain full stdout for error diagnosis since 7zip warnings go to stdout
       let stdoutBuf = ''
       proc.stdout?.on('data', (chunk: Buffer) => {
-        stdoutBuf += chunk.toString()
+        const chunkStr = chunk.toString()
+        stdoutContent += chunkStr
+        stdoutBuf += chunkStr
         const parts = stdoutBuf.split(/[\r\n]+/)
         stdoutBuf = parts.pop() || ''
         for (const line of parts) {
@@ -463,12 +468,21 @@ export class ExtractionProcessor {
         this.activeExtractions.delete(item.releaseName)
       }
 
-      // Use stderr content for specific error types
+      // 7zip exit code 1 = warning; warning messages go to stdout, errors to stderr.
+      // Check both streams so the user sees a useful message regardless.
+      const combinedOutput = (stderrContent + '\n' + stdoutContent).toLowerCase()
       let errorMessage = 'Extraction failed.'
-      if (stderrContent.toLowerCase().includes('wrong password')) {
+      if (combinedOutput.includes('wrong password')) {
         errorMessage = 'Wrong password'
-      } else if (stderrContent.toLowerCase().includes('data error') || stderrContent.toLowerCase().includes('crc failed')) {
-        errorMessage = 'Data/CRC error'
+      } else if (combinedOutput.includes('data error') || combinedOutput.includes('crc failed') || combinedOutput.includes('crc error')) {
+        errorMessage = 'Data/CRC error - archive may be corrupt'
+      } else if (combinedOutput.includes('no space left') || combinedOutput.includes('not enough space') || combinedOutput.includes('disk full')) {
+        errorMessage = 'Insufficient disk space during extraction'
+      } else if (isExecaLike(error) && error.exitCode === 1) {
+        const diagnosticOutput = (stderrContent || stdoutContent).trim()
+        errorMessage = diagnosticOutput
+          ? `Extraction warning: ${diagnosticOutput.substring(0, 400)}`
+          : 'Extraction completed with warnings (exit code 1) - archive may be corrupt or password is incorrect'
       } else if (error instanceof Error) {
         errorMessage = error.message
       } else {
