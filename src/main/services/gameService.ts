@@ -488,7 +488,7 @@ class GameService extends EventEmitter implements GamesAPI {
         '--progress'
       ]
 
-      const publicApiKey = process.env.VRSRC_API_KEY
+      const publicApiKey = process.env.VRSRC_API_KEY || this.vrpConfig?.password
       console.log('[GameService] public endpoint: api key present:', !!publicApiKey)
 
       const rcloneProcess = execa(rclonePath, publicArgs, {
