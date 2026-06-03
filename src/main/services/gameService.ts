@@ -469,13 +469,14 @@ class GameService extends EventEmitter implements GamesAPI {
       // Get the appropriate null config path based on platform
       const nullConfigPath = process.platform === 'win32' ? 'NUL' : '/dev/null'
 
-      // `sync :http:/meta.7z <dir>` matches Rookie's working pattern and avoids
-      // the HEAD stat that `copyto` issues, which causes TLS failures when the
-      // CDN redirect target doesn't support HTTPS.
+      // `copyto <file_source> <file_dest>` explicitly treats the source as a
+      // single file and writes it to the exact destination path. This avoids
+      // rclone's HTTP backend misclassifying `:http:/meta.7z` as a directory
+      // when the server returns a redirect or unexpected response.
       const publicArgs = [
-        'sync',
+        'copyto',
         `:http:/meta.7z`,
-        dirname(destination),
+        destination,
         '--config',
         nullConfigPath,
         '--http-url',
