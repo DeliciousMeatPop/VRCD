@@ -3,6 +3,8 @@ name: Issue Log Enforcer
 on:
   issues:
     types: [opened, reopened, edited]
+  issue_comment:
+    types: [created]
   schedule:
     # Daily at 12:00 UTC — scans for stale needs-logs issues to close
     - cron: '0 12 * * *'
@@ -172,5 +174,163 @@ jobs:
                 issue_number: issue.number,
                 state: 'closed',
                 state_reason: 'not_planned'
+              })
+            }
+
+  # ─── Game list / server-issue triage ─────────────────────────────────────
+  server-issue-triage:
+    name: Ask Rookie check on game-list issues
+    if: >
+      github.event_name == 'issues' &&
+      (github.event.action == 'opened' || github.event.action == 'reopened')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure triage labels exist
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              { name: 'server-issue-check', color: 'fbca04', description: 'Waiting for Rookie check — may be a server outage' },
+              { name: 'server-issue',       color: 'e4e669', description: 'Confirmed server-side issue — not a CyberDeck bug'  }
+            ]
+            for (const l of labels) {
+              try {
+                await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name: l.name })
+              } catch {
+                await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, ...l })
+              }
+            }
+
+      - name: Detect keywords and ask about Rookie
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue
+            const text  = ((issue.title ?? '') + ' ' + (issue.body ?? '')).toLowerCase()
+            const existing = issue.labels.map(l => l.name)
+
+            // Skip if we already asked or already confirmed
+            if (existing.includes('server-issue-check') || existing.includes('server-issue')) return
+
+            const keywords = [
+              'refresh gamelist',   'refresh game list',
+              'no gamelist',        'no game list',
+              'gamelist empty',     'game list empty',
+              'empty gamelist',     'empty game list',
+              'gamelist not',       'game list not',
+              'games not loading',  'games not showing',
+              'games not refresh',  'refresh games',
+              'games missing',      'missing games',
+              "can't see games",    'cant see games',
+              'no games showing',   'games disappeared',
+              'game list won',      'gamelist won',
+              'games won',          'not loading games',
+            ]
+
+            if (!keywords.some(kw => text.includes(kw))) return
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['server-issue-check']
+            })
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: [
+                '## 🔍 Quick Check Before We Investigate',
+                '',
+                'This looks like it could be a server-side sync issue rather than a CyberDeck bug.',
+                '',
+                '**Is [Rookie (VRP Rookie sideloader)](https://github.com/VRPirates/rookie) working for you?** Can it load the game list?',
+                '',
+                '- Reply **`/rookie yes`** → Rookie works fine, issue stays open for investigation',
+                '- Reply **`/rookie no`** → Rookie is also broken, this is a server outage and the issue will be closed',
+                '',
+                '*Only your reply counts — others will be ignored.*'
+              ].join('\n')
+            })
+
+  # ─── Handle /rookie yes|no responses ─────────────────────────────────────
+  handle-rookie-response:
+    name: Handle Rookie check response
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process response
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = context.payload.comment
+            const issue   = context.payload.issue
+            const body    = (comment.body ?? '').toLowerCase().trim()
+
+            // Only count the original reporter's reply
+            if (comment.user.login !== issue.user.login) return
+
+            // Only act on issues tagged for this check
+            const labels = issue.labels.map(l => l.name)
+            if (!labels.includes('server-issue-check')) return
+
+            const rookieNo  = /\/rookie\s+no\b/.test(body)  ||
+                              (/\brookie\b/.test(body) && /(not working|broken|also broken|same issue|doesn'?t work|also not|failing)/.test(body))
+            const rookieYes = /\/rookie\s+yes\b/.test(body) ||
+                              (/\brookie\b/.test(body) && /(works|working|fine|ok\b|loads|loaded)/.test(body))
+
+            if (!rookieNo && !rookieYes) return
+
+            // Remove the pending-check label either way
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                name: 'server-issue-check'
+              })
+            } catch { /* already removed */ }
+
+            if (rookieNo) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['server-issue']
+              })
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  '## 🔒 Closing — Server Outage',
+                  '',
+                  'Since Rookie is also unable to load the game list, this is a server-side outage outside of CyberDeck\'s control.',
+                  'There\'s nothing to fix on our end — the VRP servers need to come back up.',
+                  '',
+                  'Keep an eye on the VRP community channels for status updates.',
+                  'Once the servers recover, CyberDeck will work again without any update needed.',
+                  '',
+                  '---',
+                  '*Closed automatically by the issue bot.*'
+                ].join('\n')
+              })
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'not_planned'
+              })
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: [
+                  '✅ **Rookie is working** — this looks like a CyberDeck-specific bug.',
+                  'The issue is staying open for investigation. Thanks for confirming!'
+                ].join('\n')
               })
             }
