@@ -32,6 +32,7 @@ interface ErrorDiagnosis {
   title: string
   summary: string
   suggestions: string[]
+  links?: Array<{ label: string; url: string }>
 }
 
 /**
@@ -174,6 +175,27 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
         'Wake the headset and check it is still on Wi-Fi (or still cabled).',
         'Re-select the device in the Devices panel.',
         'For Wi-Fi connections: re-pair via the IP bookmark.'
+      ]
+    })
+  },
+  // TLS handshake failure — ISP or network intercepting HTTPS
+  {
+    test: /tls:\s*(first\s*record|handshake|failed)|ssl\s*(handshake|error)/i,
+    build: () => ({
+      title: 'TLS handshake failed',
+      summary:
+        'The connection to the server was blocked or intercepted before a secure channel could be established. This usually means your ISP or router is interfering with HTTPS traffic — not a problem with VR CyberDeck or the mirror.',
+      suggestions: [
+        'Enable DNS-over-HTTPS (DoH) in Windows Settings → Network & Internet → DNS — this is the most reliable fix.',
+        'Use a VPN such as ProtonVPN or Cloudflare WARP (both free).',
+        'Try a mobile hotspot to confirm whether it is your ISP or router.',
+        'Click Retry after applying one of the above.'
+      ],
+      links: [
+        {
+          label: 'How to set up DNS-over-HTTPS on Windows 11',
+          url: 'https://github.com/Curious4Tech/DNS-over-HTTPS-Set-Up#setting-up-doh-on-windows-11'
+        }
       ]
     })
   },
@@ -385,6 +407,28 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
                     }}
                   >
                     {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {diag.links && diag.links.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(var(--vrcd-neon-raw),0.6)', letterSpacing: '0.1em' }}>
+                {'// MORE INFO'}
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {diag.links.map((link, i) => (
+                  <li key={i} style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.45 }}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: NEON }}
+                    >
+                      {link.label}
+                    </a>
                   </li>
                 ))}
               </ul>
