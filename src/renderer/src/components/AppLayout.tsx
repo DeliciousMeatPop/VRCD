@@ -287,7 +287,21 @@ const MainContent: React.FC<MainContentProps> = ({
                 <Text>Change your DNS to Cloudflare (1.1.1.1) or Google (8.8.8.8)</Text>
               </li>
               <li style={{ marginBottom: tokens.spacingVerticalXS }}>
-                <Text>Use a VPN like ProtonVPN or 1.1.1.1 VPN</Text>
+                <Text>
+                  Enable <strong>DNS-over-HTTPS (DoH)</strong> — encrypts DNS queries and
+                  bypasses ISP-level interception.{' '}
+                  <a
+                    href="https://github.com/Curious4Tech/DNS-over-HTTPS-Set-Up#setting-up-doh-on-windows-11"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: tokens.colorBrandForeground1 }}
+                  >
+                    Setup guide
+                  </a>
+                </Text>
+              </li>
+              <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                <Text>Use a VPN like ProtonVPN or Cloudflare WARP (both free)</Text>
               </li>
               <li style={{ marginBottom: tokens.spacingVerticalXS }}>
                 <Text>Check your router/firewall settings</Text>
