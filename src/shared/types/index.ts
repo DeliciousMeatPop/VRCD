@@ -269,6 +269,7 @@ export interface GameAPIRenderer
   > {
   onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void
   onBackgroundSyncComplete: (callback: (games: GameInfo[]) => void) => () => void
+  onBackgroundSyncError: (callback: (error: string) => void) => () => void
 }
 
 /** Result codes returned by DownloadService.addToQueue. */

@@ -195,6 +195,7 @@ export interface IPCEvents {
   'adb:installation-completed': [deviceId: string]
   'games:download-progress': [progress: DownloadProgress]
   'games:background-sync-complete': [games: GameInfo[]]
+  'games:background-sync-error': [error: string]
   'download:queue-updated': [queue: DownloadItem[]]
   'upload:progress': [progress: UploadPreparationProgress]
   'upload:queue-updated': [queue: UploadItem[]]

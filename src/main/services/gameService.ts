@@ -218,7 +218,12 @@ class GameService extends EventEmitter implements GamesAPI {
         typedWebContentsSend.send(mainWindow, 'games:background-sync-complete', this.games)
       }
     } catch (err) {
-      console.error('[GameService] Background sync failed:', redactKey(String(err)))
+      const message = redactKey(err instanceof Error ? err.message : String(err))
+      console.error('[GameService] Background sync failed:', message)
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        typedWebContentsSend.send(mainWindow, 'games:background-sync-error', message)
+      }
     }
   }
 

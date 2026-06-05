@@ -61,7 +61,8 @@ import {
   GridRegular,
   TableRegular,
   SettingsRegular,
-  ArrowSyncRegular
+  ArrowSyncRegular,
+  DismissRegular
 } from '@fluentui/react-icons'
 import GameDetailsDialog from './GameDetailsDialog'
 import { useGameDialog } from '@renderer/hooks/useGameDialog'
@@ -465,6 +466,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     games,
     isLoading: loadingGames,
     error: gamesError,
+    syncError,
+    dismissSyncError,
     lastSyncTime,
     downloadProgress,
     extractProgress,
@@ -1788,6 +1791,52 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               <div className="progress-text">{getProcessMessage()}</div>
             </div>
           )}
+
+          {syncError && (() => {
+            const isTls = /tls:|handshake|first record/i.test(syncError)
+            return (
+              <div style={{
+                margin: '8px 12px 0',
+                padding: '10px 14px',
+                background: 'rgba(255,50,50,0.08)',
+                border: '1px solid rgba(255,80,80,0.4)',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10
+              }}>
+                <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 12, color: 'rgba(var(--vrcd-neon-raw),0.85)', lineHeight: 1.5 }}>
+                  {isTls ? (
+                    <>
+                      <strong style={{ color: '#ff7070' }}>Game list sync failed — TLS error.</strong>
+                      {' '}Your ISP or router is blocking the connection. Try{' '}
+                      <a
+                        href="https://github.com/Curious4Tech/DNS-over-HTTPS-Set-Up#setting-up-doh-on-windows-11"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--vrcd-neon)' }}
+                      >
+                        enabling DNS-over-HTTPS
+                      </a>
+                      {' '}or a VPN, then click Refresh Games.
+                    </>
+                  ) : (
+                    <>
+                      <strong style={{ color: '#ff7070' }}>Game list sync failed.</strong>
+                      {' '}{syncError}
+                    </>
+                  )}
+                </div>
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={<DismissRegular />}
+                  onClick={dismissSyncError}
+                  style={{ minWidth: 0, padding: '2px 4px', color: 'rgba(var(--vrcd-neon-raw),0.5)' }}
+                />
+              </div>
+            )
+          })()}
 
           {/* Content area */}
           <div className={styles.contentArea}>

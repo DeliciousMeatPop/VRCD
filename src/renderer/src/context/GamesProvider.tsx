@@ -30,6 +30,8 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
   const [downloadProgress, setDownloadProgress] = useState<number>(0)
   const [extractProgress, setExtractProgress] = useState<number>(0)
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const dismissSyncError = useCallback(() => setSyncError(null), [])
   const [uploadCandidates, setUploadCandidates] = useState<UploadCandidate[]>([])
   // Incremented only when checkForUploadCandidates finds fresh candidates (not when
   // addGameToBlacklist filters the list).  The dialog watches this to avoid re-opening
@@ -322,7 +324,16 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
   useEffect(() => {
     const remove = window.api.games.onBackgroundSyncComplete((games) => {
       console.log('[GamesProvider] Background sync complete, updating game list.')
+      setSyncError(null)
       setRawGames(games)
+    })
+    return remove
+  }, [])
+
+  useEffect(() => {
+    const remove = window.api.games.onBackgroundSyncError((error) => {
+      console.error('[GamesProvider] Background sync error:', error)
+      setSyncError(error)
     })
     return remove
   }, [])
@@ -355,6 +366,8 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       localGames,
       isLoading,
       error,
+      syncError,
+      dismissSyncError,
       lastSyncTime,
       downloadProgress,
       extractProgress,
@@ -377,6 +390,8 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       localGames,
       isLoading,
       error,
+      syncError,
+      dismissSyncError,
       lastSyncTime,
       downloadProgress,
       extractProgress,
