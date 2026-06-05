@@ -125,6 +125,11 @@ const api = {
       typedIpcRenderer.on('games:background-sync-complete', listener)
       return () => typedIpcRenderer.removeListener('games:background-sync-complete', listener)
     },
+    onBackgroundSyncError: (callback: (error: string) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, error: string): void => callback(error)
+      typedIpcRenderer.on('games:background-sync-error', listener)
+      return () => typedIpcRenderer.removeListener('games:background-sync-error', listener)
+    },
     addToBlacklist: (packageName: string, version?: number | 'any'): Promise<boolean> =>
       typedIpcRenderer.invoke('games:add-to-blacklist', packageName, version),
     removeFromBlacklist: (packageName: string): Promise<boolean> =>

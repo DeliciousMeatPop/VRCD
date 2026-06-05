@@ -8,6 +8,8 @@ export interface GamesContextType {
   uploadCandidatesVersion: number
   isLoading: boolean
   error: string | null
+  syncError: string | null
+  dismissSyncError: () => void
   lastSyncTime: Date | null
   downloadProgress: number
   extractProgress: number
