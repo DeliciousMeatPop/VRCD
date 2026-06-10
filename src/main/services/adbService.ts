@@ -10,6 +10,25 @@ import ping from 'pingman'
 import { AdbAPI, DeviceInfo, PackageInfo, ServiceStatus } from '@shared/types'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 
+/**
+ * Thrown by installPackage when ADB reports INSTALL_FAILED_UPDATE_INCOMPATIBLE,
+ * meaning the APK on the device was signed with a different certificate than
+ * the one we're trying to install. The only way to proceed is to uninstall the
+ * existing app first, which erases its save data/settings - so callers must
+ * surface this to the user instead of resolving it silently.
+ */
+export class SignatureMismatchError extends Error {
+  packageName: string
+
+  constructor(packageName: string) {
+    super(
+      `INSTALL_FAILED_UPDATE_INCOMPATIBLE: ${packageName || 'the installed app'} was signed with a different certificate than this build.`
+    )
+    this.name = 'SignatureMismatchError'
+    this.packageName = packageName
+  }
+}
+
 const QUEST_MODELS = ['monterey', 'hollywood', 'seacliff', 'eureka', 'panther', 'sekiu'] as const
 type QuestModel = (typeof QUEST_MODELS)[number]
 
@@ -510,34 +529,7 @@ class AdbService extends EventEmitter implements AdbAPI {
         // 2. Construct and execute pm install command
         const installCommand = `pm install ${options.flags.join(' ')} "${remoteTempApkPath}"`
         console.log(`[ADB Service] Running install command: ${installCommand}`)
-        let output = await this.runShellCommand(serial, installCommand) // runShellCommand already logs
-
-        // Check for INSTALL_FAILED_UPDATE_INCOMPATIBLE and attempt uninstall then retry
-        if (output?.includes('INSTALL_FAILED_UPDATE_INCOMPATIBLE')) {
-          console.warn(
-            `[ADB Service] Install failed due to incompatible update. Attempting uninstall and retry. Original error: ${output}`
-          )
-          const packageNameMatch = output.match(/Package ([a-zA-Z0-9_.]+)/)
-          if (packageNameMatch && packageNameMatch[1]) {
-            const packageName = packageNameMatch[1]
-            console.log(`[ADB Service] Extracted package name for uninstall: ${packageName}`)
-            const uninstallSuccess = await this.uninstallPackage(serial, packageName)
-            if (uninstallSuccess) {
-              console.log(
-                `[ADB Service] Successfully uninstalled ${packageName}. Retrying installation...`
-              )
-              output = await this.runShellCommand(serial, installCommand) // Retry install
-            } else {
-              console.error(
-                `[ADB Service] Failed to uninstall ${packageName}. Installation will likely still fail.`
-              )
-            }
-          } else {
-            console.warn(
-              '[ADB Service] Could not extract package name from incompatibility error. Cannot attempt uninstall.'
-            )
-          }
-        }
+        const output = await this.runShellCommand(serial, installCommand) // runShellCommand already logs
 
         // 3. Clean up temporary APK
         console.log(`[ADB Service] Cleaning up temporary APK: ${remoteTempApkPath}`)
@@ -560,27 +552,37 @@ class AdbService extends EventEmitter implements AdbAPI {
             `[ADB Service] Successfully installed ${apkPath} with flags. Output: ${output}`
           )
           return true
-        } else {
-          console.error(
-            `[ADB Service] Installation of ${apkPath} with flags failed or success not confirmed. Output: ${output || 'No output'}`
-          )
-          // Attempt to extract common failure reasons
-          if (output?.includes('INSTALL_FAILED_UPDATE_INCOMPATIBLE')) {
-            console.error(
-              '[ADB Service] Detailed error: INSTALL_FAILED_UPDATE_INCOMPATIBLE. Signatures might still mismatch or other issue.'
-            )
-          } else if (output?.includes('INSTALL_FAILED_VERSION_DOWNGRADE')) {
-            console.error(
-              '[ADB Service] Detailed error: INSTALL_FAILED_VERSION_DOWNGRADE. Cannot downgrade versions with these flags.'
-            )
-          } else if (output?.includes('INSTALL_FAILED_ALREADY_EXISTS')) {
-            console.error(
-              '[ADB Service] Detailed error: INSTALL_FAILED_ALREADY_EXISTS. Package already exists.'
-            )
-          }
-          return false
         }
+
+        console.error(
+          `[ADB Service] Installation of ${apkPath} with flags failed or success not confirmed. Output: ${output || 'No output'}`
+        )
+        // Attempt to extract common failure reasons. Note: we intentionally do NOT
+        // auto-uninstall+retry on a signature mismatch - that would silently wipe
+        // the user's save data. Instead we surface a dedicated error so the UI can
+        // ask the user to choose between keeping the current install or
+        // uninstalling (and losing save data) to apply the update.
+        if (output?.includes('INSTALL_FAILED_UPDATE_INCOMPATIBLE')) {
+          const packageNameMatch = output.match(/Package ([a-zA-Z0-9_.]+)/)
+          const packageName = packageNameMatch?.[1] ?? ''
+          console.error(
+            `[ADB Service] Detailed error: INSTALL_FAILED_UPDATE_INCOMPATIBLE for ${packageName || 'unknown package'}. Signatures do not match.`
+          )
+          throw new SignatureMismatchError(packageName)
+        } else if (output?.includes('INSTALL_FAILED_VERSION_DOWNGRADE')) {
+          console.error(
+            '[ADB Service] Detailed error: INSTALL_FAILED_VERSION_DOWNGRADE. Cannot downgrade versions with these flags.'
+          )
+        } else if (output?.includes('INSTALL_FAILED_ALREADY_EXISTS')) {
+          console.error(
+            '[ADB Service] Detailed error: INSTALL_FAILED_ALREADY_EXISTS. Package already exists.'
+          )
+        }
+        throw new Error(`Installation failed. Output: ${output || 'No output'}`)
       } catch (error) {
+        if (error instanceof SignatureMismatchError) {
+          throw error
+        }
         console.error(
           `[ADB Service] Error during flagged installation of ${apkPath} on device ${serial}:`,
           error
@@ -594,6 +596,9 @@ class AdbService extends EventEmitter implements AdbAPI {
             `[ADB Service] Error during cleanup of ${remoteTempApkPath} after initial error:`,
             cleanupError
           )
+        }
+        if (error instanceof Error && error.message.startsWith('Installation failed.')) {
+          throw error
         }
         return false
       }
@@ -615,6 +620,10 @@ class AdbService extends EventEmitter implements AdbAPI {
         )
         if (error instanceof Error && error.message.includes('INSTALL_FAILED')) {
           console.error(`[ADB Service] Install failed with code: ${error.message}`)
+          if (error.message.includes('INSTALL_FAILED_UPDATE_INCOMPATIBLE')) {
+            const packageNameMatch = error.message.match(/Package ([a-zA-Z0-9_.]+)/)
+            throw new SignatureMismatchError(packageNameMatch?.[1] ?? '')
+          }
         }
         return false
       }

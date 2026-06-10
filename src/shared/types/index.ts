@@ -138,6 +138,18 @@ export type DownloadStatus =
   | 'Installing'
   | 'InstallError'
 
+/**
+ * Marker embedded in DownloadItem.error when an install/update failed because
+ * the app already on the device was signed with a different certificate
+ * (INSTALL_FAILED_UPDATE_INCOMPATIBLE). The UI uses this to offer the user an
+ * explicit choice instead of silently failing or silently uninstalling.
+ */
+export const SIGNATURE_MISMATCH_ERROR_PREFIX = 'SIGNATURE_MISMATCH'
+
+export function isSignatureMismatchError(error?: string | null): boolean {
+  return !!error && error.includes(SIGNATURE_MISMATCH_ERROR_PREFIX)
+}
+
 export interface DownloadItem {
   gameId: string
   releaseName: string

@@ -17,7 +17,7 @@ import { useAdb } from '../hooks/useAdb'
 import { useGames } from '../hooks/useGames'
 import { useDownload } from '../hooks/useDownload'
 import { useLanguage } from '../hooks/useLanguage'
-import { GameInfo } from '@shared/types'
+import { GameInfo, isSignatureMismatchError } from '@shared/types'
 import placeholderImage from '../assets/images/game-placeholder.png'
 import {
   Button,
@@ -65,6 +65,8 @@ import {
   DismissRegular
 } from '@fluentui/react-icons'
 import GameDetailsDialog from './GameDetailsDialog'
+import UninstallWarningDialog from './UninstallWarningDialog'
+import { getSkipUninstallWarning, setSkipUninstallWarning } from '@renderer/hooks/useExtrasSettings'
 import { useGameDialog } from '@renderer/hooks/useGameDialog'
 import MirrorManagement from './MirrorManagement'
 import LocalUploadDialog from './LocalUploadDialog'
@@ -480,7 +482,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     queue: downloadQueue,
     cancelDownload,
     retryDownload,
-    deleteFiles
+    deleteFiles,
+    removeFromQueueOnly
   } = useDownload()
 
   const styles = useStyles()
@@ -525,6 +528,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [obbFolderToConfirm, setObbFolderToConfirm] = useState<string | null>(null)
   const [showMirrorMgmt, setShowMirrorMgmt] = useState(false)
   const [appVersion, setAppVersion] = useState('')
+  const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(null)
 
   const counts = useMemo(() => {
     const total = games.length
@@ -754,6 +758,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           const isQueued = downloadInfo?.status === 'Queued'
           const isInstalling = downloadInfo?.status === 'Installing'
           const isInstallError = downloadInfo?.status === 'InstallError'
+          const isSigMismatch = isInstallError && isSignatureMismatchError(downloadInfo?.error)
 
           return (
             <div
@@ -817,7 +822,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 )}
                 {isInstallError && (
                   <Badge shape="rounded" color="danger" appearance="outline">
-                    {t('installError')}
+                    {isSigMismatch ? t('signatureMismatch') : t('installError')}
                   </Badge>
                 )}
               </div>
@@ -1038,7 +1043,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       })
   }
 
-  const handleUninstall = async (game: GameInfo): Promise<void> => {
+  const performUninstall = async (game: GameInfo): Promise<void> => {
     if (!game || !game.packageName || !selectedDevice) {
       console.error(
         'Uninstall action aborted: Missing game data, package name, or selectedDevice.',
@@ -1071,6 +1076,18 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleUninstall = async (game: GameInfo): Promise<void> => {
+    if (!game || !game.packageName || !selectedDevice) {
+      window.alert('Cannot start uninstall: Essential information is missing.')
+      return
+    }
+    if (getSkipUninstallWarning()) {
+      await performUninstall(game)
+      return
+    }
+    setPendingUninstall(game)
   }
 
   const handleReinstall = async (game: GameInfo): Promise<void> => {
@@ -1221,6 +1238,55 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       console.error('Error triggering install from completed:', err)
       window.alert('Failed to start installation. Please check the main process logs.')
     })
+  }
+
+  // User chose "Don't Update" after a signature-mismatch install error: dismiss
+  // the failed queue entry (keeping downloaded files) without touching the
+  // device. The game falls back to its normal "Update Available" state.
+  const handleDismissUpdateError = (game: GameInfo): void => {
+    if (!game || !game.releaseName) return
+    removeFromQueueOnly(game.releaseName)
+  }
+
+  // User chose "Uninstall & Update" after a signature-mismatch install error:
+  // uninstall the conflicting build (erasing its save data) and then install
+  // the downloaded update.
+  const handleUninstallAndUpdate = async (game: GameInfo): Promise<void> => {
+    if (!game || !game.packageName || !game.releaseName || !selectedDevice) {
+      window.alert('Cannot continue: Essential information is missing.')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const uninstallSuccess = await window.api.adb.uninstallPackage(
+        selectedDevice,
+        game.packageName
+      )
+      if (!uninstallSuccess) {
+        window.alert(`Failed to uninstall ${game.name}. Update aborted.`)
+        return
+      }
+
+      const downloadInfo = downloadStatusMap.get(game.releaseName)
+      if (downloadInfo?.status === 'Completed') {
+        await window.api.downloads.installFromCompleted(game.releaseName, selectedDevice)
+      } else if (downloadInfo?.status === 'InstallError') {
+        retryDownload(game.releaseName)
+      } else {
+        await addDownloadToQueue(game)
+      }
+    } catch (error) {
+      console.error(`Uninstall & Update: Error during process for ${game.name}:`, error)
+      window.alert(
+        `An error occurred while uninstalling and updating ${game.name}. Please check logs.`
+      )
+    } finally {
+      setIsLoading(false)
+      loadPackages().catch((err) =>
+        console.error('Uninstall & Update: Error refreshing packages post-operation:', err)
+      )
+    }
   }
 
   const handleDeleteDownloaded = useCallback(
@@ -2025,9 +2091,24 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           onCancelDownload={handleCancelDownload}
           onDeleteDownloaded={handleDeleteDownloaded}
           onInstallFromCompleted={handleInstallFromCompleted}
+          onUninstallAndUpdate={handleUninstallAndUpdate}
+          onDismissUpdateError={handleDismissUpdateError}
           getNote={getNote}
           isConnected={isConnected}
           isBusy={isBusy}
+        />
+      )}
+
+      {pendingUninstall && (
+        <UninstallWarningDialog
+          appName={pendingUninstall.name || pendingUninstall.releaseName}
+          onConfirm={(dontShowAgain) => {
+            if (dontShowAgain) setSkipUninstallWarning(true)
+            const game = pendingUninstall
+            setPendingUninstall(null)
+            void performUninstall(game)
+          }}
+          onCancel={() => setPendingUninstall(null)}
         />
       )}
 

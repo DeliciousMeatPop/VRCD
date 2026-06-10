@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useDownload } from '../hooks/useDownload'
 import { useAdb } from '../hooks/useAdb'
-import { DownloadItem } from '@shared/types'
+import { DownloadItem, GameInfo } from '@shared/types'
 import {
   makeStyles,
   tokens,
@@ -29,8 +29,9 @@ import { formatDistanceToNow } from 'date-fns'
 import placeholderImage from '../assets/images/game-placeholder.png'
 import { useGames } from '@renderer/hooks/useGames'
 import { useGameDialog } from '@renderer/hooks/useGameDialog'
-import { getDeleteOnRemove, getSideloadingDisabled } from '../hooks/useExtrasSettings'
+import { getDeleteOnRemove, getSideloadingDisabled, getSkipUninstallWarning, setSkipUninstallWarning } from '../hooks/useExtrasSettings'
 import ErrorDetailDialog, { ErrorPhase } from './ErrorDetailDialog'
+import UninstallWarningDialog from './UninstallWarningDialog'
 
 const useStyles = makeStyles({
   root: {
@@ -102,6 +103,7 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, setDialogGame] = useGameDialog()
   const [confirmPending, setConfirmPending] = useState<string | null>(null)
+  const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(null)
   const [scanResult, setScanResult] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [errorDetail, setErrorDetail] = useState<{
@@ -133,7 +135,30 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
     })
   }
 
-  const handleUninstall = async (item: DownloadItem): Promise<void> => {
+  const performUninstall = async (game: GameInfo): Promise<void> => {
+    if (!game || !game.packageName || !selectedDevice) {
+      console.error('Cannot uninstall: Missing game data, package name, or selected device')
+      window.alert('Cannot uninstall: Missing required information.')
+      return
+    }
+
+    console.log(`Uninstalling ${game.packageName} from ${selectedDevice}`)
+    try {
+      const success = await window.api.adb.uninstallPackage(selectedDevice, game.packageName)
+      if (success) {
+        console.log('Uninstall successful')
+        await loadPackages()
+      } else {
+        console.error('Uninstall failed')
+        window.alert('Failed to uninstall the game.')
+      }
+    } catch (err) {
+      console.error('Error during uninstall:', err)
+      window.alert('An error occurred during uninstallation.')
+    }
+  }
+
+  const handleUninstall = (item: DownloadItem): void => {
     const game = games.find((g) => g.releaseName === item.releaseName)
     if (!game || !game.packageName || !selectedDevice) {
       console.error('Cannot uninstall: Missing game data, package name, or selected device')
@@ -141,26 +166,11 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
       return
     }
 
-    const confirmUninstall = window.confirm(
-      `Are you sure you want to uninstall ${game.name} (${game.packageName})? This will remove the app and its data from the device.`
-    )
-
-    if (confirmUninstall) {
-      console.log(`Uninstalling ${game.packageName} from ${selectedDevice}`)
-      try {
-        const success = await window.api.adb.uninstallPackage(selectedDevice, game.packageName)
-        if (success) {
-          console.log('Uninstall successful')
-          await loadPackages()
-        } else {
-          console.error('Uninstall failed')
-          window.alert('Failed to uninstall the game.')
-        }
-      } catch (err) {
-        console.error('Error during uninstall:', err)
-        window.alert('An error occurred during uninstallation.')
-      }
+    if (getSkipUninstallWarning()) {
+      void performUninstall(game)
+      return
     }
+    setPendingUninstall(game)
   }
 
   const handleDeleteButton = (releaseName: string): void => {
@@ -573,6 +583,19 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
             : undefined
         }
       />
+
+      {pendingUninstall && (
+        <UninstallWarningDialog
+          appName={pendingUninstall.name || pendingUninstall.releaseName}
+          onConfirm={(dontShowAgain) => {
+            if (dontShowAgain) setSkipUninstallWarning(true)
+            const game = pendingUninstall
+            setPendingUninstall(null)
+            void performUninstall(game)
+          }}
+          onCancel={() => setPendingUninstall(null)}
+        />
+      )}
     </div>
   )
 }

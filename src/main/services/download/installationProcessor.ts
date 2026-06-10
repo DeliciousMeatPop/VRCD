@@ -1,8 +1,8 @@
 import { basename, join } from 'path'
 import { promises as fs, existsSync } from 'fs'
-import { DownloadItem, DownloadStatus } from '@shared/types'
+import { DownloadItem, DownloadStatus, SIGNATURE_MISMATCH_ERROR_PREFIX } from '@shared/types'
 import { QueueManager } from './queueManager'
-import adbService from '../adbService'
+import adbService, { SignatureMismatchError } from '../adbService'
 
 export class InstallationProcessor {
   private queueManager: QueueManager
@@ -278,7 +278,12 @@ export class InstallationProcessor {
             }
           }
         } catch (execError: unknown) {
-          errorMessage = execError instanceof Error ? execError.message : String(execError)
+          if (execError instanceof SignatureMismatchError) {
+            const pkgName = execError.packageName || item.packageName
+            errorMessage = `${SIGNATURE_MISMATCH_ERROR_PREFIX}: ${pkgName} is already installed and was signed with a different certificate than this build. Uninstalling it will erase its save data/settings before the update can be installed.`
+          } else {
+            errorMessage = execError instanceof Error ? execError.message : String(execError)
+          }
           console.error(`[InstallProc] Error executing '${command}': ${errorMessage}`)
           if (adbCommand === 'install') overallSuccess = false
         }
@@ -369,6 +374,20 @@ export class InstallationProcessor {
           await this.adbService.installPackage(deviceId, apkPath, { flags: ['-r', '-g'] })
           console.log(`[InstallProc Standard] Successfully installed ${apk}`)
         } catch (installError: unknown) {
+          if (installError instanceof SignatureMismatchError) {
+            const pkgName = installError.packageName || item.packageName
+            console.error(
+              `[InstallProc Standard] Signature mismatch installing ${apk} for package ${pkgName}.`
+            )
+            this.updateItemStatus(
+              item.releaseName,
+              'InstallError',
+              100,
+              `${SIGNATURE_MISMATCH_ERROR_PREFIX}: ${pkgName} is already installed and was signed with a different certificate than this build. Uninstalling it will erase its save data/settings before the update can be installed.`,
+              100
+            )
+            return false
+          }
           const errorMsg =
             installError instanceof Error ? installError.message : String(installError)
           console.error(`[InstallProc Standard] Failed to install ${apk}: ${errorMsg}`)

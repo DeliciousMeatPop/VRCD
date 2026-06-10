@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { GameInfo } from '@shared/types'
+import { GameInfo, isSignatureMismatchError } from '@shared/types'
 import {
   Dialog,
   DialogSurface,
@@ -60,6 +60,8 @@ interface GameDetailsDialogProps {
   onCancelDownload: (game: GameInfo) => void
   onDeleteDownloaded: (game: GameInfo) => void
   onInstallFromCompleted: (game: GameInfo) => void
+  onUninstallAndUpdate: (game: GameInfo) => Promise<void>
+  onDismissUpdateError: (game: GameInfo) => void
   getNote: (releaseName: string) => Promise<string | null>
   isConnected: boolean
   isBusy: boolean
@@ -69,7 +71,8 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   game, open, onClose, downloadStatusMap,
   onInstall, onUninstall, onReinstall, onUpdate,
   onRetry, onCancelDownload, onDeleteDownloaded,
-  onInstallFromCompleted, getNote, isConnected, isBusy
+  onInstallFromCompleted, onUninstallAndUpdate, onDismissUpdateError,
+  getNote, isConnected, isBusy
 }) => {
   const { getTrailerUrl } = useGames()
   const { selectedDevice } = useAdb()
@@ -176,6 +179,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     const isErrorOrCancelled = status === 'Error' || status === 'Cancelled'
     const isInstalling = status === 'Installing'
     const noSideload = getSideloadingDisabled()
+    const isSignatureMismatch = isInstallError && isSignatureMismatchError(downloadStatusMap.get(g.releaseName || '')?.error)
 
     if (isInstalling) return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -186,6 +190,50 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       <Button appearance="secondary" style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }} icon={<DismissRegular />} onClick={() => onCancelDownload(g)} disabled={isBusy}>
         Cancel Download
       </Button>
+    )
+    if (isSignatureMismatch) return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontFamily: 'monospace',
+            color: '#ff5555',
+            lineHeight: 1.5,
+            border: '1px solid rgba(255,85,85,0.4)',
+            borderRadius: 6,
+            padding: '8px 10px',
+            background: 'rgba(255,50,50,0.06)'
+          }}
+        >
+          The installed version of this app was signed with a different certificate than this
+          update. To install the update, the existing app must be uninstalled first -{' '}
+          <strong>this will erase its save data, progress, and settings.</strong>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {!noSideload && (
+            <Button
+              appearance="secondary"
+              style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.7)', fontWeight: 600 }}
+              icon={<UninstallIcon />}
+              onClick={() => onUninstallAndUpdate(g)}
+              disabled={!isConnected || isBusy}
+            >
+              Uninstall &amp; Update (Erase Save Data)
+            </Button>
+          )}
+          <Button appearance="secondary" onClick={() => onDismissUpdateError(g)} disabled={isBusy}>
+            Don&apos;t Update
+          </Button>
+          <Button
+            appearance="secondary"
+            icon={<InfoRegular />}
+            style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+            onClick={() => setErrorDetailOpen(true)}
+          >
+            Error info
+          </Button>
+        </div>
+      </div>
     )
     if (isInstallError || isErrorOrCancelled) return (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -245,7 +293,8 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     : 'rgba(var(--vrcd-neon-raw),0.4)'
   const statusLabel = game.isInstalled ? (game.hasUpdate ? 'Update Available' : 'Installed')
     : dlStatus === 'Completed' ? 'Downloaded'
-    : dlStatus === 'InstallError' ? 'Install Error'
+    : dlStatus === 'InstallError'
+      ? (isSignatureMismatchError(statusEntry?.error) ? 'Signature Mismatch' : 'Install Error')
     : dlStatus === 'Error' ? 'Download Error'
     : dlStatus === 'Installing' ? 'Installing...'
     : 'Not Installed'
