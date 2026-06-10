@@ -518,7 +518,8 @@ const ExtraSystemsSettings: React.FC = () => {
     disableSideloading, setDisableSideloading,
     colorblindMode, setColorblindMode,
     accentColor, setAccentColor,
-    fontFamily, setFontFamily
+    fontFamily, setFontFamily,
+    skipUninstallWarning, setSkipUninstallWarning
   } = useExtrasSettings()
 
   const { enabled: soundEnabled, volume: soundVolume, loaded: soundLoaded, perName: soundPerName, setEnabled: setSoundEnabled, setVolume: setSoundVolume, setPerName: setSoundPerName, play: playSfx } = useSoundEffects()
@@ -600,6 +601,15 @@ const ExtraSystemsSettings: React.FC = () => {
         description="Hides all Install/Uninstall/Reinstall/Update buttons. Downloads still work. Useful for sharing the app without install access."
         checked={disableSideloading}
         onChange={setDisableSideloading}
+      />
+
+      {/* Uninstall warning */}
+      <ToggleRow
+        purple
+        label="Show uninstall warning"
+        description="Confirm before uninstalling an app, since uninstalling erases its save data, progress, and settings on the headset."
+        checked={!skipUninstallWarning}
+        onChange={(v) => setSkipUninstallWarning(!v)}
       />
 
       {/* Colorblind mode */}
