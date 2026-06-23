@@ -227,6 +227,20 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
       ]
     })
   },
+  // Download did not finalize (rclone left only .partial files)
+  {
+    test: /did\s*not\s*finalize|left\s*only\s*partial|never\s*renamed/i,
+    build: () => ({
+      title: 'Download did not finalize',
+      summary:
+        'The transfer reported success but the archive parts were never renamed from their temporary .partial names, so there was nothing to extract. This is not a disk-space problem. The usual cause is antivirus locking the download folder, or a mirror/network hiccup right at the end of the transfer.',
+      suggestions: [
+        'Click Retry — the leftover partial files are kept so it can resume.',
+        'Add the VR CyberDeck downloads folder to your antivirus exclusions, then Retry.',
+        'If it keeps happening on the same mirror, switch mirrors in Settings → Mirrors.'
+      ]
+    })
+  },
   // 7zip / extraction
   {
     test: /unexpected\s*end\s*of\s*data|crc\s*mismatch|wrong\s*password|cannot\s*open\s*encoded\s*stream|7z|extract/i,
