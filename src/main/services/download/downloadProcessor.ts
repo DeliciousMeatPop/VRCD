@@ -287,8 +287,18 @@ export class DownloadProcessor {
           '.partial',
           '--transfers',
           '4',
+          // Disable multi-thread transfers. NOTE: 0 disables them; 1 does NOT
+          // (it just runs multi-thread with a single stream). For parts larger
+          // than --multi-thread-cutoff (256M) rclone's multi-thread writer
+          // pre-allocates the destination and does its own partial-file
+          // handling, whose final rename can be lost on Windows (e.g. antivirus
+          // holding the freshly-written file open), leaving orphaned .partial
+          // files behind on an otherwise "successful" (exit 0) run. The
+          // single-thread --partial-suffix path renames reliably and still
+          // resumes at the byte level. Parallelism across parts is preserved by
+          // --transfers below.
           '--multi-thread-streams',
-          '1',
+          '0',
           '--low-level-retries',
           '10',
           '--retries',
@@ -323,8 +333,18 @@ export class DownloadProcessor {
           '.partial',
           '--transfers',
           '4',
+          // Disable multi-thread transfers. NOTE: 0 disables them; 1 does NOT
+          // (it just runs multi-thread with a single stream). For parts larger
+          // than --multi-thread-cutoff (256M) rclone's multi-thread writer
+          // pre-allocates the destination and does its own partial-file
+          // handling, whose final rename can be lost on Windows (e.g. antivirus
+          // holding the freshly-written file open), leaving orphaned .partial
+          // files behind on an otherwise "successful" (exit 0) run. The
+          // single-thread --partial-suffix path renames reliably and still
+          // resumes at the byte level. Parallelism across parts is preserved by
+          // --transfers below.
           '--multi-thread-streams',
-          '1',
+          '0',
           '--low-level-retries',
           '10',
           '--retries',
