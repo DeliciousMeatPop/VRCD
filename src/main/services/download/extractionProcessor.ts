@@ -468,12 +468,26 @@ export class ExtractionProcessor {
         this.activeExtractions.delete(item.releaseName)
       }
 
+      // Surface 7-Zip's own output in the log. Without this the log only shows
+      // "exit code N" and the real cause (wrong password vs. corrupt data vs.
+      // a missing volume) is invisible, which makes failures impossible to
+      // diagnose after the fact.
+      const sevenZipOutput = (stderrContent || stdoutContent).trim()
+      if (sevenZipOutput) {
+        console.error(
+          `[ExtractProc Catch] 7-Zip output for ${item.releaseName} (tail): ${sevenZipOutput.slice(-1000)}`
+        )
+      }
+
       // 7zip exit code 1 = warning; warning messages go to stdout, errors to stderr.
       // Check both streams so the user sees a useful message regardless.
       const combinedOutput = (stderrContent + '\n' + stdoutContent).toLowerCase()
       let errorMessage = 'Extraction failed.'
       if (combinedOutput.includes('wrong password')) {
-        errorMessage = 'Wrong password'
+        // 7-Zip says "wrong password" for both a stale archive password and for
+        // corrupt/incomplete encrypted data — keep the phrase (the diagnosis UI
+        // keys off it) but make the raw message honest about the corruption case.
+        errorMessage = 'Wrong password or corrupt archive — 7-Zip could not unpack the download'
       } else if (combinedOutput.includes('data error') || combinedOutput.includes('crc failed') || combinedOutput.includes('crc error')) {
         errorMessage = 'Data/CRC error - archive may be corrupt'
       } else if (combinedOutput.includes('no space left') || combinedOutput.includes('not enough space') || combinedOutput.includes('disk full')) {

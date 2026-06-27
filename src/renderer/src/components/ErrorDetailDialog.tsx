@@ -213,9 +213,11 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
       ]
     })
   },
-  // Auth on server
+  // Auth on server. Note: the literal "wrong password" string is produced by
+  // 7-Zip during extraction, not by a server login failure, so it is handled
+  // by the dedicated extraction rule below — keep it out of this regex.
   {
-    test: /401|403|unauthori[sz]ed|forbidden|wrong\s*password/i,
+    test: /401|403|unauthori[sz]ed|forbidden/i,
     build: () => ({
       title: 'Server rejected the credentials',
       summary:
@@ -224,6 +226,24 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
         'In Settings → Server Config, click "Refresh" / re-fetch the latest config.',
         'If a refresh does not help, wait a bit and Retry — the server password may be mid-rotation.',
         'If you imported a custom config, double-check the credentials in it.'
+      ]
+    })
+  },
+  // 7-Zip "wrong password" on an encrypted archive. This is an EXTRACTION
+  // failure, not a login error: 7-Zip reports "wrong password" both when the
+  // download is corrupt/incomplete (it can't distinguish bad ciphertext from a
+  // bad key) and, rarely, when the bundled archive password is stale. Must come
+  // before the generic extraction rule so it wins for this specific case.
+  {
+    test: /wrong\s*password/i,
+    build: () => ({
+      title: 'Archive could not be unpacked',
+      summary:
+        '7-Zip rejected the downloaded archive with a "wrong password" error. Despite the wording this is almost never a login problem — on an encrypted archive 7-Zip reports this both when the download is incomplete or corrupt (by far the most common cause) and when the bundled archive password is out of date. It cannot tell the two apart, so try both fixes below.',
+      suggestions: [
+        'Click Delete Files, then Retry to re-download from scratch — a truncated or partial download is the usual cause.',
+        'Make sure the whole download finished — every .7z.001 / .002 / … part must be present and fully downloaded.',
+        'If a clean re-download still fails, open Settings → Server Config and click "Refresh" to pull the latest archive password, then Retry.'
       ]
     })
   },
