@@ -293,9 +293,9 @@ const MirrorManagement: React.FC = () => {
                 size="small"
                 icon={<RadioButtonRegular />}
                 onClick={() => clearActiveMirror()}
-                title="Switch back to public mirror"
+                title="Switch back to the public server"
               >
-                Use Public Mirror
+                Use Public Server
               </Button>
             )}
           </div>
@@ -351,7 +351,7 @@ const MirrorManagement: React.FC = () => {
                     <Text>{t('addMirrorDesc')}</Text>
                     <Textarea
                       placeholder={`Example:
-[mirror01]
+[myremote]
 type = ftp
 host = example.com
 port = 21

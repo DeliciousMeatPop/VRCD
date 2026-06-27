@@ -132,7 +132,7 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
         'Android could not parse the APK. Usually the file is corrupt - either the download was incomplete or the extracted archive is damaged.',
       suggestions: [
         'Click Delete Files, then Retry to re-download from scratch.',
-        'If it fails again, try a different mirror in Settings → Mirrors.',
+        'If a fresh download still fails to parse, the copy on the server may still be syncing — wait a bit and Retry.',
         'Check the install logs for the specific parse error code.'
       ]
     })
@@ -184,7 +184,7 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
     build: () => ({
       title: 'TLS handshake failed',
       summary:
-        'The connection to the server was blocked or intercepted before a secure channel could be established. This usually means your ISP or router is interfering with HTTPS traffic — not a problem with VR CyberDeck or the mirror.',
+        'The connection to the server was blocked or intercepted before a secure channel could be established. This usually means your ISP or router is interfering with HTTPS traffic — not a problem with VR CyberDeck or the server.',
       suggestions: [
         'Enable DNS-over-HTTPS (DoH) in Windows Settings → Network & Internet → DNS — this is the most reliable fix.',
         'Use a VPN such as ProtonVPN or Cloudflare WARP (both free).',
@@ -203,27 +203,27 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
   {
     test: /(network|connection)\s*(reset|refused|timed?\s*out)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN/i,
     build: () => ({
-      title: 'Network problem talking to the mirror',
+      title: 'Network problem talking to the server',
       summary:
-        'The download connection failed before the file finished. This is almost always a flaky mirror or a flaky internet connection - not a problem with the game.',
+        'The download connection failed before the file finished. This is almost always a flaky server or a flaky internet connection - not a problem with the game.',
       suggestions: [
         'Click Retry - rclone will resume from where it stopped.',
-        'If retries keep failing, switch mirrors in Settings → Mirrors → Test All.',
+        'If retries keep failing, check your internet connection and try again in a few minutes.',
         'Pause other heavy network usage and try again.'
       ]
     })
   },
-  // Auth on mirror
+  // Auth on server
   {
     test: /401|403|unauthori[sz]ed|forbidden|wrong\s*password/i,
     build: () => ({
-      title: 'Mirror rejected the credentials',
+      title: 'Server rejected the credentials',
       summary:
-        'The mirror returned an auth error. Either the bundled password is out of date or the active mirror needs a custom config.',
+        'The server returned an auth error. Either the bundled password is out of date or your config needs to be refreshed.',
       suggestions: [
         'In Settings → Server Config, click "Refresh" / re-fetch the latest config.',
-        'Switch mirrors via Settings → Mirrors and re-test.',
-        'If you imported a custom mirror config, double-check the credentials in it.'
+        'If a refresh does not help, wait a bit and Retry — the server password may be mid-rotation.',
+        'If you imported a custom config, double-check the credentials in it.'
       ]
     })
   },
@@ -233,11 +233,11 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
     build: () => ({
       title: 'Download did not finalize',
       summary:
-        'The transfer reported success but the archive parts were never renamed from their temporary .partial names, so there was nothing to extract. This is not a disk-space problem. The usual cause is antivirus locking the download folder, or a mirror/network hiccup right at the end of the transfer.',
+        'The transfer reported success but the archive parts were never renamed from their temporary .partial names, so there was nothing to extract. This is not a disk-space problem. The usual cause is antivirus locking the download folder, or a server/network hiccup right at the end of the transfer.',
       suggestions: [
         'Click Retry — the leftover partial files are kept so it can resume.',
         'Add the VR CyberDeck downloads folder to your antivirus exclusions, then Retry.',
-        'If it keeps happening on the same mirror, switch mirrors in Settings → Mirrors.'
+        'If it keeps happening, wait a bit and Retry — this is usually a transient server or network hiccup.'
       ]
     })
   },
@@ -247,10 +247,10 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
     build: () => ({
       title: 'Archive extraction failed',
       summary:
-        'The downloaded archive could not be unpacked. The most common cause is a partial / truncated download or a stale archive from a mirror that has not synced yet.',
+        'The downloaded archive could not be unpacked. The most common cause is a partial / truncated download or a stale archive on the server that has not finished syncing yet.',
       suggestions: [
         'Click Delete Files, then Retry to re-download from scratch.',
-        'If the same mirror keeps producing a bad archive, switch mirrors in Settings.',
+        'If a fresh download keeps producing a bad archive, the copy on the server may still be syncing — wait a bit and Retry.',
         'Make sure the host disk has 2-3x the game size free for the extraction step.'
       ]
     })

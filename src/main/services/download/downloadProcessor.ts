@@ -554,8 +554,8 @@ export class DownloadProcessor {
         // space that isn't the problem.
         const message =
           partialFileCount > 0
-            ? 'Download did not finalize: rclone exited but left only partial files (the archive parts were never renamed to their final names). This is often caused by antivirus locking the download folder, or by a mirror/network hiccup. Retry, or try a different mirror.'
-            : 'Download did not finalize: no files were produced. Retry, or try a different mirror.'
+            ? 'Download did not finalize: rclone exited but left only partial files (the archive parts were never renamed to their final names). This is often caused by antivirus locking the download folder, or by a server/network hiccup. Retry - the leftover partial files are kept so it can resume.'
+            : 'Download did not finalize: no files were produced. Retry - this is usually a transient server or network hiccup.'
         console.error(
           `[DownProc] rclone exited successfully for ${item.releaseName} but no finalized files were found ` +
             `(real=${realFileCount}, partial=${partialFileCount}). Treating as failed download.`
