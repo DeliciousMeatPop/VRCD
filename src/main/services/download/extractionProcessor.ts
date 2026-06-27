@@ -158,6 +158,87 @@ export class ExtractionProcessor {
     }
   }
 
+  /**
+   * Validate that every part of a multi-volume 7z archive is present and fully
+   * downloaded before handing off to 7-Zip. A missing, empty, or truncated
+   * volume makes 7-Zip fail with a vague "wrong password" / fatal error that is
+   * impossible to diagnose after the fact, so catch the common
+   * corrupt/incomplete-download case here with a clear, actionable message.
+   *
+   * Returns an error string when the archive is incomplete, or null when the
+   * volumes look intact (extraction should proceed). Intentionally conservative:
+   * it only flags cases we are confident are broken so it never blocks a valid
+   * extraction.
+   */
+  private async validateArchiveVolumes(
+    files: string[],
+    downloadPath: string,
+    archivePart1: string
+  ): Promise<string | null> {
+    // Shared base name, e.g. "<hash>.7z.001" -> "<hash>"
+    const prefix = archivePart1.replace(/\.7z\.\d+$/, '')
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const partRe = new RegExp(`^${escaped}\\.7z\\.(\\d+)$`)
+    const partialRe = new RegExp(`^${escaped}\\.7z\\.\\d+\\.partial$`, 'i')
+    const pad = (n: number): string => String(n).padStart(3, '0')
+
+    // A leftover .partial means rclone never finished that volume.
+    const leftoverPartial = files.find((f) => partialRe.test(f))
+    if (leftoverPartial) {
+      return `Incomplete download — ${leftoverPartial} did not finish downloading (.partial file present). Delete Files and Retry.`
+    }
+
+    // Collect the numbered volumes that are present on disk.
+    const partNums = new Map<number, string>()
+    for (const f of files) {
+      const m = f.match(partRe)
+      if (m) partNums.set(parseInt(m[1], 10), f)
+    }
+    if (partNums.size === 0) return null // .001 existed; nothing more we can assert
+
+    const maxNum = Math.max(...partNums.keys())
+
+    // Every volume from 001..max must be present (no gaps in the sequence).
+    const missing: number[] = []
+    for (let n = 1; n <= maxNum; n++) {
+      if (!partNums.has(n)) missing.push(n)
+    }
+    if (missing.length > 0) {
+      return `Incomplete download — missing archive volume(s) ${missing
+        .map((n) => `.7z.${pad(n)}`)
+        .join(', ')} of ${maxNum}. Delete Files and Retry.`
+    }
+
+    // Size sanity: in a multi-volume 7z every volume except the last is the same
+    // (full) size; the last is >0 and no larger than that. An empty volume, or a
+    // short non-final volume, means the download was truncated.
+    const sizes = new Map<number, number>()
+    for (const [n, name] of partNums) {
+      try {
+        const st = await fs.stat(join(downloadPath, name))
+        sizes.set(n, st.size)
+      } catch {
+        return `Incomplete download — archive volume ${prefix}.7z.${pad(n)} could not be read. Delete Files and Retry.`
+      }
+    }
+    for (const [n, size] of sizes) {
+      if (size === 0) {
+        return `Incomplete download — archive volume ${prefix}.7z.${pad(n)} is empty (0 bytes). Delete Files and Retry.`
+      }
+    }
+    if (maxNum >= 2) {
+      const fullSize = Math.max(...sizes.values())
+      for (let n = 1; n < maxNum; n++) {
+        const size = sizes.get(n) ?? 0
+        if (size < fullSize) {
+          return `Incomplete download — archive volume ${prefix}.7z.${pad(n)} is truncated (${size} of ${fullSize} bytes). Delete Files and Retry.`
+        }
+      }
+    }
+
+    return null
+  }
+
   // Returns true on success, false on failure
   public async startExtraction(item: DownloadItem): Promise<boolean> {
     console.log(`[ExtractProc] Starting extraction: ${item.releaseName}`)
@@ -241,6 +322,16 @@ export class ExtractionProcessor {
       return false
     }
     const archivePath = join(downloadPath, archivePart1)
+
+    // Make sure every archive volume is present and fully downloaded before
+    // invoking 7-Zip, so an incomplete download surfaces as a clear message
+    // instead of a misleading "wrong password" extraction failure.
+    const volumeError = await this.validateArchiveVolumes(files, downloadPath, archivePart1)
+    if (volumeError) {
+      console.error(`[ExtractProc] Volume validation failed for ${item.releaseName}: ${volumeError}`)
+      this.updateItemStatus(item.releaseName, 'Error', 100, volumeError)
+      return false
+    }
 
     // Update status via internal method
     this.updateItemStatus(item.releaseName, 'Extracting', 100, undefined, undefined, undefined, 0)

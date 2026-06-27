@@ -247,6 +247,21 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
       ]
     })
   },
+  // Incomplete / corrupt multi-volume download caught by the pre-extraction
+  // volume check (missing, empty, or truncated .7z parts).
+  {
+    test: /incomplete\s*download/i,
+    build: () => ({
+      title: 'Download is incomplete',
+      summary:
+        'One or more of the archive parts are missing, empty, or truncated, so the game cannot be unpacked. rclone sometimes reports success even when a part did not fully transfer. This is a download problem — not a problem with the game, the server, or your credentials.',
+      suggestions: [
+        'Click Delete Files, then Retry to re-download the missing or truncated parts from scratch.',
+        'Add the VR CyberDeck downloads folder to your antivirus exclusions — antivirus can lock or quarantine parts mid-download.',
+        'If it keeps happening, check your connection and free disk space, then Retry.'
+      ]
+    })
+  },
   // Download did not finalize (rclone left only .partial files)
   {
     test: /did\s*not\s*finalize|left\s*only\s*partial|never\s*renamed/i,
