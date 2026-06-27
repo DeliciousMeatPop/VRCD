@@ -114,8 +114,8 @@ const translations = {
     rentryCodeHint: 'Send this code to the dev — they can view it at rentry.co/code',
     logUploadHint:
       'The log is uploaded to rentry.co as plain text. Share the short code (e.g. abc12345) with support so they can open rentry.co/abc12345.',
-    mirrorsAndServer: 'Mirrors & Server Configuration',
-    openMirrorManagement: 'Open Mirror Management',
+    mirrorsAndServer: 'Server & Remotes',
+    openMirrorManagement: 'Open Server & Remote Settings',
     settingsSaved: 'Settings saved successfully',
     failedToSavePath: 'Failed to save download path',
     failedToSaveSpeed: 'Failed to save speed limits',
@@ -142,21 +142,21 @@ const translations = {
 
     // Settings (MirrorManagementLink, LogUploadSettings)
     mirrorsAndServerDesc:
-      'Server credentials (the ServerInfo.json values) and download mirrors are managed together in Mirror Management. Open it from here or from the Manage button next to the mirror selector at the top of the app.',
-    mirrorManagement: 'Mirror Management',
+      'Server credentials (the ServerInfo.json values) and custom download remotes are managed together here. Open it from here or from the Manage button next to the remote selector at the top of the app.',
+    mirrorManagement: 'Server & Remotes',
     loadingSettings: 'Loading settings...',
 
     // MirrorSelector
-    loadingMirrors: 'Loading mirrors...',
-    publicMirror: 'Public Mirror',
-    selectMirror: 'Select mirror...',
-    testMirrorConnectivity: 'Test mirror connectivity',
+    loadingMirrors: 'Loading remotes...',
+    publicMirror: 'Public Server',
+    selectMirror: 'Select remote...',
+    testMirrorConnectivity: 'Test remote connectivity',
     test: 'Test',
-    manageMirrors: 'Manage mirrors',
+    manageMirrors: 'Manage remotes',
     manage: 'Manage',
 
     // MirrorManagement
-    confirmRemoveMirror: 'Are you sure you want to remove this mirror?',
+    confirmRemoveMirror: 'Are you sure you want to remove this remote?',
     testing: 'Testing...',
     online: 'Online',
     mirrorFailed: 'Failed',
@@ -168,12 +168,12 @@ const translations = {
     setRcloneConfig: 'Set Rclone Config',
     testAll: 'Test All',
     importFromFile: 'Import from File',
-    addMirror: 'Add Mirror',
-    addNewMirror: 'Add New Mirror',
+    addMirror: 'Add Remote',
+    addNewMirror: 'Add New Remote',
     addMirrorDesc:
-      'Paste your mirror configuration file content below. The configuration should be in INI format.',
+      'Paste your rclone remote configuration below. The configuration should be in INI format.',
     noMirrorsConfigured:
-      'No rclone mirrors configured. Import from file or add one manually.',
+      'No custom remotes configured. Import from file or add one manually.',
     lastTested: 'Last tested:',
 
     // GamesView
@@ -341,8 +341,8 @@ const translations = {
     rentryCodeHint: 'Envía este código al desarrollador — puede verlo en rentry.co/código',
     logUploadHint:
       'El registro se sube a rentry.co como texto. Comparte el código corto (p.ej. abc12345) con el soporte para que puedan abrir rentry.co/abc12345.',
-    mirrorsAndServer: 'Espejos y configuración del servidor',
-    openMirrorManagement: 'Abrir gestión de espejos',
+    mirrorsAndServer: 'Servidor y remotos',
+    openMirrorManagement: 'Abrir configuración de servidor y remotos',
     settingsSaved: 'Ajustes guardados correctamente',
     failedToSavePath: 'Error al guardar la ruta de descarga',
     failedToSaveSpeed: 'Error al guardar los límites de velocidad',
@@ -369,21 +369,21 @@ const translations = {
 
     // Ajustes (MirrorManagementLink, LogUploadSettings)
     mirrorsAndServerDesc:
-      'Las credenciales del servidor (los valores de ServerInfo.json) y los espejos de descarga se gestionan en Gestión de espejos. Ábrelo desde aquí o desde el botón Gestionar junto al selector de espejos en la parte superior.',
-    mirrorManagement: 'Gestión de espejos',
+      'Las credenciales del servidor (los valores de ServerInfo.json) y los remotos de descarga personalizados se gestionan aquí. Ábrelo desde aquí o desde el botón Gestionar junto al selector de remotos en la parte superior.',
+    mirrorManagement: 'Servidor y remotos',
     loadingSettings: 'Cargando ajustes...',
 
-    // Selector de espejo
-    loadingMirrors: 'Cargando espejos...',
-    publicMirror: 'Espejo público',
-    selectMirror: 'Seleccionar espejo...',
-    testMirrorConnectivity: 'Probar conectividad del espejo',
+    // Selector de remoto
+    loadingMirrors: 'Cargando remotos...',
+    publicMirror: 'Servidor público',
+    selectMirror: 'Seleccionar remoto...',
+    testMirrorConnectivity: 'Probar conectividad del remoto',
     test: 'Probar',
-    manageMirrors: 'Gestionar espejos',
+    manageMirrors: 'Gestionar remotos',
     manage: 'Gestionar',
 
-    // Gestión de espejos
-    confirmRemoveMirror: '¿Estás seguro de que quieres eliminar este espejo?',
+    // Gestión de remotos
+    confirmRemoveMirror: '¿Estás seguro de que quieres eliminar este remoto?',
     testing: 'Probando...',
     online: 'En línea',
     mirrorFailed: 'Fallido',
@@ -395,12 +395,12 @@ const translations = {
     setRcloneConfig: 'Establecer Rclone Config',
     testAll: 'Probar todos',
     importFromFile: 'Importar desde archivo',
-    addMirror: 'Añadir espejo',
-    addNewMirror: 'Añadir nuevo espejo',
+    addMirror: 'Añadir remoto',
+    addNewMirror: 'Añadir nuevo remoto',
     addMirrorDesc:
-      'Pega el contenido de tu archivo de configuración del espejo a continuación. La configuración debe estar en formato INI.',
+      'Pega la configuración de tu remoto rclone a continuación. La configuración debe estar en formato INI.',
     noMirrorsConfigured:
-      'No hay espejos rclone configurados. Importa desde un archivo o añade uno manualmente.',
+      'No hay remotos personalizados configurados. Importa desde un archivo o añade uno manualmente.',
     lastTested: 'Última prueba:',
 
     // Vista de juegos

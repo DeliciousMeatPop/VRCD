@@ -168,7 +168,7 @@ const MirrorSelector: React.FC = () => {
               title={t('manageMirrors')}
               style={{ flex: 1, justifyContent: 'flex-start' }}
             >
-              {t('manage')} Mirrors
+              {t('manage')} Remotes
             </Button>
           </DialogTrigger>
           <DialogSurface className={styles.managementDialog}>

@@ -53,7 +53,7 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 - Bundled server defaults — no JSON, no rclone, no setup required
 - Card view + table view, persistent sort, size presets, 18+ filter
 - Table view stretches to fill the window so wide screens aren't wasted
-- Built-in mirror management with public mirror fallback
+- Built-in custom remote management with public server fallback
 - `NEW` / `UPDATED` badges driven off real `lastUpdated` timestamps 
 
 // NOTE: `NEW` = added to the library in the last 30 days. `UPDATED` = existing game updated in the last 7 days. Both badges can appear on the same title simultaneously.

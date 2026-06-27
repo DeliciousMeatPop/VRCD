@@ -184,7 +184,7 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
     build: () => ({
       title: 'TLS handshake failed',
       summary:
-        'The connection to the server was blocked or intercepted before a secure channel could be established. This usually means your ISP or router is interfering with HTTPS traffic — not a problem with VR CyberDeck or the mirror.',
+        'The connection to the server was blocked or intercepted before a secure channel could be established. This usually means your ISP or router is interfering with HTTPS traffic — not a problem with VR CyberDeck or the server.',
       suggestions: [
         'Enable DNS-over-HTTPS (DoH) in Windows Settings → Network & Internet → DNS — this is the most reliable fix.',
         'Use a VPN such as ProtonVPN or Cloudflare WARP (both free).',
@@ -203,9 +203,9 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
   {
     test: /(network|connection)\s*(reset|refused|timed?\s*out)|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN/i,
     build: () => ({
-      title: 'Network problem talking to the mirror',
+      title: 'Network problem talking to the server',
       summary:
-        'The download connection failed before the file finished. This is almost always a flaky mirror or a flaky internet connection - not a problem with the game.',
+        'The download connection failed before the file finished. This is almost always a flaky server or a flaky internet connection - not a problem with the game.',
       suggestions: [
         'Click Retry - rclone will resume from where it stopped.',
         'If retries keep failing, check your internet connection and try again in a few minutes.',
@@ -213,11 +213,11 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
       ]
     })
   },
-  // Auth on mirror
+  // Auth on server
   {
     test: /401|403|unauthori[sz]ed|forbidden|wrong\s*password/i,
     build: () => ({
-      title: 'Mirror rejected the credentials',
+      title: 'Server rejected the credentials',
       summary:
         'The server returned an auth error. Either the bundled password is out of date or your config needs to be refreshed.',
       suggestions: [
