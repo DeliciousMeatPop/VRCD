@@ -17,7 +17,12 @@ import {
   LocalUploadError,
   AppLanguage,
   ExistingDownloadAction,
-  AddToQueueResult
+  AddToQueueResult,
+  BackupEntry,
+  BackupResult,
+  BackupCreateResult,
+  BackupReportResult,
+  BackupVerification
 } from './index'
 
 // Define types for all IPC channels between renderer and main
@@ -161,6 +166,20 @@ export interface IPCChannels {
   // Manual installation channels
   'downloads:install-manual': DefineChannel<[filePath: string, deviceId: string], boolean>
   'downloads:copy-obb-folder': DefineChannel<[folderPath: string, deviceId: string], boolean>
+
+  // Save Backup (BETA) channels
+  'backup:list': DefineChannel<[], BackupEntry[]>
+  'backup:create': DefineChannel<
+    [deviceId: string, packageName: string, appLabel: string],
+    BackupCreateResult
+  >
+  'backup:restore': DefineChannel<[backupId: string, deviceId: string], BackupResult>
+  'backup:delete': DefineChannel<[backupId: string], boolean>
+  'backup:set-verification': DefineChannel<
+    [backupId: string, result: BackupVerification],
+    BackupEntry | null
+  >
+  'backup:report-failure': DefineChannel<[backupId: string], BackupReportResult | null>
 }
 
 // Types for send (no response) channels

@@ -670,8 +670,65 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     return Promise.resolve()
   }
 
-  public retryDownload(releaseName: string): Promise<void> {
+  /**
+   * Resolve the on-disk folder for a release. After a successful
+   * download+extract the item's downloadPath already points at
+   * <downloadsPath>/<releaseName>; before that it may still be the parent
+   * downloads folder, so fall back to joining the release name.
+   */
+  private resolveReleaseFolder(item: DownloadItem): string {
+    if (item.downloadPath && item.downloadPath.endsWith(item.releaseName)) {
+      return item.downloadPath
+    }
+    return join(this.downloadsPath, item.releaseName)
+  }
+
+  public async retryDownload(releaseName: string): Promise<void> {
     const item = this.queueManager.findItem(releaseName)
+
+    // Signature-mismatch (and other post-install) failures leave a fully
+    // downloaded AND extracted payload sitting on disk — the archive parts are
+    // already gone and the APK/OBB are ready to install. Re-running the whole
+    // pipeline here would pointlessly re-download and re-extract everything
+    // (the exact "it downloads again instead of seeing the files are already
+    // there" complaint). Detect that case and jump straight to re-installing.
+    if (item && item.status === 'InstallError') {
+      const folderPath = this.resolveReleaseFolder(item)
+      if (existsSync(folderPath) && (await this.folderContainsApk(folderPath))) {
+        console.log(
+          `[Service] Retry for ${releaseName}: extracted payload already on disk — skipping re-download, re-installing.`
+        )
+        this.queueManager.updateItem(releaseName, {
+          status: 'Completed',
+          progress: 100,
+          extractProgress: 100,
+          downloadPath: folderPath,
+          error: undefined,
+          pid: undefined,
+          speed: undefined,
+          eta: undefined
+        })
+        this.emitUpdate()
+
+        const deviceId = this.getTargetDeviceForInstallation()
+        if (deviceId && !this.sideloadingDisabled) {
+          try {
+            await this.installFromCompleted(releaseName, deviceId)
+          } catch (err) {
+            console.error(`[Service] Retry re-install failed for ${releaseName}:`, err)
+          }
+        } else {
+          console.log(
+            `[Service] Retry for ${releaseName}: left as Completed (no connected device or sideloading disabled).`
+          )
+        }
+        return
+      }
+      console.log(
+        `[Service] Retry for ${releaseName}: no extracted payload on disk — falling back to full re-download.`
+      )
+    }
+
     if (
       item &&
       (item.status === 'Cancelled' || item.status === 'Error' || item.status === 'InstallError')

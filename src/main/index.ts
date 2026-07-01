@@ -18,6 +18,7 @@ import updateService from './services/updateService'
 import logsService from './services/logsService'
 import mirrorService from './services/mirrorService'
 import wifiBookmarksService from './services/wifiBookmarksService'
+import { registerBackupIpc } from './services/backup/backupIpc'
 import { typedIpcMain } from '@shared/ipc-utils'
 import settingsService from './services/settingsService'
 import { typedWebContentsSend } from '@shared/ipc-utils'
@@ -368,6 +369,9 @@ app.whenReady().then(async () => {
   })
 
   // --------- IPC Handlers --------- //
+
+  // --- Save Backup (BETA) module — self-contained, remove this line to drop it ---
+  registerBackupIpc()
 
   // --- App Info Handlers ---
   typedIpcMain.handle('app:get-version', () => app.getVersion())

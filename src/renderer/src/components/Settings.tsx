@@ -40,6 +40,8 @@ import { useLogs } from '../hooks/useLogs'
 import { useLanguage } from '../hooks/useLanguage'
 import { useAdb } from '../hooks/useAdb'
 import { useExtrasSettings, FONT_FAMILY_OPTIONS, FontFamilyChoice } from '../hooks/useExtrasSettings'
+import BackupBetaWarningDialog from './backup/BackupBetaWarningDialog'
+import BackupPanel from './backup/BackupPanel'
 import { useSoundEffects, SOUND_NAMES } from '../hooks/useSoundEffects'
 
 // Supported speed units with conversion factors to KB/s
@@ -519,8 +521,11 @@ const ExtraSystemsSettings: React.FC = () => {
     colorblindMode, setColorblindMode,
     accentColor, setAccentColor,
     fontFamily, setFontFamily,
-    skipUninstallWarning, setSkipUninstallWarning
+    skipUninstallWarning, setSkipUninstallWarning,
+    backupBetaAgreed, setBackupBetaAgreed
   } = useExtrasSettings()
+
+  const [backupBetaWarnOpen, setBackupBetaWarnOpen] = useState(false)
 
   const { enabled: soundEnabled, volume: soundVolume, loaded: soundLoaded, perName: soundPerName, setEnabled: setSoundEnabled, setVolume: setSoundVolume, setPerName: setSoundPerName, play: playSfx } = useSoundEffects()
   const anySoundLoaded = SOUND_NAMES.some((n) => soundLoaded[n])
@@ -610,6 +615,23 @@ const ExtraSystemsSettings: React.FC = () => {
         description="Confirm before uninstalling an app, since uninstalling erases its save data, progress, and settings on the headset."
         checked={!skipUninstallWarning}
         onChange={(v) => setSkipUninstallWarning(!v)}
+      />
+
+      {/* Save Backups (BETA) consent */}
+      <ToggleRow
+        purple
+        label="Enable Save Backups (BETA)"
+        description="Experimental save backup & restore. It IS possible you could lose your save — you must accept that risk to enable it. While off, all backup controls stay greyed out."
+        checked={backupBetaAgreed}
+        onChange={(v) => (v ? setBackupBetaWarnOpen(true) : setBackupBetaAgreed(false))}
+      />
+      <BackupBetaWarningDialog
+        open={backupBetaWarnOpen}
+        onAgree={() => {
+          setBackupBetaAgreed(true)
+          setBackupBetaWarnOpen(false)
+        }}
+        onCancel={() => setBackupBetaWarnOpen(false)}
       />
 
       {/* Colorblind mode */}
@@ -1073,6 +1095,7 @@ const Settings: React.FC = () => {
     intro: true,
     username: false,
     logs: false,
+    backups: false,
     download: false,
     blacklist: false,
     content: false,
@@ -1415,6 +1438,11 @@ const Settings: React.FC = () => {
         <div>
           <SectionHeader label="// EXTRA SYSTEMS" sectionKey="intro" openSections={openSections} onToggle={toggleSection} />
           {openSections.intro && <ExtraSystemsSettings />}
+        </div>
+
+        <div>
+          <SectionHeader label="// SAVE BACKUPS [BETA]" sectionKey="backups" openSections={openSections} onToggle={toggleSection} />
+          {openSections.backups && <BackupPanel />}
         </div>
 
         <div>

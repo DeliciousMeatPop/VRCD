@@ -29,6 +29,7 @@ import { useAdb } from '@renderer/hooks/useAdb'
 import { getSideloadingDisabled } from '@renderer/hooks/useExtrasSettings'
 import ErrorDetailDialog, { ErrorPhase } from './ErrorDetailDialog'
 import NoteRenderer from './NoteRenderer'
+import GameSaveBackupControls from './backup/GameSaveBackupControls'
 
 const NEON = 'var(--vrcd-neon)'
 const PURPLE = 'var(--vrcd-purple)'
@@ -402,6 +403,15 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               </div>
               <ProgressBar value={dlProgress} max={100} shape="rounded" thickness="medium" />
             </div>
+          )}
+
+          {/* ── Save Backup (BETA) controls ── */}
+          {game.packageName && (
+            <GameSaveBackupControls
+              packageName={game.packageName}
+              appLabel={game.name}
+              isInstalled={!!game.isInstalled}
+            />
           )}
 
           {/* ── Collapsible Trailer ── */}
