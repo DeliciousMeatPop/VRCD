@@ -445,6 +445,60 @@ export interface SettingsAPIRenderer
     }
   > {}
 
+// ─── Save Backup (BETA) ───────────────────────────────────────────────────────
+// Experimental save/restore module. See main/services/backup for details.
+
+/** User's assessment of whether a restore actually worked. */
+export type BackupVerification = 'pending' | 'worked' | 'failed' | 'unsure'
+
+export interface BackupEntry {
+  id: string
+  packageName: string
+  appLabel: string
+  deviceModel: string | null
+  createdAt: number
+  fileCount: number
+  totalBytes: number
+  /** Device-side path the save data was pulled from. */
+  sourcePath: string
+  verification: BackupVerification
+  verifiedAt?: number
+  /** rentry URL of a filed failure report, if any. */
+  reportUrl?: string
+}
+
+export interface BackupResult {
+  ok: boolean
+  error?: string
+}
+
+export interface BackupCreateResult extends BackupResult {
+  backup?: BackupEntry
+}
+
+export interface BackupReportResult {
+  issueUrl: string
+  rentryUrl: string | null
+}
+
+export interface BackupAPI {
+  listBackups: () => Promise<BackupEntry[]>
+  createBackup: (
+    deviceId: string,
+    packageName: string,
+    appLabel: string
+  ) => Promise<BackupCreateResult>
+  restoreBackup: (backupId: string, deviceId: string) => Promise<BackupResult>
+  deleteBackup: (backupId: string) => Promise<boolean>
+  setVerification: (
+    backupId: string,
+    result: BackupVerification
+  ) => Promise<BackupEntry | null>
+  reportFailure: (backupId: string) => Promise<BackupReportResult | null>
+}
+
+export interface BackupAPIRenderer extends BackupAPI {}
+
 // Logs API
 export interface LogsAPI {
   uploadCurrentLog: () => Promise<{ url: string; password: string; slug: string } | null>

@@ -883,6 +883,91 @@ class AdbService extends EventEmitter implements AdbAPI {
     }
   }
 
+  /**
+   * Returns true if the given remote path exists on the device (file or dir).
+   * Used by the save-backup module to check for a package's save directory
+   * before attempting a backup or restore.
+   */
+  async remotePathExists(serial: string, remotePath: string): Promise<boolean> {
+    const escaped = remotePath.replace(/"/g, '\\"')
+    const out = await this.runShellCommand(
+      serial,
+      `[ -e "${escaped}" ] && echo __VRCD_EXISTS__ || echo __VRCD_MISSING__`
+    )
+    return (out ?? '').includes('__VRCD_EXISTS__')
+  }
+
+  /**
+   * Recursively pull a remote directory to a local directory, preserving the
+   * relative tree. Returns the number of files copied and the total bytes on
+   * disk afterwards. Powers the save-backup module's snapshot of
+   * /sdcard/Android/data/<pkg>. Throws if the ADB client is unavailable; an
+   * empty/missing remote directory resolves to { fileCount: 0, totalBytes: 0 }.
+   */
+  async pullDirectory(
+    serial: string,
+    remoteDir: string,
+    localDir: string
+  ): Promise<{ fileCount: number; totalBytes: number }> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+
+    // Strip trailing slashes so relative-path math below is stable.
+    const normRemote = remoteDir.replace(/\/+$/, '')
+    const escaped = normRemote.replace(/"/g, '\\"')
+
+    // Enumerate every regular file under the tree. stderr is discarded so
+    // "Permission denied" noise on inaccessible subpaths doesn't pollute the
+    // file list.
+    const listing = await this.runShellCommand(serial, `find "${escaped}" -type f 2>/dev/null`)
+    const remoteFiles = (listing ?? '')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && (l === normRemote || l.startsWith(normRemote + '/')))
+
+    if (remoteFiles.length === 0) {
+      console.log(`[ADB Service] pullDirectory: no files found under ${normRemote} on ${serial}`)
+      return { fileCount: 0, totalBytes: 0 }
+    }
+
+    const deviceClient = this.client.getDevice(serial)
+    let fileCount = 0
+    let totalBytes = 0
+
+    for (const remoteFile of remoteFiles) {
+      // Path relative to the tree root, mapped into localDir.
+      const rel = remoteFile.slice(normRemote.length).replace(/^\/+/, '')
+      const localFile = path.join(localDir, ...rel.split('/'))
+      await fs.promises.mkdir(path.dirname(localFile), { recursive: true })
+
+      try {
+        const transfer = await deviceClient.pull(remoteFile)
+        await new Promise<void>((resolve, reject) => {
+          const ws = fs.createWriteStream(localFile)
+          transfer.on('error', reject)
+          ws.on('error', reject)
+          ws.on('finish', () => resolve())
+          transfer.pipe(ws)
+        })
+        try {
+          totalBytes += (await fs.promises.stat(localFile)).size
+        } catch {
+          /* stat failure is non-fatal for the byte tally */
+        }
+        fileCount++
+      } catch (err) {
+        console.error(`[ADB Service] pullDirectory: failed to pull ${remoteFile}:`, err)
+        throw err
+      }
+    }
+
+    console.log(
+      `[ADB Service] pullDirectory: pulled ${fileCount} file(s), ${totalBytes} bytes from ${normRemote}`
+    )
+    return { fileCount, totalBytes }
+  }
+
   async uninstallPackage(serial: string, packageName: string): Promise<boolean> {
     if (!this.client) {
       throw new Error('[ADB Service] adb service not initialized!')

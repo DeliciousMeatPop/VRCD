@@ -14,6 +14,7 @@ export const COLORBLIND_MODE_KEY = 'vrcyberdeck:colorblindMode'
 export const ACCENT_COLOR_KEY = 'vrcyberdeck:accentColor'
 export const FONT_FAMILY_KEY = 'vrcyberdeck:fontFamily'
 export const SKIP_UNINSTALL_WARNING_KEY = 'vrcyberdeck:skipUninstallWarning'
+export const BACKUP_BETA_AGREED_KEY = 'vrcyberdeck:backupBetaAgreed'
 
 export type DeleteOnRemove = 'ask' | 'delete' | 'keep'
 
@@ -102,6 +103,15 @@ export function getColorblindMode(): boolean {
   return readBool(COLORBLIND_MODE_KEY, false)
 }
 
+/**
+ * Whether the user has accepted the experimental save-backup BETA terms.
+ * Defaults to false — the backup feature stays greyed out until the user
+ * opts in from Settings → Extra Options.
+ */
+export function getBackupBetaAgreed(): boolean {
+  return readBool(BACKUP_BETA_AGREED_KEY, false)
+}
+
 export function getAccentColor(): string | null {
   try {
     return localStorage.getItem(ACCENT_COLOR_KEY)
@@ -188,6 +198,7 @@ export interface ExtrasSettings {
   accentColor: string | null
   fontFamily: FontFamilyChoice
   skipUninstallWarning: boolean
+  backupBetaAgreed: boolean
   setShowIntro: (v: boolean) => void
   setShowBreach: (v: boolean) => void
   setShowMatrixShell: (v: boolean) => void
@@ -200,6 +211,7 @@ export interface ExtrasSettings {
   setAccentColor: (v: string | null) => void
   setFontFamily: (v: FontFamilyChoice) => void
   setSkipUninstallWarning: (v: boolean) => void
+  setBackupBetaAgreed: (v: boolean) => void
 }
 
 export function useExtrasSettings(): ExtrasSettings {
@@ -215,6 +227,7 @@ export function useExtrasSettings(): ExtrasSettings {
   const [accentColor, setAccentColorState] = useState<string | null>(() => getAccentColor())
   const [fontFamily, setFontFamilyState] = useState<FontFamilyChoice>(() => getFontFamilyChoice())
   const [skipUninstallWarning, setSkipUninstallWarningState] = useState<boolean>(() => getSkipUninstallWarning())
+  const [backupBetaAgreed, setBackupBetaAgreedState] = useState<boolean>(() => getBackupBetaAgreed())
 
   const persistBool = (key: string, value: boolean): void => {
     try { localStorage.setItem(key, String(value)) } catch { /* ignore */ }
@@ -273,6 +286,10 @@ export function useExtrasSettings(): ExtrasSettings {
     setSkipUninstallWarningState(v)
     persistBool(SKIP_UNINSTALL_WARNING_KEY, v)
   }, [])
+  const setBackupBetaAgreed = useCallback((v: boolean) => {
+    setBackupBetaAgreedState(v)
+    persistBool(BACKUP_BETA_AGREED_KEY, v)
+  }, [])
 
   // Live-apply font scale whenever it changes
   useEffect(() => {
@@ -302,8 +319,8 @@ export function useExtrasSettings(): ExtrasSettings {
   }, [colorblindMode, accentColor])
 
   return {
-    showIntro, showBreach, showMatrixShell, disableAllExtras, disableAutoUpdate, fontScale, deleteOnRemove, disableSideloading, colorblindMode, accentColor, fontFamily, skipUninstallWarning,
-    setShowIntro, setShowBreach, setShowMatrixShell, setDisableAllExtras, setDisableAutoUpdate, setFontScale, setDeleteOnRemove, setDisableSideloading, setColorblindMode, setAccentColor, setFontFamily, setSkipUninstallWarning
+    showIntro, showBreach, showMatrixShell, disableAllExtras, disableAutoUpdate, fontScale, deleteOnRemove, disableSideloading, colorblindMode, accentColor, fontFamily, skipUninstallWarning, backupBetaAgreed,
+    setShowIntro, setShowBreach, setShowMatrixShell, setDisableAllExtras, setDisableAutoUpdate, setFontScale, setDeleteOnRemove, setDisableSideloading, setColorblindMode, setAccentColor, setFontFamily, setSkipUninstallWarning, setBackupBetaAgreed
   }
 }
 

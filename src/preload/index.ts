@@ -24,7 +24,8 @@ import {
   ServerConfigInfo,
   WiFiBookmark,
   LocalUploadError,
-  AppLanguage
+  AppLanguage,
+  BackupAPIRenderer
 } from '@shared/types'
 import { typedIpcRenderer } from '@shared/ipc-utils'
 
@@ -288,6 +289,18 @@ const api = {
     openLogFolder: (): Promise<void> => typedIpcRenderer.invoke('logs:open-log-folder'),
     openLogFile: (): Promise<void> => typedIpcRenderer.invoke('logs:open-log-file')
   } satisfies LogsAPIRenderer,
+  // Save Backup (BETA) APIs
+  backup: {
+    listBackups: () => typedIpcRenderer.invoke('backup:list'),
+    createBackup: (deviceId, packageName, appLabel) =>
+      typedIpcRenderer.invoke('backup:create', deviceId, packageName, appLabel),
+    restoreBackup: (backupId, deviceId) =>
+      typedIpcRenderer.invoke('backup:restore', backupId, deviceId),
+    deleteBackup: (backupId) => typedIpcRenderer.invoke('backup:delete', backupId),
+    setVerification: (backupId, result) =>
+      typedIpcRenderer.invoke('backup:set-verification', backupId, result),
+    reportFailure: (backupId) => typedIpcRenderer.invoke('backup:report-failure', backupId)
+  } satisfies BackupAPIRenderer,
   // Mirror APIs
   mirrors: {
     getMirrors: () => typedIpcRenderer.invoke('mirrors:get-mirrors'),

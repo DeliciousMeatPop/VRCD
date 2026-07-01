@@ -95,6 +95,59 @@ function sanitizeSlug(raw: string): string {
     .slice(0, 50)
 }
 
+/**
+ * Upload an arbitrary block of text to rentry.co anonymously and return its
+ * public URL (or null on failure). Unlike uploadCurrentLog this always creates
+ * a fresh random-slug paste and does not touch the persistent rentry config —
+ * it's used for one-off, self-contained reports (e.g. a failed save-backup
+ * diagnostic) that should not overwrite the user's main log paste.
+ */
+export async function uploadTextToRentry(text: string): Promise<string | null> {
+  try {
+    const trimmed =
+      Buffer.byteLength(text, 'utf-8') > MAX_LOG_BYTES
+        ? `[...truncated — showing last ~60 KB...]\n\n${text.slice(-MAX_LOG_BYTES)}`
+        : text
+
+    const initResponse = await fetch('https://rentry.co/', {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    })
+    const setCookieHeader = initResponse.headers.get('set-cookie')
+    const csrfMatch = setCookieHeader?.match(/csrftoken=([^;,\s]+)/)
+    if (!csrfMatch) throw new Error('Could not retrieve CSRF token from rentry.co')
+    const csrfToken = csrfMatch[1]
+
+    const formData = new URLSearchParams()
+    formData.append('csrfmiddlewaretoken', csrfToken)
+    formData.append('text', trimmed)
+
+    const postResponse = await fetch('https://rentry.co/api/new', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: `csrftoken=${csrfToken}`,
+        Referer: 'https://rentry.co/'
+      },
+      body: formData.toString()
+    })
+    if (!postResponse.ok) {
+      throw new Error(`Rentry API HTTP error: ${postResponse.status} ${postResponse.statusText}`)
+    }
+    const result = (await postResponse.json()) as { status: string; url: string }
+    if (result.status !== '200') {
+      throw new Error(`Rentry API returned status ${result.status}`)
+    }
+    console.log('[LogsService] Text uploaded to rentry:', result.url)
+    return result.url
+  } catch (error) {
+    console.error('[LogsService] Failed to upload text to rentry.co:', error)
+    return null
+  }
+}
+
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 class LogsService implements LogsAPI {
