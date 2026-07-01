@@ -974,6 +974,32 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     rowVirtualizer.measure()
   }, [prefs.rowDensity])
 
+  // Reset the table scroll to the top whenever the user changes the filter tab
+  // or the search term. The virtualized table derives its visible rows from the
+  // scroll container's scrollTop; switching to a much smaller result set (e.g.
+  // the Installed tab, or a search that matches only a few games) while scrolled
+  // down would otherwise leave the container scrolled past the new end of the
+  // list, rendering a blank table until a manual refresh remounts it.
+  useEffect(() => {
+    const el = tableContainerRef.current
+    if (el) el.scrollTop = 0
+  }, [activeFilter, globalFilter, prefs.viewMode])
+
+  // Safety net for the "search stops working while the app is busy" case: when a
+  // background library refresh (e.g. an install finishing and repopulating the
+  // installed flags) shrinks the current result set, our saved scroll position
+  // can end up past the end of the now-shorter list, again rendering blank. Pull
+  // it back into range without yanking the user to the top on every refresh.
+  useEffect(() => {
+    const el = tableContainerRef.current
+    if (!el || el.scrollTop === 0) return
+    const maxScroll = rowVirtualizer.getTotalSize() - el.clientHeight
+    if (el.scrollTop > maxScroll) {
+      el.scrollTop = Math.max(0, maxScroll)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows.length])
+
   const formatDate = (date: Date | null): string => {
     if (!date) return t('never')
     return new Intl.DateTimeFormat('en-US', {
