@@ -3,6 +3,7 @@ import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import os from 'os'
 import { LogsAPI } from '@shared/types'
+import { redactApiKey } from './apiKey'
 
 // Rentry caps POST body size. Log files with lots of brackets, colons, slashes
 // encode to 2-3x their raw size as application/x-www-form-urlencoded.
@@ -104,10 +105,11 @@ function sanitizeSlug(raw: string): string {
  */
 export async function uploadTextToRentry(text: string): Promise<string | null> {
   try {
-    const trimmed =
+    const trimmed = redactApiKey(
       Buffer.byteLength(text, 'utf-8') > MAX_LOG_BYTES
         ? `[...truncated — showing last ~60 KB...]\n\n${text.slice(-MAX_LOG_BYTES)}`
         : text
+    )
 
     const initResponse = await fetch('https://rentry.co/', {
       headers: {
@@ -187,11 +189,14 @@ class LogsService implements LogsAPI {
       console.log('[LogsService] Reading log file...')
       const raw = readFileSync(logFilePath, 'utf-8')
 
-      // Truncate to last MAX_LOG_BYTES if the file is too large
-      const trimmed =
+      // Truncate to last MAX_LOG_BYTES if the file is too large, and strip
+      // the API key in case it was ever accidentally logged unredacted —
+      // this file gets published to a public rentry.co paste below.
+      const trimmed = redactApiKey(
         Buffer.byteLength(raw, 'utf-8') > MAX_LOG_BYTES
           ? `[...truncated — showing last ~60 KB...]\n\n${raw.slice(-MAX_LOG_BYTES)}`
           : raw
+      )
 
       // Annotate real error lines with rentry red colour markup
       const content = annotateErrors(trimmed)

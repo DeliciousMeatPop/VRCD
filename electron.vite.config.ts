@@ -1,6 +1,7 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import { encodeApiKey } from './src/shared/keyObfuscation'
 
 export default defineConfig(({ command }) => {
   const apiKey = process.env.VRSRC_API_KEY ?? ''
@@ -21,7 +22,9 @@ export default defineConfig(({ command }) => {
     main: {
       plugins: [externalizeDepsPlugin()],
       define: {
-        'process.env.VRSRC_API_KEY': JSON.stringify(apiKey)
+        // Embedded obfuscated (see src/shared/keyObfuscation.ts) rather than as
+        // a raw string so the packaged app doesn't contain the plaintext key.
+        'process.env.VRSRC_API_KEY_ENC': JSON.stringify(encodeApiKey(apiKey))
       },
       resolve: {
         alias: {

@@ -7,15 +7,11 @@ import axios from 'axios'
 import dependencyService from './dependencyService'
 import mirrorService from './mirrorService'
 import settingsService from './settingsService'
+import { getApiKey, redactApiKey as redactKey } from './apiKey'
 import { GameInfo, ServiceStatus, GamesAPI, BlacklistEntry } from '@shared/types'
 import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
-
-function redactKey(s: string): string {
-  const k = process.env.VRSRC_API_KEY
-  return k ? s.split(k).join('[REDACTED]') : s
-}
 
 interface VrpConfig {
   baseUri: string
@@ -401,7 +397,7 @@ class GameService extends EventEmitter implements GamesAPI {
             ]
 
             // Pass the API key via env var so it never appears in args or errors
-            const mirrorApiKey = process.env.VRSRC_API_KEY
+            const mirrorApiKey = getApiKey()
 
             // Execute rclone using execa with progress reporting
             const rcloneProcess = execa(rclonePath, rcloneArgs, {
@@ -494,7 +490,7 @@ class GameService extends EventEmitter implements GamesAPI {
         '--progress'
       ]
 
-      const publicApiKey = process.env.VRSRC_API_KEY
+      const publicApiKey = getApiKey()
       console.log('[GameService] public endpoint: api key present:', !!publicApiKey)
 
       const rcloneProcess = execa(rclonePath, publicArgs, {
