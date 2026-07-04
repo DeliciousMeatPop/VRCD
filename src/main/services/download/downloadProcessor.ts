@@ -3,11 +3,7 @@ import { promises as fs, promises as fsPromises } from 'fs'
 import { execa, ExecaError } from 'execa'
 import crypto from 'crypto'
 import { QueueManager } from './queueManager'
-
-function redactKey(s: string): string {
-  const k = process.env.VRSRC_API_KEY
-  return k ? s.split(k).join('[REDACTED]') : s
-}
+import { getApiKey, redactApiKey as redactKey } from '../apiKey'
 import dependencyService from '../dependencyService'
 import mirrorService from '../mirrorService'
 import settingsService from '../settingsService'
@@ -363,7 +359,7 @@ export class DownloadProcessor {
 
       // Pass the API key via env var (RCLONE_HEADER) rather than --header so
       // it never appears in process listings, logs, or ExecaError messages.
-      const apiKey = process.env.VRSRC_API_KEY
+      const apiKey = getApiKey()
       const rcloneProcess = execa(rclonePath, copyArgs, {
         all: true,
         buffer: false,
