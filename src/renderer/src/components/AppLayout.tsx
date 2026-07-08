@@ -455,53 +455,60 @@ const MainContent: React.FC<MainContentProps> = ({
           {isMac && (
             <>
               <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
-                Most likely cause on macOS (Apple Silicon):
+                Reliable workaround on macOS:
+              </Text>
+              <Text style={{ marginTop: tokens.spacingVerticalXS }}>
+                If setup keeps failing while unpacking rclone/adb, install the two helper
+                binaries yourself. The app uses them directly once they&apos;re in its{' '}
+                <span style={{ fontFamily: 'monospace' }}>bin</span> folder and skips the
+                download/unpack step entirely. Open <strong>Terminal</strong> and run:
+              </Text>
+              <pre
+                style={{
+                  textAlign: 'left',
+                  background: tokens.colorNeutralBackground3,
+                  padding: tokens.spacingVerticalS,
+                  borderRadius: tokens.borderRadiusMedium,
+                  fontSize: '11px',
+                  overflowX: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  marginTop: tokens.spacingVerticalS
+                }}
+              >
+                {[
+                  'BIN="$HOME/Library/Application Support/vr-cyberdeck/bin"',
+                  'mkdir -p "$BIN" && cd "$(mktemp -d)"',
+                  '',
+                  '# rclone (pinned to v1.72.1)',
+                  'curl -L -o rclone.zip https://github.com/rclone/rclone/releases/download/v1.72.1/rclone-v1.72.1-osx-arm64.zip',
+                  'unzip -o rclone.zip && cp rclone-v1.72.1-osx-arm64/rclone "$BIN/rclone" && chmod +x "$BIN/rclone"',
+                  '',
+                  '# adb (Android platform-tools)',
+                  'curl -L -o pt.zip https://dl.google.com/android/repository/platform-tools-latest-darwin.zip',
+                  'unzip -o pt.zip && cp platform-tools/adb "$BIN/adb" && chmod +x "$BIN/adb"'
+                ].join('\n')}
+              </pre>
+              <Text style={{ marginTop: tokens.spacingVerticalXS }}>
+                Then quit and reopen the app. (If you have Homebrew, `brew install rclone
+                android-platform-tools` and copying those binaries into the same folder works
+                too — but rclone must be v1.72.1.)
+              </Text>
+              <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
+                If that isn&apos;t it, also worth checking:
               </Text>
               <ul style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
                 <li style={{ marginBottom: tokens.spacingVerticalXS }}>
                   <Text>
-                    <strong>Gatekeeper quarantined the app.</strong> Because the app is only
-                    ad-hoc signed, macOS blocks the bundled and downloaded helper binaries
-                    (7-Zip, rclone, adb) from running, which makes dependency setup fail. This
-                    is the usual cause when setup fails right after installing.
+                    <strong>Gatekeeper quarantine.</strong> If you ran the app straight from
+                    the mounted .dmg, move it to <strong>Applications</strong> first, then run{' '}
+                    <span style={{ fontFamily: 'monospace' }}>
+                      xattr -cr &quot;/Applications/VR CyberDeck.app&quot;
+                    </span>{' '}
+                    and reopen.
                   </Text>
                 </li>
               </ul>
-              <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
-                How to fix it:
-              </Text>
-              <ol style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
-                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
-                  <Text>
-                    Move <strong>VR CyberDeck.app</strong> to your <strong>Applications</strong>{' '}
-                    folder (don&apos;t run it from the mounted .dmg).
-                  </Text>
-                </li>
-                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
-                  <Text>
-                    Open <strong>Terminal</strong> and remove the quarantine flag, then clear the
-                    partially-downloaded binaries so they re-download cleanly:
-                  </Text>
-                  <pre
-                    style={{
-                      textAlign: 'left',
-                      background: tokens.colorNeutralBackground3,
-                      padding: tokens.spacingVerticalS,
-                      borderRadius: tokens.borderRadiusMedium,
-                      fontSize: '11px',
-                      overflowX: 'auto',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all'
-                    }}
-                  >
-                    {'xattr -cr "/Applications/VR CyberDeck.app"\n' +
-                      'rm -rf ~/Library/Application\\ Support/vr-cyberdeck/bin'}
-                  </pre>
-                </li>
-                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
-                  <Text>Quit and reopen the app.</Text>
-                </li>
-              </ol>
               <Text style={{ marginTop: tokens.spacingVerticalS, fontSize: '12px' }}>
                 Your log file is at{' '}
                 <span style={{ fontFamily: 'monospace' }}>
