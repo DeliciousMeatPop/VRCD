@@ -245,6 +245,60 @@ class DependencyService {
     }
   }
 
+  /**
+   * Extract an archive with the bundled 7-Zip.
+   *
+   * node-7z (v3) treats *any* byte written to 7-Zip's stderr as a fatal error
+   * and rejects with a generic `Error('unknown error')` — even benign warnings
+   * emitted after the files have already been extracted. On macOS (Apple
+   * Silicon in particular) the bundled `7zz` writes such non-fatal output near
+   * the end of extraction, which made rclone/adb setup fail despite the archive
+   * being fully unpacked.
+   *
+   * So we don't treat 7-Zip's stderr as the pass/fail signal here. We always
+   * wait for the process to finish, capture any error (including the real
+   * `stderr` text, which node-7z hides), and let the caller decide success by
+   * checking whether the expected files actually landed on disk. The captured
+   * error is returned for logging / to enrich a "not found" failure message.
+   */
+  private extractWithSevenZip(
+    archivePath: string,
+    destDir: string,
+    progressName: string,
+    progressCallback?: ProgressCallback
+  ): Promise<Error | null> {
+    const sevenZipPath = this.get7zPath()
+    console.log(`Using bundled 7zip at ${sevenZipPath} for extraction.`)
+    return new Promise<Error | null>((resolve) => {
+      let captured: Error | null = null
+      const myStream = SevenZip.extractFull(archivePath, destDir, {
+        $bin: sevenZipPath,
+        $progress: true
+      })
+
+      myStream.on('progress', (progress) => {
+        progressCallback?.(this.status, { name: progressName, percentage: progress.percent })
+      })
+
+      myStream.on('end', () => {
+        console.log(`Archive extracted to ${destDir}`)
+        resolve(captured)
+      })
+
+      myStream.on('error', (error: Error & { stderr?: string }) => {
+        // Log the real 7-Zip stderr node-7z tucks away, not just "unknown error".
+        console.warn(
+          `7zip reported an error during extraction (may be a benign warning): ${error.message}` +
+            (error.stderr ? ` | stderr: ${error.stderr.trim()}` : '')
+        )
+        captured = error
+        // Resolve rather than reject — success is decided by the caller's file
+        // existence check, not by whether 7-Zip wrote to stderr.
+        resolve(captured)
+      })
+    })
+  }
+
   // --- rclone ---
 
   public getRclonePath(): string {
@@ -344,29 +398,12 @@ class DependencyService {
         throw new Error('Bundled 7zip is not available or ready, cannot extract rclone archive.')
       }
 
-      const sevenZipPath = this.get7zPath()
-      console.log(`Using bundled 7zip at ${sevenZipPath} for extraction.`)
-      await new Promise<void>((resolve, reject) => {
-        const myStream = SevenZip.extractFull(tempArchivePath!, tempExtractDir!, {
-          $bin: sevenZipPath,
-          $progress: true
-        })
-
-        myStream.on('progress', (progress) => {
-          progressCallback?.(this.status, { name: 'rclone-extract', percentage: progress.percent })
-        })
-
-        myStream.on('end', () => {
-          console.log(`Archive extracted to ${tempExtractDir}`)
-          resolve()
-        })
-
-        myStream.on('error', (error) => {
-          console.error('7zip extraction error:', error)
-          reject(error)
-        })
-      })
-      // await extract(tempArchivePath, { dir: tempExtractDir }) // Old extract-zip method
+      const extractionError = await this.extractWithSevenZip(
+        tempArchivePath!,
+        tempExtractDir!,
+        'rclone-extract',
+        progressCallback
+      )
 
       // Find the binary within the extracted files (usually in a subdirectory)
       const binaryName = process.platform === 'win32' ? 'rclone.exe' : 'rclone'
@@ -390,8 +427,12 @@ class DependencyService {
       }
 
       if (!foundBinaryPath) {
+        // Extraction genuinely failed — surface the real 7-Zip stderr if we have it.
+        const detail = extractionError
+          ? ` 7zip error: ${(extractionError as Error & { stderr?: string }).stderr?.trim() || extractionError.message}`
+          : ''
         console.error(`Could not find ${binaryName} within extracted files in ${tempExtractDir}`)
-        throw new Error(`Could not locate ${binaryName} after extraction.`)
+        throw new Error(`Could not locate ${binaryName} after extraction.${detail}`)
       }
 
       console.log(`Found rclone binary at ${foundBinaryPath}. Copying to ${expectedPath}...`)
@@ -626,29 +667,12 @@ class DependencyService {
         throw new Error('Bundled 7zip is not available or ready, cannot extract adb archive.')
       }
 
-      const sevenZipPath = this.get7zPath()
-      console.log(`Using bundled 7zip at ${sevenZipPath} for adb extraction.`)
-
-      await new Promise<void>((resolve, reject) => {
-        const myStream = SevenZip.extractFull(tempArchivePath!, tempExtractDir!, {
-          $bin: sevenZipPath,
-          $progress: true
-        })
-
-        myStream.on('progress', (progress) => {
-          progressCallback?.(this.status, { name: 'adb-extract', percentage: progress.percent })
-        })
-
-        myStream.on('end', () => {
-          console.log(`ADB archive extracted to ${tempExtractDir}`)
-          resolve()
-        })
-
-        myStream.on('error', (error) => {
-          console.error('7zip adb extraction error:', error)
-          reject(error)
-        })
-      })
+      const extractionError = await this.extractWithSevenZip(
+        tempArchivePath!,
+        tempExtractDir!,
+        'adb-extract',
+        progressCallback
+      )
 
       // Copy required files from extracted platform-tools directory to binDir
       const isWindows = platform === 'win32'
@@ -660,8 +684,12 @@ class DependencyService {
       const platformToolsDir = join(tempExtractDir, 'platform-tools')
 
       if (!existsSync(platformToolsDir)) {
+        // Extraction genuinely failed — surface the real 7-Zip stderr if we have it.
+        const detail = extractionError
+          ? ` 7zip error: ${(extractionError as Error & { stderr?: string }).stderr?.trim() || extractionError.message}`
+          : ''
         throw new Error(
-          `Platform-tools directory not found in extracted archive: ${platformToolsDir}`
+          `Platform-tools directory not found in extracted archive: ${platformToolsDir}.${detail}`
         )
       }
 
