@@ -190,6 +190,81 @@ const useStyles = makeStyles({
   }
 })
 
+/**
+ * Log actions shown on the dependency-setup failure screen.
+ *
+ * When setup fails the entire app (sidebar and Settings included) is gated
+ * behind the error screen, so the normal "Upload Log" button in Settings is
+ * unreachable. These buttons drive the same log IPC directly so a stuck user
+ * can still open the log folder or publish the log for a bug report.
+ */
+const DependencyErrorLogActions: React.FC = () => {
+  const [uploading, setUploading] = useState(false)
+  const [result, setResult] = useState<string | null>(null)
+
+  const handleUpload = async (): Promise<void> => {
+    setUploading(true)
+    setResult(null)
+    try {
+      const uploaded = await window.api.logs.uploadCurrentLog()
+      if (uploaded?.url) {
+        setResult(uploaded.url)
+        try {
+          await navigator.clipboard.writeText(uploaded.url)
+        } catch {
+          // Clipboard may be unavailable; the URL is still shown below.
+        }
+      } else {
+        setResult('Upload failed — please open the log folder and attach main.log manually.')
+      }
+    } catch {
+      setResult('Upload failed — please open the log folder and attach main.log manually.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: tokens.spacingVerticalL }}>
+      <div style={{ display: 'flex', gap: tokens.spacingHorizontalS, justifyContent: 'center' }}>
+        <Button appearance="secondary" onClick={() => window.api.logs.openLogFolder()}>
+          Open Log Folder
+        </Button>
+        <Button appearance="primary" onClick={handleUpload} disabled={uploading}>
+          {uploading ? 'Uploading…' : 'Upload Log'}
+        </Button>
+      </div>
+      {result && (
+        <Text
+          style={{
+            display: 'block',
+            marginTop: tokens.spacingVerticalS,
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            wordBreak: 'break-all'
+          }}
+        >
+          {result.startsWith('http') ? (
+            <>
+              Log uploaded (copied to clipboard):{' '}
+              <a
+                href={result}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: tokens.colorBrandForeground1 }}
+              >
+                {result}
+              </a>
+            </>
+          ) : (
+            result
+          )}
+        </Text>
+      )}
+    </div>
+  )
+}
+
 interface MainContentProps {
   currentView: AppView
   onDeviceConnected: () => void
@@ -225,6 +300,7 @@ const MainContent: React.FC<MainContentProps> = ({
   if (!dependenciesReady) {
     if (dependencyError) {
       const isWindows = navigator.platform.startsWith('Win')
+      const isMac = navigator.platform.toUpperCase().includes('MAC')
 
       // Check if this is a connectivity error
       if (dependencyError.startsWith('CONNECTIVITY_ERROR|')) {
@@ -375,6 +451,68 @@ const MainContent: React.FC<MainContentProps> = ({
               </ul>
             </>
           )}
+
+          {isMac && (
+            <>
+              <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
+                Most likely cause on macOS (Apple Silicon):
+              </Text>
+              <ul style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>
+                    <strong>Gatekeeper quarantined the app.</strong> Because the app is only
+                    ad-hoc signed, macOS blocks the bundled and downloaded helper binaries
+                    (7-Zip, rclone, adb) from running, which makes dependency setup fail. This
+                    is the usual cause when setup fails right after installing.
+                  </Text>
+                </li>
+              </ul>
+              <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
+                How to fix it:
+              </Text>
+              <ol style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>
+                    Move <strong>VR CyberDeck.app</strong> to your <strong>Applications</strong>{' '}
+                    folder (don&apos;t run it from the mounted .dmg).
+                  </Text>
+                </li>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>
+                    Open <strong>Terminal</strong> and remove the quarantine flag, then clear the
+                    partially-downloaded binaries so they re-download cleanly:
+                  </Text>
+                  <pre
+                    style={{
+                      textAlign: 'left',
+                      background: tokens.colorNeutralBackground3,
+                      padding: tokens.spacingVerticalS,
+                      borderRadius: tokens.borderRadiusMedium,
+                      fontSize: '11px',
+                      overflowX: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    {'xattr -cr "/Applications/VR CyberDeck.app"\n' +
+                      'rm -rf ~/Library/Application\\ Support/vr-cyberdeck/bin'}
+                  </pre>
+                </li>
+                <li style={{ marginBottom: tokens.spacingVerticalXS }}>
+                  <Text>Quit and reopen the app.</Text>
+                </li>
+              </ol>
+              <Text style={{ marginTop: tokens.spacingVerticalS, fontSize: '12px' }}>
+                Your log file is at{' '}
+                <span style={{ fontFamily: 'monospace' }}>
+                  ~/Library/Application Support/vr-cyberdeck/logs/main.log
+                </span>
+                .
+              </Text>
+            </>
+          )}
+
+          <DependencyErrorLogActions />
         </div>
       )
     }
