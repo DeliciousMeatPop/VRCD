@@ -3,6 +3,7 @@ import { promises as fs, existsSync } from 'fs'
 import { join, basename } from 'path'
 import { execFile } from 'child_process'
 import SevenZip from 'node-7z'
+import { awaitSevenZipStream } from './sevenZipUtils'
 import adbService from './adbService'
 import dependencyService from './dependencyService'
 import gameService from './gameService'
@@ -1299,11 +1300,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         await fs.mkdir(tmpDir, { recursive: true })
 
         try {
-          await new Promise<void>((resolve, reject) => {
-            const stream = SevenZip.extractFull(filePath, tmpDir, { $bin: sevenZipPath })
-            stream.on('end', resolve)
-            stream.on('error', reject)
-          })
+          // Tolerate benign 7-Zip stderr noise (e.g. dylibs injected into the
+          // 7zz child by macOS tweak frameworks); only a real ERROR rejects.
+          await awaitSevenZipStream(SevenZip.extractFull(filePath, tmpDir, { $bin: sevenZipPath }))
 
           const manualId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const tempItem: DownloadItem = {
