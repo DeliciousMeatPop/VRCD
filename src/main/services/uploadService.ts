@@ -17,6 +17,7 @@ import {
 } from '@shared/types'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
+import { awaitSevenZipStream } from './sevenZipUtils'
 
 // Enum for stages to track overall progress
 enum UploadStage {
@@ -378,14 +379,14 @@ class UploadService extends EventEmitter {
     const tmpDir = join(this.uploadsBasePath, `apk_parse_${Date.now()}`)
     try {
       await fs.mkdir(tmpDir, { recursive: true })
-      await new Promise<void>((resolve, reject) => {
-        const stream = SevenZip.extractFull(apkPath, tmpDir, {
+      // Tolerate benign 7-Zip stderr noise (e.g. injected tweak dylibs); a real
+      // ERROR still rejects, and the readFile below confirms the manifest landed.
+      await awaitSevenZipStream(
+        SevenZip.extractFull(apkPath, tmpDir, {
           $bin: sevenZipPath,
           $cherryPick: ['AndroidManifest.xml']
         })
-        stream.on('end', resolve)
-        stream.on('error', reject)
-      })
+      )
       const buf = await fs.readFile(join(tmpDir, 'AndroidManifest.xml'))
       return this.parseAXML(buf)
     } finally {
@@ -461,35 +462,27 @@ class UploadService extends EventEmitter {
             await fs.unlink(zipFilePath)
           }
 
-          await new Promise<void>((resolve, reject) => {
-            const myStream = SevenZip.add(zipFilePath, `${stagingDir}/*`, {
-              $bin: sevenZipPath,
-              $progress: true
-            })
-
-            if (!myStream) {
-              reject(new Error('Failed to start 7zip compression process.'))
-              return
-            }
-
-            this.activeCompression = myStream
-            myStream.on('progress', (progress) => {
+          const compressStream = SevenZip.add(zipFilePath, `${stagingDir}/*`, {
+            $bin: sevenZipPath,
+            $progress: true
+          })
+          if (!compressStream) {
+            throw new Error('Failed to start 7zip compression process.')
+          }
+          this.activeCompression = compressStream
+          try {
+            // Tolerate benign 7-Zip stderr noise (e.g. injected tweak dylibs).
+            await awaitSevenZipStream(compressStream, (percent) => {
               // Scale 10–90% while compressing
               this.updateProgress(
                 item.packageName,
                 UploadStage.Compressing,
-                10 + Math.floor(progress.percent * 0.8)
+                10 + Math.floor(percent * 0.8)
               )
             })
-            myStream.on('end', () => {
-              this.activeCompression = null
-              resolve()
-            })
-            myStream.on('error', (error) => {
-              this.activeCompression = null
-              reject(error)
-            })
-          })
+          } finally {
+            this.activeCompression = null
+          }
 
           this.updateProgress(item.packageName, UploadStage.Compressing, 100)
 
@@ -780,42 +773,29 @@ class UploadService extends EventEmitter {
 
       console.log(`Creating zip archive at ${zipFilePath}...`)
 
-      await new Promise<void>((resolve, reject) => {
-        const myStream = SevenZip.add(zipFilePath, `${packageFolderPath}/*`, {
-          $bin: sevenZipPath,
-          $progress: true
-        })
-
-        if (!myStream) {
-          throw new Error('Failed to start 7zip compression process.')
-        }
-
-        // Store the compression stream for cancellation
-        this.activeCompression = myStream
-
-        // Set up progress tracking
-        let lastProgress = 0
-
-        myStream.on('progress', (progress) => {
-          if (progress.percent > lastProgress) {
-            lastProgress = progress.percent
-            console.log(`[Compression progress]: ${progress.percent}%`)
-            this.updateProgress(packageName, UploadStage.Compressing, progress.percent)
+      const compressStream = SevenZip.add(zipFilePath, `${packageFolderPath}/*`, {
+        $bin: sevenZipPath,
+        $progress: true
+      })
+      if (!compressStream) {
+        throw new Error('Failed to start 7zip compression process.')
+      }
+      // Store the compression stream for cancellation
+      this.activeCompression = compressStream
+      let lastProgress = 0
+      try {
+        // Tolerate benign 7-Zip stderr noise (e.g. injected tweak dylibs).
+        await awaitSevenZipStream(compressStream, (percent) => {
+          if (percent > lastProgress) {
+            lastProgress = percent
+            console.log(`[Compression progress]: ${percent}%`)
+            this.updateProgress(packageName, UploadStage.Compressing, percent)
           }
         })
-
-        myStream.on('end', () => {
-          console.log(`[Compression complete]: ${zipFilePath}`)
-          this.activeCompression = null
-          resolve()
-        })
-
-        myStream.on('error', (error) => {
-          console.error(`[Compression error]: ${error}`)
-          this.activeCompression = null
-          reject(error)
-        })
-      })
+        console.log(`[Compression complete]: ${zipFilePath}`)
+      } finally {
+        this.activeCompression = null
+      }
 
       this.updateProgress(packageName, UploadStage.Compressing, 100)
 

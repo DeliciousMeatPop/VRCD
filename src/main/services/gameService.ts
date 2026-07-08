@@ -12,6 +12,7 @@ import { GameInfo, ServiceStatus, GamesAPI, BlacklistEntry } from '@shared/types
 import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
+import { awaitSevenZipStream, describeSevenZipError } from './sevenZipUtils'
 
 interface VrpConfig {
   baseUri: string
@@ -569,33 +570,31 @@ class GameService extends EventEmitter implements GamesAPI {
 
         const mainWindow = BrowserWindow.getAllWindows()[0]
 
-        await new Promise<void>((resolve, reject) => {
-          const myStream = SevenZip.extractFull(archive, this.dataPath, {
-            $bin: dependencyService.get7zPath(),
-            password: decodedPassword,
-            $progress: true
-          })
-
-          myStream.on('progress', function (progress) {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              typedWebContentsSend.send(mainWindow, 'games:download-progress', {
-                packageName: 'meta',
-                stage: 'extract',
-                progress: progress.percent
-              })
-            }
-          })
-
-          myStream.on('end', function () {
-            console.log('Extraction complete')
-            resolve() // Resolve the Promise when extraction is complete
-          })
-
-          myStream.on('error', function (error) {
-            console.error('Extraction error:', error)
-            reject(error) // Reject the Promise if there's an error
-          })
+        const stream = SevenZip.extractFull(archive, this.dataPath, {
+          $bin: dependencyService.get7zPath(),
+          password: decodedPassword,
+          $progress: true
         })
+        // Tolerate benign 7-Zip stderr noise (e.g. tweak dylibs injected into
+        // the 7zz child process); a genuine ERROR (like a wrong password) still
+        // rejects. Success is confirmed by the game list check below.
+        const extractionError = await awaitSevenZipStream(stream, (percent) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            typedWebContentsSend.send(mainWindow, 'games:download-progress', {
+              packageName: 'meta',
+              stage: 'extract',
+              progress: percent
+            })
+          }
+        })
+
+        // node-7z can't be trusted to signal success via stderr, so verify the
+        // extraction actually produced the game list before declaring victory.
+        if (!(await this.resolveGameListPath())) {
+          throw new Error(
+            `meta archive extraction did not produce a game list.${describeSevenZipError(extractionError)}`
+          )
+        }
 
         console.log('Extraction complete')
 

@@ -5,6 +5,7 @@ import { promises as fsPromises, existsSync, createWriteStream, chmodSync, copyF
 import axios, { AxiosProgressEvent } from 'axios'
 import SevenZip from 'node-7z'
 import { ServiceStatus } from '@shared/types'
+import { awaitSevenZipStream } from './sevenZipUtils'
 
 // Pinned rclone version. See getRcloneDownloadUrl for the rationale.
 const RCLONE_PINNED_VERSION = 'v1.72.1'
@@ -261,7 +262,7 @@ class DependencyService {
    * checking whether the expected files actually landed on disk. The captured
    * error is returned for logging / to enrich a "not found" failure message.
    */
-  private extractWithSevenZip(
+  private async extractWithSevenZip(
     archivePath: string,
     destDir: string,
     progressName: string,
@@ -269,34 +270,18 @@ class DependencyService {
   ): Promise<Error | null> {
     const sevenZipPath = this.get7zPath()
     console.log(`Using bundled 7zip at ${sevenZipPath} for extraction.`)
-    return new Promise<Error | null>((resolve) => {
-      let captured: Error | null = null
-      const myStream = SevenZip.extractFull(archivePath, destDir, {
-        $bin: sevenZipPath,
-        $progress: true
-      })
-
-      myStream.on('progress', (progress) => {
-        progressCallback?.(this.status, { name: progressName, percentage: progress.percent })
-      })
-
-      myStream.on('end', () => {
-        console.log(`Archive extracted to ${destDir}`)
-        resolve(captured)
-      })
-
-      myStream.on('error', (error: Error & { stderr?: string }) => {
-        // Log the real 7-Zip stderr node-7z tucks away, not just "unknown error".
-        console.warn(
-          `7zip reported an error during extraction (may be a benign warning): ${error.message}` +
-            (error.stderr ? ` | stderr: ${error.stderr.trim()}` : '')
-        )
-        captured = error
-        // Resolve rather than reject — success is decided by the caller's file
-        // existence check, not by whether 7-Zip wrote to stderr.
-        resolve(captured)
-      })
+    const stream = SevenZip.extractFull(archivePath, destDir, {
+      $bin: sevenZipPath,
+      $progress: true
     })
+    // Tolerate benign 7-Zip stderr (e.g. dylibs injected by macOS tweak
+    // frameworks); a real ERROR still rejects and success is confirmed by the
+    // caller's file existence check below.
+    const captured = await awaitSevenZipStream(stream, (percent) =>
+      progressCallback?.(this.status, { name: progressName, percentage: percent })
+    )
+    console.log(`Archive extracted to ${destDir}`)
+    return captured
   }
 
   // --- rclone ---
