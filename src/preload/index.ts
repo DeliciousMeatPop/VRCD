@@ -299,7 +299,8 @@ const api = {
     deleteBackup: (backupId) => typedIpcRenderer.invoke('backup:delete', backupId),
     setVerification: (backupId, result) =>
       typedIpcRenderer.invoke('backup:set-verification', backupId, result),
-    reportFailure: (backupId) => typedIpcRenderer.invoke('backup:report-failure', backupId)
+    reportFailure: (backupId) => typedIpcRenderer.invoke('backup:report-failure', backupId),
+    getProfile: (packageName) => typedIpcRenderer.invoke('backup:get-profile', packageName)
   } satisfies BackupAPIRenderer,
   // Mirror APIs
   mirrors: {
