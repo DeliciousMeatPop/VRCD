@@ -451,6 +451,49 @@ export interface SettingsAPIRenderer
 /** User's assessment of whether a restore actually worked. */
 export type BackupVerification = 'pending' | 'worked' | 'failed' | 'unsure'
 
+/**
+ * A single captured source tree inside a backup. A default backup has exactly
+ * one root (the app's external `/sdcard/Android/data/<pkg>` directory). Games
+ * that match a save-backup profile may capture several — extra external paths
+ * and/or private internal data pulled via `run-as`.
+ */
+export interface BackupRoot {
+  /** Device-side path this tree was captured from. */
+  remotePath: string
+  /** Sub-directory under the backup folder that mirrors this tree. */
+  localDir: string
+  /** How this root is transferred: adb push (external) or run-as (internal). */
+  method: 'push' | 'run-as'
+  fileCount: number
+  totalBytes: number
+}
+
+/**
+ * Per-package backup override, fetched from the remote profile registry on
+ * GitHub (`backup-profiles.json`) and cached locally. Lets specific games —
+ * whose saves don't live in the default location — be backed up and restored
+ * correctly without shipping an app update: the maintainer just edits the JSON
+ * in the repo and every client picks it up on the next backup/restore.
+ */
+export interface BackupProfile {
+  packageName: string
+  appLabel?: string
+  /**
+   * Device paths to snapshot. Defaults to `['/sdcard/Android/data/<pkg>']` when
+   * omitted. The first entry is treated as the primary root.
+   */
+  paths?: string[]
+  /**
+   * Also attempt to capture private internal data (`/data/data/<pkg>`) via
+   * `run-as`. Best-effort — only works on debuggable app builds. Needed for
+   * games that keep progress in PlayerPrefs / shared_prefs (e.g. many Unity
+   * titles) rather than in external storage.
+   */
+  includeInternalData?: boolean
+  /** Human-readable note about this game's quirks, surfaced in UI and logs. */
+  notes?: string
+}
+
 export interface BackupEntry {
   id: string
   packageName: string
@@ -459,12 +502,22 @@ export interface BackupEntry {
   createdAt: number
   fileCount: number
   totalBytes: number
-  /** Device-side path the save data was pulled from. */
+  /** Device-side path the save data was pulled from (primary root). */
   sourcePath: string
   verification: BackupVerification
   verifiedAt?: number
   /** rentry URL of a filed failure report, if any. */
   reportUrl?: string
+  /**
+   * Captured source trees. Present on profile-aware backups (and all backups
+   * created after that change). Legacy single-root backups omit it and are
+   * treated as one `push` root rooted at `sourcePath` / `data`.
+   */
+  roots?: BackupRoot[]
+  /** True when a per-package profile was applied when this backup was made. */
+  profileApplied?: boolean
+  /** Note from the applied profile, if any. */
+  profileNotes?: string
 }
 
 export interface BackupResult {
@@ -495,6 +548,12 @@ export interface BackupAPI {
     result: BackupVerification
   ) => Promise<BackupEntry | null>
   reportFailure: (backupId: string) => Promise<BackupReportResult | null>
+  /**
+   * Look up the (remote, cached) save-backup profile for a package, or null if
+   * the game uses the default method. Lets the UI show when a custom method
+   * will be used before the user commits to a backup/restore.
+   */
+  getProfile: (packageName: string) => Promise<BackupProfile | null>
 }
 
 export interface BackupAPIRenderer extends BackupAPI {}

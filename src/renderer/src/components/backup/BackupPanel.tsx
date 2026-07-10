@@ -162,6 +162,11 @@ const BackupPanel: React.FC = () => {
                       {new Date(b.createdAt).toLocaleString()} · {b.fileCount} files · {formatBytes(b.totalBytes)}
                       {b.deviceModel ? ` · ${b.deviceModel}` : ''}
                     </span>
+                    {b.profileApplied && (
+                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--vrcd-purple)', lineHeight: 1.5 }}>
+                        ⚙ custom backup method{b.profileNotes ? ` — ${b.profileNotes}` : ''}
+                      </span>
+                    )}
                   </div>
                   <span
                     style={{

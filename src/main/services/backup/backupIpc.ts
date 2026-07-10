@@ -27,4 +27,8 @@ export function registerBackupIpc(): void {
   typedIpcMain.handle('backup:report-failure', (_event, backupId) =>
     backupService.reportFailure(backupId)
   )
+
+  typedIpcMain.handle('backup:get-profile', (_event, packageName) =>
+    backupService.getProfile(packageName)
+  )
 }

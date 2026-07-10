@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "updated": "2026-07-09",
+  "_readme": "Per-package save-backup overrides for VR CyberDeck. Games listed here use a custom backup/restore method instead of the default (snapshot of /sdcard/Android/data/<pkg>). VR CyberDeck fetches this file from GitHub before every backup/restore, caches it locally, and falls back to the default method for any package not listed. To add a game: add an entry under `profiles` keyed by its package name. Fields per profile: `appLabel` (string, display only); `paths` (string[], device paths to snapshot — defaults to ['/sdcard/Android/data/<pkg>'], first entry is primary); `includeInternalData` (bool, also attempt a best-effort run-as capture of /data/data/<pkg> — only works on debuggable builds); `notes` (string, shown in the app UI and failure reports).",
+  "profiles": {
+    "com.fyian.TheThrillOfTheFight": {
+      "appLabel": "The Thrill of the Fight",
+      "paths": ["/sdcard/Android/data/com.fyian.TheThrillOfTheFight"],
+      "includeInternalData": true,
+      "notes": "Career progression is stored in PlayerPrefs (private internal shared_prefs), not external storage. The external Android/data tree is mostly cache. Internal capture is best-effort and only succeeds on debuggable builds; retail builds need root for a full restore."
+    }
+  }
+}

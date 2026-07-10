@@ -22,7 +22,8 @@ import {
   BackupResult,
   BackupCreateResult,
   BackupReportResult,
-  BackupVerification
+  BackupVerification,
+  BackupProfile
 } from './index'
 
 // Define types for all IPC channels between renderer and main
@@ -180,6 +181,7 @@ export interface IPCChannels {
     BackupEntry | null
   >
   'backup:report-failure': DefineChannel<[backupId: string], BackupReportResult | null>
+  'backup:get-profile': DefineChannel<[packageName: string], BackupProfile | null>
 }
 
 // Types for send (no response) channels

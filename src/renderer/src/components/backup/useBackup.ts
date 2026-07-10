@@ -4,7 +4,8 @@ import {
   BackupVerification,
   BackupResult,
   BackupCreateResult,
-  BackupReportResult
+  BackupReportResult,
+  BackupProfile
 } from '@shared/types'
 
 /**
@@ -25,6 +26,7 @@ export interface UseBackup {
     result: BackupVerification
   ) => Promise<BackupEntry | null>
   reportFailure: (backupId: string) => Promise<BackupReportResult | null>
+  getProfile: (packageName: string) => Promise<BackupProfile | null>
 }
 
 export function useBackup(): UseBackup {
@@ -88,5 +90,20 @@ export function useBackup(): UseBackup {
     []
   )
 
-  return { backups, loading, refresh, create, restore, remove, setVerification, reportFailure }
+  const getProfile = useCallback(
+    (packageName: string) => window.api.backup.getProfile(packageName),
+    []
+  )
+
+  return {
+    backups,
+    loading,
+    refresh,
+    create,
+    restore,
+    remove,
+    setVerification,
+    reportFailure,
+    getProfile
+  }
 }

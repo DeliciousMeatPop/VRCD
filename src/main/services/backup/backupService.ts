@@ -2,13 +2,16 @@ import { app, shell } from 'electron'
 import { join } from 'path'
 import { promises as fs, existsSync } from 'fs'
 import adbService from '../adbService'
+import profileService from './profileService'
 import { uploadTextToRentry } from '../logsService'
 import {
   BackupEntry,
   BackupVerification,
   BackupResult,
   BackupCreateResult,
-  BackupReportResult
+  BackupReportResult,
+  BackupProfile,
+  BackupRoot
 } from '@shared/types'
 
 /**
@@ -24,12 +27,22 @@ import {
  *    - preload:  delete the `backup` namespace
  *    - renderer: delete components/backup + the two call sites (Settings, dialog)
  *
- *  Save data on Quest lives under /sdcard/Android/data/<package>. That is the
- *  only location we snapshot — OBB is shipped game content, not user progress.
+ *  Save data on Quest usually lives under /sdcard/Android/data/<package>, which
+ *  is what we snapshot by default (OBB is shipped game content, not progress).
+ *
+ *  Some games don't fit that mould — they keep extra data in other external
+ *  paths, or keep progress in PlayerPrefs / shared_prefs under the app's PRIVATE
+ *  internal storage (/data/data/<pkg>), which a normal adb pull can't read. For
+ *  those, a per-package *profile* (fetched from the remote registry — see
+ *  profileService.ts) overrides the default: it can list additional paths and/or
+ *  request a best-effort `run-as` capture of internal data. Games with no profile
+ *  keep using the plain default method.
  *
  *  Backups are stored under userData/save-backups/<backupId>/:
- *    - manifest.json   metadata + user verification state
- *    - data/           mirror of the device's /sdcard/Android/data/<pkg> tree
+ *    - manifest.json   metadata + captured-root map + user verification state
+ *    - data/           mirror of the primary /sdcard/Android/data/<pkg> tree
+ *    - roots/extN/     additional external trees from a profile (if any)
+ *    - internal/       private /data/data/<pkg> tree captured via run-as (if any)
  *    - backup.log      human-readable log of create/restore attempts (attached
  *                      to failure reports so issues are actually diagnosable)
  */
@@ -118,9 +131,44 @@ class BackupService {
   }
 
   /**
+   * Look up the per-package backup profile (remote registry, cached). Exposed to
+   * the renderer so the UI can indicate when a custom method will be used.
+   */
+  public async getProfile(packageName: string): Promise<BackupProfile | null> {
+    return profileService.getProfile(packageName)
+  }
+
+  /**
+   * Compute the set of source trees to capture for a package, honouring its
+   * profile. Without a profile this is just the single default external path,
+   * so default backups are byte-for-byte identical in layout to before.
+   */
+  private plannedRoots(
+    packageName: string,
+    profile: BackupProfile | null
+  ): { remotePath: string; localDir: string; method: BackupRoot['method'] }[] {
+    const externalPaths =
+      profile?.paths && profile.paths.length > 0 ? profile.paths : [deviceSavePath(packageName)]
+
+    const roots: { remotePath: string; localDir: string; method: BackupRoot['method'] }[] =
+      externalPaths.map((remotePath, i) => ({
+        remotePath,
+        // Keep the primary tree at `data/` for backward/forward compatibility.
+        localDir: i === 0 ? 'data' : `roots/ext${i}`,
+        method: 'push'
+      }))
+
+    if (profile?.includeInternalData) {
+      roots.push({ remotePath: `/data/data/${packageName}`, localDir: 'internal', method: 'run-as' })
+    }
+    return roots
+  }
+
+  /**
    * Snapshot the save data for `packageName` from the device into a new backup.
-   * Fails (without creating an empty backup) if the app has no save directory
-   * or it contains no files — usually because the app was never launched.
+   * Applies a per-package profile when one exists (extra paths / internal data);
+   * otherwise snapshots the default /sdcard/Android/data/<pkg> tree. Fails
+   * (without creating an empty backup) only if nothing at all could be captured.
    */
   public async createBackup(
     deviceId: string,
@@ -132,40 +180,76 @@ class BackupService {
 
     const id = `${this.sanitize(packageName)}_${Date.now()}`
     const dir = this.backupDir(id)
-    const dataDir = join(dir, 'data')
-    const remotePath = deviceSavePath(packageName)
 
     try {
-      await fs.mkdir(dataDir, { recursive: true })
+      await fs.mkdir(dir, { recursive: true })
       await this.log(id, `Backup started for ${appLabel} (${packageName}) on ${deviceId}`)
-      await this.log(id, `Source: ${remotePath}`)
 
-      const exists = await adbService.remotePathExists(deviceId, remotePath)
-      if (!exists) {
-        await this.log(id, `Save directory not found on device: ${remotePath}`)
-        await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
-        return {
-          ok: false,
-          error: `No save data found for ${appLabel}. Launch the app on the headset at least once before backing up.`
+      const profile = await profileService.getProfile(packageName)
+      if (profile) {
+        await this.log(
+          id,
+          `Profile applied for ${packageName}: paths=${JSON.stringify(
+            profile.paths ?? [deviceSavePath(packageName)]
+          )} includeInternalData=${!!profile.includeInternalData}` +
+            (profile.notes ? ` — ${profile.notes}` : '')
+        )
+      } else {
+        await this.log(id, 'No profile — using default method.')
+      }
+
+      const planned = this.plannedRoots(packageName, profile)
+      const roots: BackupRoot[] = []
+      let anyExternalPathMissing = false
+
+      for (const p of planned) {
+        const localDirAbs = join(dir, ...p.localDir.split('/'))
+        await fs.mkdir(localDirAbs, { recursive: true })
+        await this.log(id, `Source (${p.method}): ${p.remotePath} → ${p.localDir}/`)
+
+        if (p.method === 'push') {
+          const exists = await adbService.remotePathExists(deviceId, p.remotePath)
+          if (!exists) {
+            await this.log(id, `  Path not found on device, skipping: ${p.remotePath}`)
+            anyExternalPathMissing = true
+            continue
+          }
+          const { fileCount, totalBytes } = await adbService.pullDirectory(
+            deviceId,
+            p.remotePath,
+            localDirAbs
+          )
+          await this.log(id, `  Pulled ${fileCount} file(s), ${totalBytes} bytes`)
+          roots.push({ ...p, fileCount, totalBytes })
+        } else {
+          // run-as internal capture (best-effort).
+          const res = await adbService.pullInternalDataViaRunAs(deviceId, packageName, localDirAbs)
+          if (!res.accessible) {
+            await this.log(id, `  Internal data NOT captured: ${res.reason ?? 'run-as unavailable'}`)
+          } else {
+            await this.log(
+              id,
+              `  Internal data captured: ${res.fileCount} file(s), ${res.totalBytes} bytes` +
+                (res.reason ? ` (${res.reason})` : '')
+            )
+          }
+          roots.push({ ...p, fileCount: res.fileCount, totalBytes: res.totalBytes })
         }
       }
 
-      const { fileCount, totalBytes } = await adbService.pullDirectory(
-        deviceId,
-        remotePath,
-        dataDir
-      )
-      await this.log(id, `Pulled ${fileCount} file(s), ${totalBytes} bytes`)
+      const fileCount = roots.reduce((n, r) => n + r.fileCount, 0)
+      const totalBytes = roots.reduce((n, r) => n + r.totalBytes, 0)
 
       if (fileCount === 0) {
-        await this.log(id, 'Backup aborted: no files copied.')
+        await this.log(id, 'Backup aborted: no files copied from any source.')
         await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
-        return {
-          ok: false,
-          error: `No save files found for ${appLabel}. There may be nothing to back up yet.`
-        }
+        const hint = anyExternalPathMissing
+          ? `No save data found for ${appLabel}. Launch the app on the headset at least once before backing up.`
+          : `No save files found for ${appLabel}. There may be nothing to back up yet.`
+        return { ok: false, error: hint }
       }
 
+      const primary = roots.find((r) => r.localDir === 'data') ?? roots[0]
       const entry: BackupEntry = {
         id,
         packageName,
@@ -174,11 +258,14 @@ class BackupService {
         createdAt: Date.now(),
         fileCount,
         totalBytes,
-        sourcePath: remotePath,
-        verification: 'pending'
+        sourcePath: primary.remotePath,
+        verification: 'pending',
+        roots,
+        profileApplied: !!profile,
+        profileNotes: profile?.notes
       }
       await this.writeManifest(entry)
-      await this.log(id, 'Backup completed successfully.')
+      await this.log(id, `Backup completed successfully (${roots.length} root(s)).`)
       return { ok: true, backup: entry }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -190,29 +277,87 @@ class BackupService {
   }
 
   /**
-   * Push a backup's stored save tree back onto the device. The target app
+   * Resolve a backup's captured roots, synthesising a single legacy root for
+   * old backups that predate the multi-root manifest.
+   */
+  private rootsFor(entry: BackupEntry): BackupRoot[] {
+    if (entry.roots && entry.roots.length > 0) return entry.roots
+    return [
+      {
+        remotePath: entry.sourcePath || deviceSavePath(entry.packageName),
+        localDir: 'data',
+        method: 'push',
+        fileCount: entry.fileCount,
+        totalBytes: entry.totalBytes
+      }
+    ]
+  }
+
+  /**
+   * Push a backup's stored save trees back onto the device. The target app
    * should already be installed so its /sdcard/Android/data/<pkg> directory
-   * exists with the right context; we mkdir -p defensively regardless.
+   * exists with the right context; we mkdir -p defensively regardless. Internal
+   * (run-as) roots are restored best-effort and never block the external
+   * restore. After pushing, a sanity check re-counts device files so a restore
+   * that silently placed nothing gets flagged in the log.
    */
   public async restoreBackup(backupId: string, deviceId: string): Promise<BackupResult> {
     if (!deviceId) return { ok: false, error: 'No device connected.' }
     const entry = await this.readManifest(backupId)
     if (!entry) return { ok: false, error: 'Backup not found.' }
 
-    const dataDir = join(this.backupDir(backupId), 'data')
-    if (!existsSync(dataDir)) {
-      return { ok: false, error: 'Backup data is missing on disk.' }
+    const roots = this.rootsFor(entry)
+    const pushRoots = roots.filter((r) => r.method === 'push')
+    // Every push root must exist on disk; a missing primary tree is fatal.
+    for (const r of pushRoots) {
+      if (!existsSync(join(this.backupDir(backupId), ...r.localDir.split('/')))) {
+        return { ok: false, error: `Backup data is missing on disk (${r.localDir}).` }
+      }
     }
-    const remotePath = deviceSavePath(entry.packageName)
 
     try {
-      await this.log(backupId, `Restore started to ${deviceId} → ${remotePath}`)
-      await adbService.runShellCommand(deviceId, `mkdir -p "${remotePath}"`)
-      const ok = await adbService.pushFileOrFolder(deviceId, dataDir, remotePath)
-      if (!ok) {
-        await this.log(backupId, 'Restore FAILED: push returned false.')
-        return { ok: false, error: 'Failed to push save data to the device.' }
+      await this.log(backupId, `Restore started to ${deviceId} (${roots.length} root(s))`)
+
+      for (const r of roots) {
+        const localDirAbs = join(this.backupDir(backupId), ...r.localDir.split('/'))
+
+        if (r.method === 'push') {
+          await this.log(backupId, `Restoring ${r.localDir}/ → ${r.remotePath}`)
+          await adbService.runShellCommand(deviceId, `mkdir -p "${r.remotePath}"`)
+          const ok = await adbService.pushFileOrFolder(deviceId, localDirAbs, r.remotePath)
+          if (!ok) {
+            await this.log(backupId, `Restore FAILED: push returned false for ${r.localDir}.`)
+            return { ok: false, error: 'Failed to push save data to the device.' }
+          }
+          // Post-restore sanity check: does the device actually have the files?
+          const onDevice = await adbService.countRemoteFiles(deviceId, r.remotePath)
+          if (onDevice < 0) {
+            await this.log(backupId, `  Post-restore check: could not list ${r.remotePath}.`)
+          } else if (onDevice < r.fileCount) {
+            await this.log(
+              backupId,
+              `  Post-restore check WARNING: ${r.remotePath} has ${onDevice} file(s), expected >= ${r.fileCount}.`
+            )
+          } else {
+            await this.log(
+              backupId,
+              `  Post-restore check OK: ${r.remotePath} has ${onDevice} file(s).`
+            )
+          }
+        } else {
+          // Internal data via run-as — best-effort, never fatal.
+          if (!existsSync(localDirAbs)) continue
+          await this.log(backupId, `Restoring internal data (run-as) → ${r.remotePath}`)
+          const ok = await adbService.pushInternalDataViaRunAs(deviceId, entry.packageName, localDirAbs)
+          await this.log(
+            backupId,
+            ok
+              ? '  Internal data restored via run-as.'
+              : '  Internal data NOT restored (app not debuggable or copy failed). If progress is stored in PlayerPrefs, it may not come back without root.'
+          )
+        }
       }
+
       await this.log(backupId, 'Restore push completed.')
       // A fresh restore invalidates any previous verification — the user needs
       // to re-check whether it actually worked this time.
@@ -252,10 +397,67 @@ class BackupService {
   }
 
   /**
+   * Walk a captured root's local mirror and return a `relpath — size` listing so
+   * the maintainer can see WHAT was actually backed up (real save files vs. just
+   * cache). Capped so a huge tree can't blow up the report.
+   */
+  private async buildRootListing(backupId: string, root: BackupRoot, cap: number): Promise<string[]> {
+    const rootAbs = join(this.backupDir(backupId), ...root.localDir.split('/'))
+    const lines: string[] = []
+    const walk = async (abs: string, rel: string): Promise<void> => {
+      if (lines.length >= cap) return
+      let entries: import('fs').Dirent[]
+      try {
+        entries = await fs.readdir(abs, { withFileTypes: true })
+      } catch {
+        return
+      }
+      for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+        if (lines.length >= cap) return
+        const childRel = rel ? `${rel}/${e.name}` : e.name
+        const childAbs = join(abs, e.name)
+        if (e.isDirectory()) {
+          await walk(childAbs, childRel)
+        } else if (e.isFile()) {
+          let size = 0
+          try {
+            size = (await fs.stat(childAbs)).size
+          } catch {
+            /* ignore */
+          }
+          lines.push(`  ${childRel} — ${size} B`)
+        }
+      }
+    }
+    await walk(rootAbs, '')
+    return lines
+  }
+
+  /** Assemble the per-root file tree section of a failure report. */
+  private async buildFileTree(backupId: string, entry: BackupEntry): Promise<string> {
+    const CAP_PER_ROOT = 200
+    const roots = this.rootsFor(entry)
+    const sections: string[] = []
+    for (const root of roots) {
+      const listing = await this.buildRootListing(backupId, root, CAP_PER_ROOT)
+      const header = `[${root.method}] ${root.remotePath}  (${root.fileCount} files, ${root.totalBytes} B)`
+      const body =
+        listing.length === 0
+          ? '  (no files captured)'
+          : listing.join('\n') +
+            (listing.length >= CAP_PER_ROOT ? `\n  … (truncated at ${CAP_PER_ROOT} entries)` : '')
+      sections.push(`${header}\n${body}`)
+    }
+    return sections.join('\n\n')
+  }
+
+  /**
    * Build an anonymous diagnostic report for a backup the user says didn't
    * restore correctly, upload the details to rentry, and open a pre-filled
    * GitHub issue so the maintainer gets a genuinely useful report. No personal
-   * information is attached — just the manifest and the backup log.
+   * information is attached — just the manifest, the captured file tree, and the
+   * backup log. The file tree is the key addition: it shows whether we captured
+   * real save data or only cache, which is what makes these reports triable.
    */
   public async reportFailure(backupId: string): Promise<BackupReportResult | null> {
     const entry = await this.readManifest(backupId)
@@ -268,6 +470,14 @@ class BackupService {
       /* ignore */
     }
 
+    let fileTree = '(unavailable)'
+    try {
+      fileTree = await this.buildFileTree(backupId, entry)
+    } catch {
+      /* ignore */
+    }
+
+    const roots = this.rootsFor(entry)
     const report = [
       'VR CyberDeck — Save Backup Failure Report',
       '=========================================',
@@ -277,8 +487,13 @@ class BackupService {
       `Device model:   ${entry.deviceModel ?? 'unknown'}`,
       `Created:        ${new Date(entry.createdAt).toISOString()}`,
       `Files / bytes:  ${entry.fileCount} / ${entry.totalBytes}`,
-      `Source path:    ${entry.sourcePath}`,
+      `Profile:        ${entry.profileApplied ? 'applied' : 'none (default method)'}`,
+      ...(entry.profileNotes ? [`Profile notes:  ${entry.profileNotes}`] : []),
+      `Roots:          ${roots.map((r) => `${r.method}:${r.remotePath}`).join(', ')}`,
       `User result:    restore reported NOT WORKING`,
+      '',
+      '--- captured files ---',
+      fileTree,
       '',
       '--- backup.log ---',
       logContents.trim()

@@ -968,6 +968,190 @@ class AdbService extends EventEmitter implements AdbAPI {
     return { fileCount, totalBytes }
   }
 
+  // ── Private internal app data via run-as (save-backup profiles) ───────────────
+  // Games that keep progress in PlayerPrefs / shared_prefs store it under
+  // /data/data/<pkg>, which is not world-readable and not reachable by a normal
+  // adb pull. `run-as` lets us act as the app's own UID — but ONLY for debuggable
+  // builds. All of the methods below are best-effort: on a non-debuggable app (the
+  // common case for store/sideload releases) they resolve cleanly to "not
+  // accessible" and log why, so the failure is diagnosable rather than silent.
+
+  /** Total internal bytes we're willing to pull before truncating (safety cap). */
+  private static readonly INTERNAL_PULL_CAP_BYTES = 32 * 1024 * 1024
+
+  /**
+   * Returns true if `run-as <pkg>` works on this device — i.e. the app build is
+   * debuggable and its private data can be read/written as the app UID.
+   */
+  async isPackageDebuggable(serial: string, packageName: string): Promise<boolean> {
+    const out = await this.runShellCommand(serial, `run-as ${packageName} echo __VRCD_RUNAS_OK__`)
+    if (!out) return false
+    if (/not debuggable|unknown package|is unknown|Package .* is not/i.test(out)) return false
+    return out.includes('__VRCD_RUNAS_OK__')
+  }
+
+  /**
+   * Best-effort pull of `/data/data/<pkg>` (minus cache/code_cache) into
+   * `localDir`, reading each file as base64 through `run-as` so binary content
+   * survives. Returns { accessible:false } when the app isn't debuggable.
+   */
+  async pullInternalDataViaRunAs(
+    serial: string,
+    packageName: string,
+    localDir: string
+  ): Promise<{ accessible: boolean; fileCount: number; totalBytes: number; reason?: string }> {
+    if (!(await this.isPackageDebuggable(serial, packageName))) {
+      return {
+        accessible: false,
+        fileCount: 0,
+        totalBytes: 0,
+        reason: 'app is not debuggable (run-as denied) — internal data cannot be read over ADB'
+      }
+    }
+
+    const base = `/data/data/${packageName}`
+    // Relative (./…) paths so we can map them straight into localDir.
+    const listing = await this.runShellCommand(
+      serial,
+      `run-as ${packageName} sh -c "cd ${base} && find . -type f ! -path './cache/*' ! -path './code_cache/*' ! -path './lib/*' 2>/dev/null"`
+    )
+    const rels = (listing ?? '')
+      .split(/\r?\n/)
+      .map((l) => l.trim().replace(/^\.\//, ''))
+      .filter((l) => l.length > 0 && !l.startsWith('run-as:'))
+
+    if (rels.length === 0) {
+      return { accessible: true, fileCount: 0, totalBytes: 0, reason: 'no internal files found' }
+    }
+
+    let fileCount = 0
+    let totalBytes = 0
+    for (const rel of rels) {
+      if (totalBytes >= AdbService.INTERNAL_PULL_CAP_BYTES) {
+        console.warn(`[ADB Service] run-as pull: hit ${AdbService.INTERNAL_PULL_CAP_BYTES}-byte cap, stopping.`)
+        break
+      }
+      const remoteFile = `${base}/${rel}`
+      const b64 = await this.runShellCommand(
+        serial,
+        `run-as ${packageName} base64 "${remoteFile}"`
+      )
+      if (b64 === null || /run-as:|No such file|base64: not found|inaccessible/i.test(b64)) {
+        console.warn(`[ADB Service] run-as pull: could not read ${remoteFile}; skipping.`)
+        continue
+      }
+      let buf: Buffer
+      try {
+        buf = Buffer.from(b64.replace(/\s+/g, ''), 'base64')
+      } catch {
+        continue
+      }
+      const localFile = path.join(localDir, ...rel.split('/'))
+      await fs.promises.mkdir(path.dirname(localFile), { recursive: true })
+      await fs.promises.writeFile(localFile, buf)
+      totalBytes += buf.length
+      fileCount++
+    }
+
+    console.log(
+      `[ADB Service] run-as pull: captured ${fileCount} internal file(s), ${totalBytes} bytes from ${base}`
+    )
+    return { accessible: true, fileCount, totalBytes }
+  }
+
+  /**
+   * Best-effort restore of a locally-mirrored internal tree back into
+   * `/data/data/<pkg>` via `run-as`. Stages files through a world-readable temp
+   * dir on /sdcard, then copies them in as the app UID. Returns false (and logs)
+   * when the app isn't debuggable or any copy fails.
+   */
+  async pushInternalDataViaRunAs(
+    serial: string,
+    packageName: string,
+    localDir: string
+  ): Promise<boolean> {
+    if (!(await this.isPackageDebuggable(serial, packageName))) {
+      console.warn(
+        `[ADB Service] run-as restore: ${packageName} is not debuggable — cannot restore internal data.`
+      )
+      return false
+    }
+    if (!this.client) throw new Error('[ADB Service] adb service not initialized!')
+
+    // Collect local files relative to localDir.
+    const files: string[] = []
+    const walk = async (dir: string, prefix: string): Promise<void> => {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+      for (const e of entries) {
+        const rel = prefix ? `${prefix}/${e.name}` : e.name
+        if (e.isDirectory()) await walk(path.join(dir, e.name), rel)
+        else if (e.isFile()) files.push(rel)
+      }
+    }
+    try {
+      await walk(localDir, '')
+    } catch (err) {
+      console.error('[ADB Service] run-as restore: failed to read local internal tree:', err)
+      return false
+    }
+    if (files.length === 0) return true
+
+    const stage = `/sdcard/__vrcd_int_restore/${packageName}`
+    const base = `/data/data/${packageName}`
+    const deviceClient = this.client.getDevice(serial)
+    let ok = true
+    try {
+      await this.runShellCommand(serial, `rm -rf "${stage}"; mkdir -p "${stage}"`)
+      for (const rel of files) {
+        const localFile = path.join(localDir, ...rel.split('/'))
+        const stagedFile = `${stage}/${rel}`
+        const stagedParent = path.posix.dirname(stagedFile)
+        await this.runShellCommand(serial, `mkdir -p "${stagedParent}"`)
+        // Push to the world-readable staging area, then copy in as the app UID.
+        const transfer = await deviceClient.push(localFile, stagedFile)
+        const pushed = await new Promise<boolean>((resolve) => {
+          transfer.on('end', () => resolve(true))
+          transfer.on('error', () => resolve(false))
+        })
+        if (!pushed) {
+          ok = false
+          continue
+        }
+        await this.runShellCommand(serial, `chmod 644 "${stagedFile}"`)
+        const dest = `${base}/${rel}`
+        const cp = await this.runShellCommand(
+          serial,
+          `run-as ${packageName} sh -c 'mkdir -p "$(dirname "${dest}")" && cp -f "${stagedFile}" "${dest}"'`
+        )
+        if (cp !== null && /run-as:|No such file|Permission denied|cannot/i.test(cp)) {
+          console.warn(`[ADB Service] run-as restore: failed to place ${dest}: ${cp}`)
+          ok = false
+        }
+      }
+    } catch (err) {
+      console.error('[ADB Service] run-as restore: exception:', err)
+      ok = false
+    } finally {
+      await this.runShellCommand(serial, `rm -rf "${stage}"`).catch(() => {})
+    }
+    return ok
+  }
+
+  /**
+   * Count the regular files under a remote path (used by the save-backup
+   * post-restore sanity check). Returns -1 if the path can't be listed.
+   */
+  async countRemoteFiles(serial: string, remotePath: string): Promise<number> {
+    const escaped = remotePath.replace(/"/g, '\\"')
+    const out = await this.runShellCommand(
+      serial,
+      `find "${escaped}" -type f 2>/dev/null | wc -l`
+    )
+    if (out === null) return -1
+    const n = parseInt(out.trim(), 10)
+    return Number.isFinite(n) ? n : -1
+  }
+
   async uninstallPackage(serial: string, packageName: string): Promise<boolean> {
     if (!this.client) {
       throw new Error('[ADB Service] adb service not initialized!')
