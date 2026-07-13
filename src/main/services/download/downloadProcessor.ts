@@ -238,6 +238,22 @@ export class DownloadProcessor {
     try {
       await fs.mkdir(downloadPath, { recursive: true })
 
+      // Clear any orphaned .partial files left behind by a previous interrupted
+      // or failed run BEFORE starting. rclone's HTTP backend cannot resume a
+      // partially-written file across invocations — it re-downloads that part
+      // into a brand-new `<name>.<rand>.partial` and never touches the old one,
+      // so on repeated retries these dead partials pile up (up to --transfers
+      // per interrupted run) and can exhaust the disk, which is exactly what
+      // turns a flaky download into a run of immediate "exit code 1" failures.
+      // Completed (non-.partial) parts are kept for real file-level resume.
+      const reclaimed = await this.cleanupPartialFiles(downloadPath)
+      if (reclaimed > 0) {
+        console.log(
+          `[DownProc] Reclaimed ${this.formatBytes(reclaimed)} of orphaned partial file(s) before ` +
+            `${isResume ? 'resuming' : 'starting'} ${item.releaseName}`
+        )
+      }
+
       // On resume, measure already-downloaded bytes so progress doesn't reset to 0%
       let baselineBytes = 0
       const resumeFloor = isResume ? (item.progress ?? 0) : 0
@@ -571,17 +587,7 @@ export class DownloadProcessor {
 
       // Real files exist — safe to clean up any leftover .partial stragglers.
       if (partialFileCount > 0) {
-        try {
-          const files = await this.getFilesRecursively(downloadPath)
-          for (const file of files) {
-            if (file.relativePath.endsWith('.partial')) {
-              await fs.unlink(join(downloadPath, file.relativePath))
-              console.log(`[DownProc] Cleaned up partial file: ${file.relativePath}`)
-            }
-          }
-        } catch {
-          // Ignore cleanup errors
-        }
+        await this.cleanupPartialFiles(downloadPath)
       }
 
       console.log(`[DownProc] rclone copy download completed successfully for ${item.releaseName}`)
@@ -708,6 +714,34 @@ export class DownloadProcessor {
   // Method to check if a download is active
   public isDownloadActive(releaseName: string): boolean {
     return this.activeDownloads.has(releaseName)
+  }
+
+  // Remove orphaned `.partial` files from a download folder, returning the
+  // number of bytes reclaimed. rclone cannot resume these across runs, so they
+  // are pure dead weight once a run has ended — deleting them frees disk space
+  // without sacrificing any resumable progress. Completed (non-.partial) parts
+  // are left untouched so file-level resume can skip them on the next run.
+  private async cleanupPartialFiles(downloadPath: string): Promise<number> {
+    let reclaimed = 0
+    try {
+      const files = await this.getFilesRecursively(downloadPath)
+      for (const file of files) {
+        if (!file.relativePath.endsWith('.partial')) continue
+        try {
+          await fs.unlink(join(downloadPath, file.relativePath))
+          reclaimed += file.size
+          console.log(`[DownProc] Cleaned up partial file: ${file.relativePath}`)
+        } catch (unlinkErr) {
+          console.warn(
+            `[DownProc] Could not remove partial file ${file.relativePath}:`,
+            String(unlinkErr)
+          )
+        }
+      }
+    } catch {
+      // Folder may not exist yet or be unreadable — nothing to clean
+    }
+    return reclaimed
   }
 
   // Helper method to get all files recursively from a directory
