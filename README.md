@@ -148,9 +148,9 @@ That's it. The bundled server config means there's nothing to configure on first
 
 Found a bug? Got an idea? Want to swap notes with other CyberDeck users?
 
-- 🐛 **[Open an issue](https://github.com/KaladinDMP/VR-CyberDeck/issues/new)** for crashes, broken downloads, ADB weirdness, or anything that looks wrong. Include a log file from **Settings → Log Upload** and I can usually figure it out fast.
+- 🐛 **[Open an issue](https://github.com/DeliciousMeatPop/VRCD/issues/new)** for crashes, broken downloads, ADB weirdness, or anything that looks wrong. Include a log file from **Settings → Log Upload** and I can usually figure it out fast.
 
-~~- 💬 **[Start or join a Discussion](https://github.com/KaladinDMP/VR-CyberDeck/discussions)** for feature ideas, questions, "is this normal?", custom shortcut macros worth sharing, sound-effect recommendations, or anything that isn't strictly a bug.~~
+~~- 💬 **[Start or join a Discussion](https://github.com/DeliciousMeatPop/VRCD/discussions)** for feature ideas, questions, "is this normal?", custom shortcut macros worth sharing, sound-effect recommendations, or anything that isn't strictly a bug.~~
 
 I REMOVED DISCUSSIONS SINCE PEOPLE WERE ONLY USING IT AS A WAY TO AVOID ADDING LOGS TO AN ISSUE IT SEEMS, EVEN IF THAT WAS NOT THE INTENTION, IN ACTUALITY THAT WAS THE RESULT
 
@@ -182,10 +182,10 @@ GNU Affero GPL v3
 
 ---
 
-![Visitors](https://api.visitorbadge.io/api/visitors?path=kaladindmp%2Fvr-cyberdeck&label=People%20Who%20Forgot%20To%20Star%20This%20Repo&countColor=%23ba68c8&style=plastic)
-![Last Commit](https://img.shields.io/github/last-commit/KaladinDMP/VR-CyberDeck?label=Last%20Updated)
-![Created](https://img.shields.io/github/created-at/KaladinDMP/VR-CyberDeck?label=Created)
-![Monthly Commits](https://img.shields.io/github/commit-activity/m/KaladinDMP/VR-CyberDeck?label=Monthly%20Commits)
+![Visitors](https://api.visitorbadge.io/api/visitors?path=DeliciousMeatPop%2FVRCD&label=People%20Who%20Forgot%20To%20Star%20This%20Repo&countColor=%23ba68c8&style=plastic)
+![Last Commit](https://img.shields.io/github/last-commit/DeliciousMeatPop/VRCD?label=Last%20Updated)
+![Created](https://img.shields.io/github/created-at/DeliciousMeatPop/VRCD?label=Created)
+![Monthly Commits](https://img.shields.io/github/commit-activity/m/DeliciousMeatPop/VRCD?label=Monthly%20Commits)
 
 ## ⭐ Do the thing
 
@@ -197,6 +197,6 @@ Just hit the ⭐ and we both win.
 
 ---
 
-[![GitHub stars for this repo](https://img.shields.io/github/stars/KaladinDMP/VR-CyberDeck?style=social)](https://github.com/KaladinDMP/VR-CyberDeck) = **GitHub stars for this repo**
+[![GitHub stars for this repo](https://img.shields.io/github/stars/DeliciousMeatPop/VRCD?style=social)](https://github.com/KaladinDMP/VR-CyberDeck) = **GitHub stars for this repo**
 
-[![GitHub stars in total (all repos)](https://img.shields.io/github/stars/KaladinDMP?style=social)](https://github.com/KaladinDMP) = **GitHub stars in total (all repos)**
+[![GitHub stars in total (all repos)](https://img.shields.io/github/stars/DeliciousMeatPop?style=social)](https://github.com/KaladinDMP) = **GitHub stars in total (all repos)**
