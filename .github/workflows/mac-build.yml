@@ -99,7 +99,7 @@ jobs:
           TAG="v${VERSION}"
           echo "Verifying release $TAG exists..."
           gh release view "$TAG" --repo DeliciousMeatPop/VRCD
-          for DMG in dist/VRCD-${VERSION}-x64.dmg dist/vr-cyberdeck-${VERSION}-arm64.dmg; do
+          for DMG in dist/vr-cyberdeck-${VERSION}-x64.dmg dist/vr-cyberdeck-${VERSION}-arm64.dmg; do
             echo "Uploading $DMG..."
             gh release upload "$TAG" "$DMG" \
               --repo DeliciousMeatPop/VRCD \
