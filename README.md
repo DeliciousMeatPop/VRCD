@@ -182,10 +182,10 @@ GNU Affero GPL v3
 
 ---
 
-![Visitors](https://api.visitorbadge.io/api/visitors?path=DeliciousMeatPop%2FVRCD&label=People%20Who%20Forgot%20To%20Star%20This%20Repo&countColor=%23ba68c8&style=plastic)
-![Last Commit](https://img.shields.io/github/last-commit/DeliciousMeatPop/VRCD?label=Last%20Updated)
-![Created](https://img.shields.io/github/created-at/DeliciousMeatPop/VRCD?label=Created)
-![Monthly Commits](https://img.shields.io/github/commit-activity/m/DeliciousMeatPop/VRCD?label=Monthly%20Commits)
+![Visitors](https://api.visitorbadge.io/api/visitors?path=DeliciousMeatPop%2FVRCD&label=People%20Who%20Forgot%20To%20Star%20This%20Repo&countColor=%23ba68c8&style=plastic)<br>
+![Last Commit](https://img.shields.io/github/last-commit/DeliciousMeatPop/VRCD?label=Last%20Updated)<br>
+![Created](https://img.shields.io/github/created-at/DeliciousMeatPop/VRCD?label=Created)<br>
+![Monthly Commits](https://img.shields.io/github/commit-activity/m/DeliciousMeatPop/VRCD?label=Monthly%20Commits)<br>
 
 ## ⭐ Do the thing
 
@@ -197,6 +197,6 @@ Just hit the ⭐ and we both win.
 
 ---
 
-[![GitHub stars for this repo](https://img.shields.io/github/stars/DeliciousMeatPop/VRCD?style=social)](https://github.com/KaladinDMP/VR-CyberDeck) = **GitHub stars for this repo**
+[![GitHub stars for this repo](https://img.shields.io/github/stars/DeliciousMeatPop/VRCD?style=social)](https://github.com/DeliciousMeatPop/VRCD) = **GitHub stars for this repo**
 
-[![GitHub stars in total (all repos)](https://img.shields.io/github/stars/DeliciousMeatPop?style=social)](https://github.com/KaladinDMP) = **GitHub stars in total (all repos)**
+[![GitHub stars in total (all repos)](https://img.shields.io/github/stars/DeliciousMeatPop?style=social)](https://github.com/DeliciousMeatPop) = **GitHub stars in total (all repos)**
