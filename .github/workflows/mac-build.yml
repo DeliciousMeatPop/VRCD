@@ -97,12 +97,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v${VERSION}"
-          echo "Verifying release $TAG exists..."
-          gh release view "$TAG" --repo DeliciousMeatPop/VRCD
+          REPO="${{ github.repository }}"
+          echo "Verifying release $TAG exists in $REPO..."
+          gh release view "$TAG" --repo "$REPO"
+
           for DMG in dist/vr-cyberdeck-${VERSION}-x64.dmg dist/vr-cyberdeck-${VERSION}-arm64.dmg; do
+            if [ ! -f "$DMG" ]; then
+              echo "ERROR: expected DMG not found: $DMG"
+              ls -la dist/ || true
+              exit 1
+            fi
             echo "Uploading $DMG..."
             gh release upload "$TAG" "$DMG" \
-              --repo DeliciousMeatPop/VRCD \
+              --repo "$REPO" \
               --clobber
           done
           echo "Done."
