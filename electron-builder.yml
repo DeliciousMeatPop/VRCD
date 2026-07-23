@@ -89,6 +89,6 @@ deb:
 npmRebuild: false
 publish:
   provider: github
-  owner: KaladinDMP
-  repo: vr-cyberdeck
+  owner: DeliciousMeatPop
+  repo: VRCD
 electronDownload: {}
