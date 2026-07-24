@@ -61,6 +61,8 @@ const api = {
       typedIpcRenderer.invoke('adb:get-installed-packages', serial),
     uninstallPackage: (serial: string, packageName: string): Promise<boolean> =>
       typedIpcRenderer.invoke('adb:uninstallPackage', serial, packageName),
+    deleteGameFiles: (releaseName: string): Promise<{ deleted: boolean; path: string; error?: string }> =>
+      typedIpcRenderer.invoke('adb:deleteGameFiles', releaseName),
     pingDevice: (ipAddress: string): Promise<{ reachable: boolean; responseTime?: number }> =>
       typedIpcRenderer.invoke('adb:ping-device', ipAddress),
     startTrackingDevices: (): void => typedIpcRenderer.send('adb:start-tracking-devices'),

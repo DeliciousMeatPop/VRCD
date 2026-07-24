@@ -237,6 +237,7 @@ export interface AdbAPI {
   getInstalledPackages: (serial: string) => Promise<PackageInfo[]>
   getApplicationLabel: (serial: string, packageName: string) => Promise<string | null>
   uninstallPackage: (serial: string, packageName: string) => Promise<boolean>
+  deleteGameFiles: (releaseName: string) => Promise<{ deleted: boolean; path: string; error?: string }>
   startTrackingDevices: (mainWindow?: BrowserWindow) => void
   stopTrackingDevices: () => void
   getUserName: (serial: string) => Promise<string>

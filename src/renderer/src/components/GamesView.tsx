@@ -1069,7 +1069,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       })
   }
 
-  const performUninstall = async (game: GameInfo): Promise<void> => {
+  const performUninstall = async (game: GameInfo, deleteFiles = false): Promise<void> => {
     if (!game || !game.packageName || !selectedDevice) {
       console.error(
         'Uninstall action aborted: Missing game data, package name, or selectedDevice.',
@@ -1089,6 +1089,14 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       const success = await window.api.adb.uninstallPackage(selectedDevice, game.packageName)
       if (success) {
         console.log(`Uninstall: Successfully uninstalled ${game.packageName}.`)
+        if (deleteFiles && game.releaseName) {
+          const result = await window.api.adb.deleteGameFiles(game.releaseName)
+          if (result.deleted) {
+            console.log(`Uninstall: Deleted game files at ${result.path}`)
+          } else {
+            console.log(`Uninstall: Could not delete game files: ${result.error}`)
+          }
+        }
       } else {
         console.error(`Uninstall: Failed to uninstall ${game.packageName}.`)
         window.alert('Failed to uninstall the game.')
@@ -2128,11 +2136,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       {pendingUninstall && (
         <UninstallWarningDialog
           appName={pendingUninstall.name || pendingUninstall.releaseName}
-          onConfirm={(dontShowAgain) => {
+          onConfirm={(dontShowAgain, deleteFiles) => {
             if (dontShowAgain) setSkipUninstallWarning(true)
             const game = pendingUninstall
             setPendingUninstall(null)
-            void performUninstall(game)
+            void performUninstall(game, deleteFiles)
           }}
           onCancel={() => setPendingUninstall(null)}
         />

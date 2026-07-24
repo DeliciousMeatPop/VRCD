@@ -452,6 +452,24 @@ app.whenReady().then(async () => {
     console.log(`IPC adb:uninstallPackage called for ${packageName} on ${serial}`)
     return await adbService.uninstallPackage(serial, packageName)
   })
+  typedIpcMain.handle('adb:deleteGameFiles', async (_event, releaseName) => {
+    const downloadPath = settingsService.getDownloadPath()
+    const gamePath = join(downloadPath, releaseName)
+    console.log(`[IPC] adb:deleteGameFiles - Deleting ${gamePath}`)
+    try {
+      await fs.stat(gamePath)
+      await fs.rm(gamePath, { recursive: true, force: true })
+      console.log(`[IPC] adb:deleteGameFiles - Deleted ${gamePath}`)
+      return { deleted: true, path: gamePath }
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        console.log(`[IPC] adb:deleteGameFiles - Path not found: ${gamePath}`)
+        return { deleted: false, path: gamePath, error: 'Game files not found in current download folder' }
+      }
+      console.error(`[IPC] adb:deleteGameFiles - Error deleting ${gamePath}:`, error)
+      return { deleted: false, path: gamePath, error: String(error) }
+    }
+  })
   typedIpcMain.on('adb:start-tracking-devices', () => {
     if (mainWindow) adbService.startTrackingDevices(mainWindow)
     else console.error('Cannot start tracking devices, mainWindow is not available.')

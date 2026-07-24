@@ -2,22 +2,17 @@ import React, { useState } from 'react'
 
 interface UninstallWarningDialogProps {
   appName: string
-  onConfirm: (dontShowAgain: boolean) => void
+  onConfirm: (dontShowAgain: boolean, deleteFiles: boolean) => void
   onCancel: () => void
 }
 
-/**
- * Confirmation shown before any "Uninstall" action. Uninstalling an app on
- * the headset also wipes its save data and settings, so this is a deliberate
- * extra step rather than a silent action - with an opt-out for users who
- * don't want to see it again (toggleable back on in Settings).
- */
 const UninstallWarningDialog: React.FC<UninstallWarningDialogProps> = ({
   appName,
   onConfirm,
   onCancel
 }) => {
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const [deleteFiles, setDeleteFiles] = useState(false)
 
   return (
     <div
@@ -78,9 +73,39 @@ const UninstallWarningDialog: React.FC<UninstallWarningDialogProps> = ({
             This cannot be undone.
           </span>
         </div>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px',
+            marginBottom: '16px',
+            padding: '10px 12px',
+            fontSize: '12px',
+            color: deleteFiles ? '#ff5555' : 'rgba(var(--vrcd-neon-raw),0.7)',
+            cursor: 'pointer',
+            background: deleteFiles ? 'rgba(255,85,85,0.08)' : 'rgba(var(--vrcd-neon-raw),0.04)',
+            border: `1px solid ${deleteFiles ? 'rgba(255,85,85,0.3)' : 'rgba(var(--vrcd-neon-raw),0.12)'}`,
+            borderRadius: '6px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={deleteFiles}
+            onChange={(e) => setDeleteFiles(e.target.checked)}
+            style={{ accentColor: '#ff5555', marginTop: '2px', flexShrink: 0 }}
+          />
+          <div style={{ lineHeight: 1.5 }}>
+            Also delete downloaded game files
+            <div style={{ fontSize: '10px', color: 'rgba(var(--vrcd-neon-raw),0.45)', marginTop: '2px' }}>
+              Only deletes files from your current download folder.
+              Games in other folders or previous download locations will not be affected.
+            </div>
+          </div>
+        </label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <button
-            onClick={() => onConfirm(dontShowAgain)}
+            onClick={() => onConfirm(dontShowAgain, deleteFiles)}
             style={{
               background: 'transparent',
               border: '2px solid rgba(255,85,85,0.7)',
