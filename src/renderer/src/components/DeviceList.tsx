@@ -312,6 +312,26 @@ const TargetCard: React.FC<TargetCardProps> = ({
               ✗ Connection failed — check device
             </span>
           )}
+
+          {/* Unauthorized help */}
+          {isUnauth && (
+            <div style={{
+              ...S, fontSize: '10px', color: '#ffaa00', lineHeight: 1.5,
+              marginTop: '4px', padding: '6px 8px',
+              background: 'rgba(255,170,0,0.06)',
+              border: '1px solid rgba(255,170,0,0.2)',
+              borderRadius: '4px'
+            }}>
+              <strong>USB debugging not authorized.</strong> Put on the headset and accept the
+              &quot;Allow USB debugging?&quot; prompt. If you accidentally denied it:
+              <br />
+              <span style={{ color: 'rgba(255,170,0,0.75)' }}>
+                On the Quest: Settings → System → Developer → Revoke USB debugging authorizations
+              </span>
+              <br />
+              Then unplug and replug the cable.
+            </div>
+          )}
         </div>
       </div>
 
@@ -360,6 +380,16 @@ const TargetCard: React.FC<TargetCardProps> = ({
               <span style={{ fontFamily: 'monospace', fontSize: '9px', color: 'rgba(var(--vrcd-purple-raw),0.5)', letterSpacing: '0.1em' }}>SAVED</span>
             )}
           </>
+        ) : isUnauth ? (
+          <button className="breach-btn" onClick={async () => {
+            try {
+              await window.api.adb.runLocalAdbCommand('kill-server')
+              await new Promise(r => setTimeout(r, 1000))
+              await window.api.adb.runLocalAdbCommand('start-server')
+            } catch { /* ignore */ }
+          }} style={{ fontSize: '10px', padding: '5px 12px', borderColor: 'rgba(255,170,0,0.5)', color: '#ffaa00' }}>
+            ↻ RESET ADB
+          </button>
         ) : (
           <button className="breach-btn" disabled style={{ fontSize: '10px', padding: '5px 12px' }}>
             INACCESSIBLE
