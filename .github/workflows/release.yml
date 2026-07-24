@@ -1,5 +1,4 @@
 name: Create Release
-
 on:
   workflow_dispatch:
     inputs:
@@ -7,9 +6,8 @@ on:
         description: 'Release version (e.g. 1.0.1) — used as tag (v$VERSION), title, and app version.'
         required: true
         type: string
-  push:
-    tags:
-      - 'v*.*.*'
+# push trigger removed — the workflow creates its own tag via gh release create,
+# which would otherwise re-trigger this same workflow in an infinite loop.
 
 # Workflow-level write permission so every job inherits it.
 permissions:
