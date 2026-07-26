@@ -235,6 +235,12 @@ export class DownloadProcessor {
       : join(item.downloadPath, item.releaseName)
     this.queueManager.updateItem(item.releaseName, { downloadPath: downloadPath })
 
+    // Declared outside `try` so the catch block can inspect transfer state
+    // and produce a targeted error message (e.g. "server returned no data").
+    let lastProgress = -1
+    let lastSpeed = ''
+    let statsCount = 0
+
     try {
       await fs.mkdir(downloadPath, { recursive: true })
 
@@ -395,9 +401,6 @@ export class DownloadProcessor {
       })
 
       // Parse rclone JSON log output for progress
-      let lastProgress = -1
-      let lastSpeed = ''
-      let statsCount = 0
       if (rcloneProcess.all) {
         let lineBuffer = ''
         rcloneProcess.all.on('data', (chunk: Buffer) => {
@@ -627,6 +630,16 @@ export class DownloadProcessor {
         errorMessage = String(error)
       }
       errorMessage = redactKey(errorMessage).substring(0, 500)
+
+      // rclone received stats but transferred zero bytes — the download source
+      // is unreachable or returned an empty directory listing. Provide a clear
+      // message instead of the raw "exit code 1".
+      if (statsCount > 0 && lastProgress <= 0) {
+        errorMessage =
+          'Download source returned no data. The download server may be temporarily ' +
+          'unavailable, or the game may have been removed from the server. ' +
+          'Check your internet connection and try again later.'
+      }
 
       // Normalise ENOSPC / "no space left" that surfaces mid-download (rclone
       // writes fail after the pre-flight disk-space check passed).

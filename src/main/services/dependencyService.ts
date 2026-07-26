@@ -266,7 +266,8 @@ class DependencyService {
     archivePath: string,
     destDir: string,
     progressName: string,
-    progressCallback?: ProgressCallback
+    progressCallback?: ProgressCallback,
+    timeoutMs: number = 120_000
   ): Promise<Error | null> {
     const sevenZipPath = this.get7zPath()
     console.log(`Using bundled 7zip at ${sevenZipPath} for extraction.`)
@@ -277,11 +278,33 @@ class DependencyService {
     // Tolerate benign 7-Zip stderr (e.g. dylibs injected by macOS tweak
     // frameworks); a real ERROR still rejects and success is confirmed by the
     // caller's file existence check below.
-    const captured = await awaitSevenZipStream(stream, (percent) =>
+    const extractionPromise = awaitSevenZipStream(stream, (percent) =>
       progressCallback?.(this.status, { name: progressName, percentage: percent })
     )
-    console.log(`Archive extracted to ${destDir}`)
-    return captured
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        try {
+          stream.destroy()
+        } catch { /* stream may already be closed */ }
+        reject(
+          new Error(
+            `Extraction timed out after ${Math.round(timeoutMs / 1000)}s. ` +
+              `This usually means the 7-Zip process could not start or the archive is corrupt. ` +
+              `Antivirus software blocking executables in AppData is a common cause on Windows.`
+          )
+        )
+      }, timeoutMs)
+    })
+
+    try {
+      const captured = await Promise.race([extractionPromise, timeoutPromise])
+      console.log(`Archive extracted to ${destDir}`)
+      return captured
+    } finally {
+      clearTimeout(timeoutId)
+    }
   }
 
   // --- rclone ---
@@ -641,6 +664,20 @@ class DependencyService {
 
       console.log(`adb platform-tools download complete: ${tempArchivePath}`)
       progressCallback?.(this.status, { name: 'adb', percentage: 100 })
+
+      // Validate the downloaded archive before trying to extract it. A
+      // corrupt, truncated, or intercepted download (e.g. a captive-portal
+      // HTML page returned with HTTP 200) would make 7-Zip hang or fail with
+      // a misleading error. Platform-tools zips are always >5 MB.
+      const downloadedStat = await fsPromises.stat(tempArchivePath)
+      if (downloadedStat.size < 1024 * 1024) {
+        throw new Error(
+          `Downloaded ADB archive is too small (${downloadedStat.size} bytes) — ` +
+            `the file is likely corrupt or your network returned an error page. ` +
+            `Check your internet connection and try again.`
+        )
+      }
+      console.log(`Downloaded archive size: ${downloadedStat.size} bytes`)
 
       // --- Extraction Step using SevenZip ---
       tempExtractDir = join(app.getPath('temp'), `adb-extract-${Date.now()}`)
