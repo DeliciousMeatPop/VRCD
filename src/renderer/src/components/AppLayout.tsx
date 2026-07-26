@@ -530,12 +530,18 @@ const MainContent: React.FC<MainContentProps> = ({
     } else if (dependencyStatus?.rclone.downloading && dependencyProgress) {
       progressText = `Setting up ${dependencyProgress.name}... ${dependencyProgress.percentage}%`
       if (dependencyProgress.name === 'rclone-extract') {
-        progressText = `Extracting ${dependencyProgress.name.replace('-extract', '')}...`
+        progressText =
+          dependencyProgress.percentage > 0
+            ? `Extracting ${dependencyProgress.name.replace('-extract', '')}... ${dependencyProgress.percentage}%`
+            : `Extracting ${dependencyProgress.name.replace('-extract', '')}...`
       }
     } else if (dependencyStatus?.adb.downloading && dependencyProgress) {
       progressText = `Setting up ${dependencyProgress.name}... ${dependencyProgress.percentage}%`
       if (dependencyProgress.name === 'adb-extract') {
-        progressText = `Extracting ${dependencyProgress.name.replace('-extract', '')}...`
+        progressText =
+          dependencyProgress.percentage > 0
+            ? `Extracting ${dependencyProgress.name.replace('-extract', '')}... ${dependencyProgress.percentage}%`
+            : `Extracting ${dependencyProgress.name.replace('-extract', '')}...`
       }
     } else if (
       dependencyStatus &&
