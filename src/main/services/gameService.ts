@@ -122,9 +122,8 @@ class GameService extends EventEmitter implements GamesAPI {
       console.error('Error initializing game service:', error)
       this.status = 'ERROR'
       return 'ERROR'
-    } finally {
-      this.status = 'INITIALIZED'
     }
+    this.status = 'INITIALIZED'
     return 'INITIALIZED'
   }
 

@@ -219,6 +219,17 @@ function createWindow(): void {
       try {
         const initialized = await dependencyService.initialize(sendDependencyProgress)
         if (initialized === 'INITIALIZING') {
+          console.log('DependencyService already initializing, skipping duplicate request.')
+          return
+        }
+        if (initialized === 'ERROR') {
+          console.error('Dependency initialization returned ERROR status.')
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            typedWebContentsSend.send(mainWindow, 'dependency-setup-error', {
+              message: 'One or more dependencies failed to initialize',
+              status: dependencyService.getStatus()
+            })
+          }
           return
         }
         console.log('Dependency initialization complete. Sending status.')
@@ -275,15 +286,13 @@ function createWindow(): void {
           } catch (serviceInitError) {
             console.error('Error initializing dependent services:', serviceInitError)
             dependencyService.setDependencyServiceStatus('ERROR')
-            // Optionally notify the renderer about this failure
-            // if (mainWindow && !mainWindow.isDestroyed()) {
-            //   typedWebContentsSend.send(mainWindow, 'service-init-error', {
-            //     message:
-            //       serviceInitError instanceof Error
-            //         ? serviceInitError.message
-            //         : 'Unknown service initialization error'
-            //   })
-            // }
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              typedWebContentsSend.send(
+                mainWindow,
+                'dependency-setup-complete',
+                dependencyService.getStatus()
+              )
+            }
           }
           // -----------------------------------------------------------
         }
