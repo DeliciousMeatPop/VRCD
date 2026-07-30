@@ -48,6 +48,11 @@ declare global {
         showFolderPicker: () => Promise<string | null>
         showLocalFolderPicker: () => Promise<string[] | null>
         showLocalZipPicker: () => Promise<string[] | null>
+        getPathForFile: (file: File) => string
+        classifyPath: (path: string) => Promise<{
+          kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown'
+          name: string
+        }>
       }
       wifiBookmarks: {
         getAll: () => Promise<WiFiBookmark[]>

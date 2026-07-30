@@ -168,6 +168,12 @@ export interface IPCChannels {
   // Manual installation channels
   'downloads:install-manual': DefineChannel<[filePath: string, deviceId: string], boolean>
   'downloads:copy-obb-folder': DefineChannel<[folderPath: string, deviceId: string], boolean>
+  // Classify a dropped/selected path so the UI can route it to the right action
+  // (install an APK/ZIP/game-folder vs. copy an OBB folder).
+  'manual:classify-path': DefineChannel<
+    [path: string],
+    { kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown'; name: string }
+  >
 
   // Save Backup (BETA) channels
   'backup:list': DefineChannel<[], BackupEntry[]>

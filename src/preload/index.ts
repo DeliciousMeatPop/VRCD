@@ -1,4 +1,4 @@
-import { contextBridge, IpcRendererEvent, ipcRenderer, webFrame } from 'electron'
+import { contextBridge, IpcRendererEvent, ipcRenderer, webFrame, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import {
   GameInfo,
@@ -350,7 +350,17 @@ const api = {
     showLocalFolderPicker: (): Promise<string[] | null> =>
       typedIpcRenderer.invoke('dialog:show-local-folder-picker'),
     showLocalZipPicker: (): Promise<string[] | null> =>
-      typedIpcRenderer.invoke('dialog:show-local-zip-picker')
+      typedIpcRenderer.invoke('dialog:show-local-zip-picker'),
+    // Resolve the absolute filesystem path of a dragged-and-dropped File.
+    // Electron removed File.path, so drag-and-drop must go through webUtils.
+    getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+    // Classify a dropped/selected path (apk / zip / game folder / obb folder).
+    classifyPath: (
+      path: string
+    ): Promise<{
+      kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown'
+      name: string
+    }> => typedIpcRenderer.invoke('manual:classify-path', path)
   },
   // WiFi bookmarks API
   wifiBookmarks: {
