@@ -107,7 +107,20 @@ const useStyles = makeStyles({
   }
 })
 
-const MirrorManagement: React.FC = () => {
+interface MirrorManagementProps {
+  /** True when a server (public JSON or rclone config) has been configured. */
+  serverConfigured?: boolean
+  /** True when server mode is currently active (configured AND not toggled off). */
+  serverActive?: boolean
+  /** Toggle server mode on/off without wiping the saved server credentials. */
+  onToggleServer?: (on: boolean) => void
+}
+
+const MirrorManagement: React.FC<MirrorManagementProps> = ({
+  serverConfigured = false,
+  serverActive = false,
+  onToggleServer
+}) => {
   const styles = useStyles()
   const { t } = useLanguage()
   const {
@@ -287,17 +300,35 @@ const MirrorManagement: React.FC = () => {
               )}
               <Text style={{ color: getServerStatusColor() }}>{getServerStatusText()}</Text>
             </div>
-            {activeMirror && hasPublicConfig && (
-              <Button
-                appearance="subtle"
-                size="small"
-                icon={<RadioButtonRegular />}
-                onClick={() => clearActiveMirror()}
-                title="Switch back to the public server"
-              >
-                Use Public Server
-              </Button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
+              {activeMirror && hasPublicConfig && (
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={<RadioButtonRegular />}
+                  onClick={() => clearActiveMirror()}
+                  title="Switch back to the public server"
+                >
+                  Use Public Server
+                </Button>
+              )}
+              {/* Toggle server mode on/off without wiping the saved credentials */}
+              {serverConfigured && onToggleServer && (
+                <Button
+                  appearance="primary"
+                  size="small"
+                  icon={serverActive ? <DismissCircleRegular /> : <PlayRegular />}
+                  onClick={() => onToggleServer(!serverActive)}
+                  title={
+                    serverActive
+                      ? 'Turn the server off and drop back to the sideloader (keeps your saved server info)'
+                      : 'Turn the configured server back on'
+                  }
+                >
+                  {serverActive ? 'Switch to Sideloader' : 'Switch to Server Mode'}
+                </Button>
+              )}
+            </div>
           </div>
         </CardPreview>
       </Card>
