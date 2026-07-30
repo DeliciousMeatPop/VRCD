@@ -1734,7 +1734,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           <DialogBody style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
             <DialogTitle style={{ padding: '16px 24px', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>Server & Remotes</DialogTitle>
             <DialogContent style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '16px 24px' }}>
-              <MirrorManagement />
+              <MirrorManagement
+                serverConfigured={hasServerConfig}
+                serverActive={isServerMode}
+                onToggleServer={setServerMode}
+              />
             </DialogContent>
             <DialogActions style={{ padding: '12px 24px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>
               <Button appearance="secondary" onClick={() => setShowMirrorMgmt(false)}>Close</Button>
