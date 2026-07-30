@@ -7,8 +7,8 @@ import path from 'path'
 import { UpdateInfo, UpdateProgressInfo } from '@shared/types'
 import { compareVersions } from 'compare-versions'
 
-const RELEASE_REPO_OWNER = 'KaladinDMP'
-const RELEASE_REPO_NAME = 'vr-cyberdeck'
+const RELEASE_REPO_OWNER = 'DeliciousMeatPop'
+const RELEASE_REPO_NAME = 'VRCD'
 
 const REPO_URL = `https://github.com/${RELEASE_REPO_OWNER}/${RELEASE_REPO_NAME}`
 const RELEASES_LATEST_URL = `${REPO_URL}/releases/latest`

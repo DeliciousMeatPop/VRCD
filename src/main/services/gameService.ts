@@ -51,7 +51,7 @@ const SNAPSHOT_VERSION = 1
  * app releases without users having to reinstall.
  */
 const REMOTE_CUSTOM_NOTES_URL =
-  'https://raw.githubusercontent.com/KaladinDMP/vr-cyberdeck/main/resources/custom-notes.json'
+  'https://raw.githubusercontent.com/DeliciousMeatPop/VRCD/main/resources/custom-notes.json'
 
 const INTERNAL_BLACKLIST_GAMES = ['com.oculus.MiramarSetupRetail']
 

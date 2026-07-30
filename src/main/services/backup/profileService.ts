@@ -13,7 +13,7 @@ import { BackupProfile } from '@shared/types'
  *  storage). Rather than hard-coding those exceptions into each app release,
  *  they live in a JSON registry hosted in the repo:
  *
- *    https://raw.githubusercontent.com/KaladinDMP/VR-CyberDeck/main/backup-profiles.json
+ *    https://raw.githubusercontent.com/DeliciousMeatPop/VRCD/main/backup-profiles.json
  *
  *  Before every backup/restore the service asks this module for the package's
  *  profile. The registry is fetched over HTTPS, cached on disk, and only
@@ -27,7 +27,7 @@ import { BackupProfile } from '@shared/types'
  */
 
 const REGISTRY_URL =
-  'https://raw.githubusercontent.com/KaladinDMP/VR-CyberDeck/main/backup-profiles.json'
+  'https://raw.githubusercontent.com/DeliciousMeatPop/VRCD/main/backup-profiles.json'
 
 /** How long a cached registry is considered fresh before we try to re-fetch. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6 hours

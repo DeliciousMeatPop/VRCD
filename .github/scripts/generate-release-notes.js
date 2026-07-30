@@ -47,12 +47,6 @@ ${changelog}
 - Cyberdeck warns you with \`[ TRANSFERS IN PROGRESS ]\` if you try to close the window mid-transfer (works for both X and Cmd+Q)
 - Scan existing downloads folder, retry, clear-completed, per-item delete
 
-### \`[ UPLOADS ]\`
-- Auto-detect games on your headset that are missing or newer than the library
-- **Local PC upload** — point at a folder or a pre-made ZIP, no headset required
-- Full pipeline: stage → ADB pull APK → grab OBBs → metadata → 7z → rclone
-- Optional \`CRACKED\` tagging on uploads
-
 ### \`[ DEVICE / ADB ]\`
 - Auto-connect Quest on launch, WiFi bookmarks for wireless ADB
 - **ADB Shell** with built-in **quick-command shortcuts**:
