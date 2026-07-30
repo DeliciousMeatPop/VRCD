@@ -19,7 +19,7 @@ I REMOVED DISCUSSIONS SINCE PEOPLE WERE ONLY USING IT AS A WAY TO AVOID ADDING L
 
 ---
 
-VR CyberDeck is a cross-platform desktop deck for managing, sideloading, and uploading content to android devices and Meta Quest devices. You can connect to your own personal library or just use it as a sideloader or wraps the whole thing in a neon terminal aesthetic that doesn't feel like a 2014 sideloader.
+VR CyberDeck is a cross-platform desktop deck for sideloading content to Android and Meta Quest devices, wrapped in a neon terminal aesthetic that doesn't feel like a 2014 sideloader. Use it as a pure sideloader out of the box, or add your own server for a browsable library.
 
 ---
 
@@ -38,7 +38,6 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 | **Library view** | Table only | Table **and** card view, sort presets, table stretches edge-to-edge |
 | **Trailers** | Loads full youtube.com page | Locked-down nocookie embed — no ads, no suggestions, no subscribe |
 | **Downloads** | Sequential | Up to **5 concurrent**, with NEW / UPDATED badges |
-| **Uploads** | Headset-only | Headset **or** local PC files (folders + ZIPs) |
 | **Quit safety** | None | Confirmation prompt when transfers are in flight |
 | **Settings** | Flat panel | Collapsible sections, accent color, font picker, tab memory |
 | **A11y** | Limited | Full colorblind theming, font picker, font scale to 200%, 900x640 min size |
@@ -49,28 +48,22 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 
 ## `// FEATURES`
 
-**`[ LIBRARY ]`**
-- Bundled server defaults — no JSON, no rclone, no setup required
+**`[ LIBRARY ]`** — optional, only when you add a server
+- Sideloader-first: works on first launch with zero config; a library is entirely opt-in
+- Add your own server under **Manage Remotes** (a server config or an rclone config) to unlock a browsable library
 - Card view + table view, persistent sort, size presets, 18+ filter
 - Table view stretches to fill the window so wide screens aren't wasted
-- Built-in custom remote management with public server fallback
 - `NEW` / `UPDATED` badges driven off real `lastUpdated` timestamps 
 
 // NOTE: `NEW` = added to the library in the last 30 days. `UPDATED` = existing game updated in the last 7 days. Both badges can appear on the same title simultaneously.
 
 **`[ TRANSFERS ]`**
 - Up to 5 parallel downloads with live progress
-- Live `// TRANSFER_BUS` strip in the header — rotates through active downloads/uploads with name, stage, %, speed, and ETA
-- Unified Transfers drawer (downloads + uploads in one place) with stage-aware labels (`Installing APK...`, `Copying OBB...`)
+- Live `// TRANSFER_BUS` strip in the header — rotates through active transfers with name, stage, %, speed, and ETA
+- Unified Transfers drawer with stage-aware labels (`Installing APK...`, `Copying OBB...`)
 - Scan existing downloads folder and reconcile against the library
 - Clear-completed, retry, and per-item delete actions
 - Close the window mid-transfer? Cyberdeck warns you with `[ TRANSFERS IN PROGRESS ]` before letting you bail (works for both X and Cmd+Q on macOS)
-
-**`[ UPLOADS ]`**
-- Auto-detect games on your headset that are missing or newer than the library
-- Local PC upload — point at a folder or pre-made ZIP, no headset required
-- Full pipeline: stage → ADB pull APK → grab OBBs → metadata → 7z → rclone
-- Optional `CRACKED` tagging on uploads
 
 **`[ DEVICE / ADB ]`**
 - Auto-connect Quest on launch
@@ -134,13 +127,13 @@ chmod +x vr-cyberdeck-x.x.x-x86_64.AppImage
 1. Install the build for your OS
 2. Plug in your Quest via USB (data-capable cable)
 3. Allow USB Debugging on the headset
-4. Sideload games
+4. Drag an APK, ZIP, game folder, or OBB folder onto the deck to sideload it
 
-That's it.
+That's it — no account, no server, no JSON to edit.
 
-> Want to point at a custom server, swap in your own rclone config, or upload from PC? See **Other Settings** — every advanced flow lives there.
+> Want a browsable library instead? Add your own server — a server config or your own rclone config — under **Manage Remotes**. Other advanced flows live in **Other Settings**.
 
-> Power user? Open the **ADB Shell** from the sidebar — the shortcut panel above the terminal covers most Quest tweaks in one click, and you can save your own commands as `MY MACROS` pills.
+> Power user? Open the **ADB Shell** right from the deck — the shortcut panel above the terminal covers most Quest tweaks in one click, and you can save your own commands as `MY MACROS` pills.
 
 ---
 

@@ -34,8 +34,8 @@ ${changelog}
 <details>
 <summary>## // HEADLINE FEATURES (Click to Expand - ITS A SPOILER!</summary>
 
-### \`[ LIBRARY ]\`
-- Bundled server defaults — works first launch, zero config
+### \`[ LIBRARY ]\` — optional, when you add a server
+- Sideloader-first: works first launch with zero config; add your own server (a server config or an rclone config) under **Manage Remotes** for a browsable library
 - Card view **and** table view (table now stretches edge-to-edge in wide windows)
 - Persistent sort, density presets, 18+ filter, mirror management with public fallback
 - \`NEW\` / \`UPDATED\` badges driven off real \`lastUpdated\` timestamps
@@ -46,12 +46,6 @@ ${changelog}
 - Unified Transfers drawer with stage-aware labels (\`Installing APK...\`, \`Copying OBB...\`)
 - Cyberdeck warns you with \`[ TRANSFERS IN PROGRESS ]\` if you try to close the window mid-transfer (works for both X and Cmd+Q)
 - Scan existing downloads folder, retry, clear-completed, per-item delete
-
-### \`[ UPLOADS ]\`
-- Auto-detect games on your headset that are missing or newer than the library
-- **Local PC upload** — point at a folder or a pre-made ZIP, no headset required
-- Full pipeline: stage → ADB pull APK → grab OBBs → metadata → 7z → rclone
-- Optional \`CRACKED\` tagging on uploads
 
 ### \`[ DEVICE / ADB ]\`
 - Auto-connect Quest on launch, WiFi bookmarks for wireless ADB
@@ -119,15 +113,15 @@ Already on a 0.x build? It will auto-update.
 1. Install the build for your OS
 2. Plug your Quest in via USB (data-capable cable)
 3. Allow USB Debugging on the headset
-4. Browse the library and hit download
+4. Drag an APK, ZIP, game folder, or OBB folder onto the deck to sideload it
 
-That's it. No server config, no rclone setup, no JSON to edit. Power-user knobs (custom servers, mirrors, rclone configs, PC uploads, ADB macros, sound effects) all live in **Settings**.
+That's it — no account, no server, no JSON to edit. Want a browsable library instead? You can add your own server (a server config or an rclone config) under **Manage Remotes** — either you already know one, or you just use it as a sideloader. Power-user knobs (custom servers, mirrors, rclone configs, ADB macros, sound effects) all live in **Settings**.
 
 ---
 
 ## \`// FEEDBACK\`
 
-- 🐛 [Open an issue](https://github.com/KaladinDMP/VR-CyberDeck/issues/new) for bugs — include a rentry link of the log from **Other Settings → //Upload Log**.
+- 🐛 [Open an issue](https://github.com/DeliciousMeatPop/VRCD/issues/new) for bugs — include a rentry link of the log from **Other Settings → //Upload Log**.
 
 ---
 

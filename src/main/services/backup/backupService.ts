@@ -47,7 +47,7 @@ import {
  *                      to failure reports so issues are actually diagnosable)
  */
 
-const REPO = 'KaladinDMP/VR-CyberDeck'
+const REPO = 'DeliciousMeatPop/VRCD'
 const SAVE_DATA_BASE = '/sdcard/Android/data'
 
 function deviceSavePath(packageName: string): string {
