@@ -64,7 +64,8 @@ import {
   SettingsRegular,
   ArrowSyncRegular,
   DismissRegular,
-  CloudRegular as CloudIcon
+  CloudRegular as CloudIcon,
+  ServerRegular as ServerIcon
 } from '@fluentui/react-icons'
 import GameDetailsDialog from './GameDetailsDialog'
 import UninstallWarningDialog from './UninstallWarningDialog'
@@ -491,10 +492,30 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const { t } = useLanguage()
   const { serverConfig } = useSettings()
   const { activeMirror } = useMirrors()
-  // Server mode = a public vrSrc JSON or an rclone config has been added. With
-  // neither, the app runs as a pure sideloader: no sidebar, no game list, just
-  // the drag-and-drop install deck over the cyberdeck background.
-  const isServerMode = serverConfig.baseUri.trim().length > 0 || !!activeMirror
+  // A server (public server JSON or an rclone config) has been configured.
+  const hasServerConfig = serverConfig.baseUri.trim().length > 0 || !!activeMirror
+  // Manual override so a configured server can be turned "off" without wiping
+  // its credentials — lets you flip between the library and the sideloader deck
+  // for testing a server setup. Persisted so the choice survives restarts.
+  const [serverDisabled, setServerDisabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vrcyberdeck:serverDisabled') === 'true'
+    } catch {
+      return false
+    }
+  })
+  const setServerMode = useCallback((on: boolean): void => {
+    setServerDisabled(!on)
+    try {
+      localStorage.setItem('vrcyberdeck:serverDisabled', String(!on))
+    } catch {
+      /* ignore */
+    }
+  }, [])
+  // Server mode = a server is configured AND not manually turned off. With no
+  // server (or one toggled off) the app is a pure sideloader: no sidebar, no
+  // game list, just the drag-and-drop install deck over the cyberdeck background.
+  const isServerMode = hasServerConfig && !serverDisabled
 
   const [shellDialogOpen, setShellDialogOpen] = useState(false)
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
@@ -1874,6 +1895,20 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               </button>
             </div>
 
+            {/* Re-enter server mode — only when a server is configured but has
+                been toggled off (kept for testing a server setup). */}
+            {hasServerConfig && (
+              <div style={{ width: '100%' }}>
+                <button
+                  className="cyber-deck-btn purple"
+                  style={{ width: '100%' }}
+                  onClick={() => setServerMode(true)}
+                >
+                  <ServerIcon /><span>Enter Server Mode</span>
+                </button>
+              </div>
+            )}
+
             {/* Footer: version + github */}
             <div className="sideloader-footer">
               {appVersion && <span className="ver">v{appVersion}</span>}
@@ -2018,6 +2053,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               </Button>
               <Button appearance="subtle" size="small" icon={<SettingsRegular />} onClick={onSettings} style={CB}>
                 Other Settings
+              </Button>
+              {/* Turn the configured server off (kept, not wiped) and drop back
+                  to the sideloader deck — handy for testing a server setup. */}
+              <Button appearance="subtle" size="small" icon={<ServerIcon />} onClick={() => setServerMode(false)} style={CBP}>
+                Back to Sideloader
               </Button>
             </section>
 
