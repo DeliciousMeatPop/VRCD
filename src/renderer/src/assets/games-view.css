@@ -542,3 +542,345 @@
 .search-wrap .fui-Input .fui-Input__contentBefore {
   color: rgba(var(--vrcd-neon-raw), 0.5);
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   SIDELOADER MODE — full-window cyberdeck deck (no server configured)
+   ════════════════════════════════════════════════════════════════════════ */
+.sideloader-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #050514;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  overflow: auto;
+  padding: 24px;
+}
+/* Darkening scrim so dropped-in content stays legible over any artwork */
+.sideloader-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(5, 5, 20, 0.25) 0%,
+    rgba(5, 5, 20, 0.55) 55%,
+    rgba(5, 5, 20, 0.78) 100%
+  );
+  pointer-events: none;
+}
+
+.sideloader-screen {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 92%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+  background: rgba(3, 3, 14, 0.62);
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.28);
+  border-radius: 4px;
+  backdrop-filter: blur(3px);
+  box-shadow:
+    0 0 34px rgba(var(--vrcd-neon-raw), 0.1),
+    inset 0 0 30px rgba(var(--vrcd-purple-raw), 0.06);
+  /* clipped, non-rectangular sci-fi panel */
+  clip-path: polygon(
+    0 14px, 14px 0,
+    calc(100% - 14px) 0, 100% 14px,
+    100% calc(100% - 14px), calc(100% - 14px) 100%,
+    14px 100%, 0 calc(100% - 14px)
+  );
+}
+
+/* ── device chip ── */
+.sideloader-devicechip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: var(--vrcd-font-mono, monospace);
+  font-size: 12px;
+  color: var(--vrcd-neon);
+  padding: 6px 12px;
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.25);
+  border-radius: 999px;
+  background: rgba(var(--vrcd-neon-raw), 0.04);
+}
+.sideloader-devicechip .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sideloader-devicechip .dot.online {
+  background: var(--vrcd-neon);
+  box-shadow: 0 0 6px var(--vrcd-neon);
+}
+.sideloader-devicechip .dot.offline {
+  background: #ff4444;
+  box-shadow: 0 0 6px #ff4444;
+}
+.sideloader-devicechip .name {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.sideloader-devicechip .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: rgba(var(--vrcd-neon-raw), 0.85);
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.35);
+  background: rgba(var(--vrcd-neon-raw), 0.05);
+}
+.sideloader-devicechip .chip-x {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid rgba(var(--vrcd-purple-raw), 0.55);
+  color: var(--vrcd-purple);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.sideloader-devicechip .chip-x:hover {
+  background: rgba(var(--vrcd-purple-raw), 0.12);
+}
+
+/* ── drop zone ── */
+.sideloader-dropzone {
+  position: relative;
+  width: 100%;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--vrcd-neon);
+  padding: 26px 20px;
+  cursor: default;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+  clip-path: polygon(
+    0 18px, 18px 0,
+    calc(100% - 18px) 0, 100% 18px,
+    100% calc(100% - 18px), calc(100% - 18px) 100%,
+    18px 100%, 0 calc(100% - 18px)
+  );
+  background: rgba(var(--vrcd-neon-raw), 0.03);
+}
+/* animated dashed neon frame drawn as a border-image-free overlay */
+.sideloader-dropzone .dz-frame {
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  border: 1.5px dashed rgba(var(--vrcd-neon-raw), 0.45);
+  clip-path: polygon(
+    0 14px, 14px 0,
+    calc(100% - 14px) 0, 100% 14px,
+    100% calc(100% - 14px), calc(100% - 14px) 100%,
+    14px 100%, 0 calc(100% - 14px)
+  );
+  transition: border-color 0.15s ease;
+}
+.sideloader-dropzone.is-dragover {
+  background: rgba(var(--vrcd-neon-raw), 0.1);
+  box-shadow: 0 0 30px rgba(var(--vrcd-neon-raw), 0.22);
+  transform: translateY(-1px);
+}
+.sideloader-dropzone.is-dragover .dz-frame {
+  border-color: var(--vrcd-neon);
+  border-style: solid;
+}
+.sideloader-dropzone.is-disabled {
+  opacity: 0.55;
+}
+.sideloader-dropzone .dz-icon {
+  color: rgba(var(--vrcd-neon-raw), 0.8);
+  filter: drop-shadow(0 0 10px rgba(var(--vrcd-neon-raw), 0.4));
+}
+.sideloader-dropzone.is-dragover .dz-icon {
+  color: var(--vrcd-neon);
+  animation: dz-bounce 0.7s ease-in-out infinite;
+}
+@keyframes dz-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+.sideloader-dropzone .dz-title {
+  font-family: var(--vrcd-font-mono, monospace);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 12px rgba(var(--vrcd-neon-raw), 0.6);
+}
+.sideloader-dropzone .dz-sub {
+  font-family: var(--vrcd-font-mono, monospace);
+  font-size: 11px;
+  line-height: 1.7;
+  color: rgba(var(--vrcd-neon-raw), 0.6);
+  letter-spacing: 0.02em;
+}
+.sideloader-dropzone .dz-sub b {
+  color: var(--vrcd-neon);
+  font-weight: 700;
+}
+.sideloader-dropzone .dz-warn {
+  margin-top: 6px;
+  font-family: var(--vrcd-font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #ff6a6a;
+}
+
+/* ── action button rows ── */
+.sideloader-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.sideloader-actions.secondary {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* ── beveled sci-fi cyberdeck button ── */
+.cyber-deck-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  min-height: 42px;
+  font-family: var(--vrcd-font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vrcd-neon);
+  cursor: pointer;
+  background: linear-gradient(
+    160deg,
+    rgba(var(--vrcd-neon-raw), 0.12) 0%,
+    rgba(var(--vrcd-neon-raw), 0.04) 45%,
+    rgba(3, 3, 14, 0.6) 100%
+  );
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.5);
+  box-shadow:
+    0 0 8px rgba(var(--vrcd-neon-raw), 0.12),
+    inset 0 1px 0 rgba(var(--vrcd-neon-raw), 0.18),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.45);
+  /* angled corners → non-rectangular */
+  clip-path: polygon(
+    10px 0, 100% 0,
+    100% calc(100% - 10px), calc(100% - 10px) 100%,
+    0 100%, 0 10px
+  );
+  transition: color 0.14s ease, box-shadow 0.14s ease,
+    transform 0.1s ease, background 0.14s ease;
+}
+.cyber-deck-btn > span {
+  white-space: nowrap;
+}
+.cyber-deck-btn:hover:not(:disabled) {
+  color: #d7ffe9;
+  background: linear-gradient(
+    160deg,
+    rgba(var(--vrcd-neon-raw), 0.22) 0%,
+    rgba(var(--vrcd-neon-raw), 0.08) 45%,
+    rgba(3, 3, 14, 0.6) 100%
+  );
+  box-shadow:
+    0 0 18px rgba(var(--vrcd-neon-raw), 0.32),
+    inset 0 1px 0 rgba(var(--vrcd-neon-raw), 0.3),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
+}
+.cyber-deck-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    0 0 10px rgba(var(--vrcd-neon-raw), 0.2),
+    inset 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+.cyber-deck-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cyber-deck-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+/* purple accent variant */
+.cyber-deck-btn.purple {
+  color: var(--vrcd-purple);
+  border-color: rgba(var(--vrcd-purple-raw), 0.55);
+  background: linear-gradient(
+    160deg,
+    rgba(var(--vrcd-purple-raw), 0.16) 0%,
+    rgba(var(--vrcd-purple-raw), 0.05) 45%,
+    rgba(3, 3, 14, 0.6) 100%
+  );
+  box-shadow:
+    0 0 8px rgba(var(--vrcd-purple-raw), 0.16),
+    inset 0 1px 0 rgba(var(--vrcd-purple-raw), 0.2),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.45);
+}
+.cyber-deck-btn.purple:hover:not(:disabled) {
+  color: #f0dcff;
+  box-shadow:
+    0 0 18px rgba(var(--vrcd-purple-raw), 0.36),
+    inset 0 1px 0 rgba(var(--vrcd-purple-raw), 0.32),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* ── footer ── */
+.sideloader-footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 2px;
+  font-family: var(--vrcd-font-mono, monospace);
+}
+.sideloader-footer .ver {
+  color: rgba(var(--vrcd-neon-raw), 0.5);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.sideloader-footer a {
+  color: rgba(var(--vrcd-neon-raw), 0.6);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(var(--vrcd-neon-raw), 0.35);
+  padding-bottom: 1px;
+}
+.sideloader-footer a:hover {
+  color: var(--vrcd-neon);
+}
+
+@media (max-width: 720px) {
+  .sideloader-actions,
+  .sideloader-actions.secondary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

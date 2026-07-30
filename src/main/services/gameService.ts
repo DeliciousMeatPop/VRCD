@@ -113,7 +113,10 @@ class GameService extends EventEmitter implements GamesAPI {
       // If meta.7z has never been downloaded or the cache is stale (>24 h),
       // kick off a background sync so notes/thumbnails appear without the
       // user having to manually click "Refresh Games".
-      const syncNeeded = await this.needsSync()
+      // Only sync when a server is actually configured. With no server the app
+      // is a pure sideloader and must never reach out to (or block on) a remote.
+      const hasServer = !!(this.vrpConfig?.baseUri && this.vrpConfig?.password)
+      const syncNeeded = hasServer && (await this.needsSync())
       if (syncNeeded) {
         console.log('[GameService] Stale or missing meta data - starting background sync.')
         void this.backgroundSync()
@@ -169,8 +172,10 @@ class GameService extends EventEmitter implements GamesAPI {
         return
       }
 
-      console.log('No server credentials configured yet; prompting user.')
-      await this.fetchVrpPublicInfo()
+      // No server configured — run as a pure sideloader. Leave vrpConfig null
+      // and do NOT prompt or attempt any sync. A server is only wired up once
+      // the user adds a public JSON or rclone config via Manage Remotes.
+      console.log('No server credentials configured; running in sideloader-only mode.')
     } catch (error) {
       console.error('Error loading configuration:', error)
     }

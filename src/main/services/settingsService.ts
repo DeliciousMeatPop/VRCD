@@ -11,13 +11,6 @@ import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import EventEmitter from 'events'
 
-// Bundled server — used when no custom config has been saved.
-// Update these values here when the server details change.
-const BUNDLED_SERVER: ServerConfigInfo = {
-  baseUri: 'https://go.srcdl1.xyz/',
-  password: 'Z0w1OVZmZ1B4b0hS'
-}
-
 class SettingsService extends EventEmitter implements SettingsAPI {
   private settings: Settings
   private settingsPath: string
@@ -88,13 +81,11 @@ class SettingsService extends EventEmitter implements SettingsAPI {
   }
 
   getServerConfig(): ServerConfigInfo {
+    // No bundled/hardcoded server. When nothing has been configured the app
+    // runs as a pure sideloader; a server (public vrSrc JSON or an rclone
+    // config) only comes into play once the user adds one via Manage Remotes.
     const uri = this.settings.serverConfig?.baseUri ?? ''
     const pwd = this.settings.serverConfig?.password ?? ''
-    // Fall back to the bundled defaults when no config has been explicitly saved
-    // (new installs) or the saved values were cleared (empty strings).
-    if (!uri || !pwd) {
-      return { ...BUNDLED_SERVER }
-    }
     return { baseUri: uri, password: pwd }
   }
 

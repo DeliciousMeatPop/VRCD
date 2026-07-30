@@ -19,6 +19,7 @@ import { useDownload } from '../hooks/useDownload'
 import { useLanguage } from '../hooks/useLanguage'
 import { GameInfo, isSignatureMismatchError } from '@shared/types'
 import placeholderImage from '../assets/images/game-placeholder.png'
+import sideloaderBg from '../assets/images/sideloader-bg.png'
 import {
   Button,
   tokens,
@@ -62,14 +63,14 @@ import {
   TableRegular,
   SettingsRegular,
   ArrowSyncRegular,
-  DismissRegular
+  DismissRegular,
+  CloudRegular as CloudIcon
 } from '@fluentui/react-icons'
 import GameDetailsDialog from './GameDetailsDialog'
 import UninstallWarningDialog from './UninstallWarningDialog'
 import { getSkipUninstallWarning, setSkipUninstallWarning } from '@renderer/hooks/useExtrasSettings'
 import { useGameDialog } from '@renderer/hooks/useGameDialog'
 import MirrorManagement from './MirrorManagement'
-import LocalUploadDialog from './LocalUploadDialog'
 import { AdbShellDialog } from './AdbShellDialog'
 import { useTablePreferences } from '@renderer/hooks/useTablePreferences'
 import { useSettings } from '../hooks/useSettings'
@@ -490,7 +491,10 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const { t } = useLanguage()
   const { serverConfig } = useSettings()
   const { activeMirror } = useMirrors()
-  const isUsingVrSrcEndpoint = !activeMirror && serverConfig.baseUri.includes('srcdl1.xyz')
+  // Server mode = a public vrSrc JSON or an rclone config has been added. With
+  // neither, the app runs as a pure sideloader: no sidebar, no game list, just
+  // the drag-and-drop install deck over the cyberdeck background.
+  const isServerMode = serverConfig.baseUri.trim().length > 0 || !!activeMirror
 
   const [shellDialogOpen, setShellDialogOpen] = useState(false)
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
@@ -529,6 +533,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [showMirrorMgmt, setShowMirrorMgmt] = useState(false)
   const [appVersion, setAppVersion] = useState('')
   const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const counts = useMemo(() => {
     const total = games.length
@@ -1344,29 +1349,16 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     [deleteFiles, handleCloseDialog]
   )
 
-  const handleManualInstall = useCallback(
-    async (type: 'apk' | 'folder') => {
+  // Core manual-install routine shared by the picker buttons and drag-and-drop.
+  // Installs a single APK, a ZIP, or a game/parent folder (APK + OBB +
+  // install.txt payloads) onto the connected device.
+  const installFileManually = useCallback(
+    async (filePath: string, itemName = 'file') => {
       if (!isConnected || !selectedDevice) {
         window.alert('Please connect to a device first.')
         return
       }
-
       try {
-        let filePath: string | null = null
-        let itemName: string = ''
-
-        if (type === 'apk') {
-          filePath = await window.api.dialog.showApkFilePicker()
-          itemName = 'APK file'
-        } else {
-          filePath = await window.api.dialog.showFolderPicker()
-          itemName = 'folder'
-        }
-
-        if (!filePath) {
-          return // User cancelled the dialog
-        }
-
         const fileName = filePath.split(/[/\\]/).pop() || filePath
         console.log(`${itemName} install requested for: ${filePath}`)
 
@@ -1390,7 +1382,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           setInstallStatusMessage(`❌ Failed to install "${fileName}"`)
         }
       } catch (error) {
-        console.error(`Error during ${type} installation:`, error)
+        console.error(`Error during installation:`, error)
         setInstallStatusMessage('❌ Installation error occurred')
         setInstallSuccess(false)
       } finally {
@@ -1398,6 +1390,69 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       }
     },
     [isConnected, selectedDevice, loadPackages]
+  )
+
+  const handleManualInstall = useCallback(
+    async (type: 'apk' | 'folder') => {
+      if (!isConnected || !selectedDevice) {
+        window.alert('Please connect to a device first.')
+        return
+      }
+
+      const filePath =
+        type === 'apk'
+          ? await window.api.dialog.showApkFilePicker()
+          : await window.api.dialog.showFolderPicker()
+
+      if (!filePath) {
+        return // User cancelled the dialog
+      }
+
+      await installFileManually(filePath, type === 'apk' ? 'APK file' : 'folder')
+    },
+    [isConnected, selectedDevice, installFileManually]
+  )
+
+  // Core OBB-copy routine shared by the picker button and drag-and-drop. Checks
+  // whether a matching package is installed and, if not, prompts before copying.
+  const startObbCopy = useCallback(
+    async (folderPath: string) => {
+      if (!isConnected || !selectedDevice) {
+        window.alert('Please connect to a device first.')
+        return
+      }
+
+      const folderName = folderPath.split(/[/\\]/).pop() || folderPath
+      console.log(`OBB folder copy requested for: ${folderPath}`)
+
+      // Check if there's a corresponding package installed
+      try {
+        const installedPackages = await window.api.adb.getInstalledPackages(selectedDevice)
+        const matchingPackage = installedPackages.find((pkg) => pkg.packageName === folderName)
+        if (!matchingPackage) {
+          // No matching package found, show confirmation dialog
+          console.log(`No matching package found for folder: ${folderName}`)
+          setObbFolderToConfirm(folderPath)
+          setShowObbConfirmDialog(true)
+          return
+        }
+        console.log(`Found matching package for folder: ${folderName}`)
+      } catch (error) {
+        console.error('Error checking installed packages:', error)
+        const proceed = window.confirm(
+          `Could not verify installed packages. Do you want to proceed with copying "${folderName}" to the OBB directory?`
+        )
+        if (!proceed) {
+          return
+        }
+      }
+
+      // Proceed with copying
+      await performObbCopy(folderPath)
+    },
+    // performObbCopy is defined below; it is stable via useCallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isConnected, selectedDevice]
   )
 
   const handleCopyObbFolder = useCallback(async () => {
@@ -1507,6 +1562,56 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     setInstallStatusMessage('')
   }, [])
 
+  // Drag-and-drop sideload: resolve each dropped item's real path, classify it,
+  // and route APK/ZIP/game-folders to install and OBB folders to copy.
+  const handleSideloadDrop = useCallback(
+    async (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragOver(false)
+
+      if (!isConnected || !selectedDevice) {
+        window.alert('Please connect to a device first.')
+        return
+      }
+      if (isManualInstalling) return
+
+      const files = Array.from(e.dataTransfer.files)
+      if (files.length === 0) return
+
+      for (const file of files) {
+        let path = ''
+        try {
+          path = window.api.dialog.getPathForFile(file)
+        } catch (err) {
+          console.error('Failed to resolve dropped file path:', err)
+          continue
+        }
+        if (!path) continue
+
+        let kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown' = 'unknown'
+        let name = path.split(/[/\\]/).pop() || path
+        try {
+          const res = await window.api.dialog.classifyPath(path)
+          kind = res.kind
+          name = res.name
+        } catch (err) {
+          console.error('Failed to classify dropped path:', err)
+        }
+
+        if (kind === 'obbFolder') {
+          await startObbCopy(path)
+        } else if (kind === 'apk' || kind === 'zip' || kind === 'gameFolder') {
+          await installFileManually(path, name)
+        } else {
+          // Unknown — best effort: try a manual install.
+          await installFileManually(path, name)
+        }
+      }
+    },
+    [isConnected, selectedDevice, isManualInstalling, startObbCopy, installFileManually]
+  )
+
   useEffect(() => {
     let mounted = true
     const p = window.api.app?.getVersion?.()
@@ -1545,6 +1650,245 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     color: 'var(--vrcd-purple)',
     boxShadow: '0 0 6px rgba(var(--vrcd-purple-raw),0.18)'
   }
+
+  // Dialogs shared by both the sideloader deck and the server-backed library:
+  // the manual-install progress modal, the ADB shell, Manage Remotes, and the
+  // OBB-copy confirmation.
+  const installDialogs = (
+    <>
+      <Dialog open={showInstallDialog} onOpenChange={(_, data) => !data.open && closeInstallDialog()}>
+        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
+          <DialogBody>
+            <DialogTitle>{t('manualOperation')}</DialogTitle>
+            <DialogContent>
+              <div style={{ marginBottom: tokens.spacingVerticalM }}>
+                <Text>{installStatusMessage}</Text>
+              </div>
+              {isManualInstalling && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalM }}>
+                  <Spinner size="small" />
+                  <Text>{t('processing')}</Text>
+                </div>
+              )}
+              {installSuccess !== null && (
+                <div
+                  style={{
+                    marginTop: tokens.spacingVerticalM,
+                    padding: tokens.spacingVerticalS,
+                    borderRadius: tokens.borderRadiusMedium,
+                    backgroundColor: installSuccess ? tokens.colorPaletteGreenBackground1 : tokens.colorPaletteRedBackground1,
+                    color: installSuccess ? tokens.colorPaletteGreenForeground1 : tokens.colorPaletteRedForeground1
+                  }}
+                >
+                  <Text weight="semibold">
+                    {installSuccess ? t('operationSuccess') : t('operationFailed')}
+                  </Text>
+                  {!installSuccess && (
+                    <div style={{ marginTop: tokens.spacingVerticalXS }}>
+                      <Text size={200}>{t('checkLogs')}</Text>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="primary" onClick={closeInstallDialog} disabled={isManualInstalling}>
+                {isManualInstalling ? t('processing') : t('close')}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {selectedDevice && (
+        <AdbShellDialog
+          deviceId={selectedDevice}
+          isOpen={shellDialogOpen}
+          onDismiss={() => setShellDialogOpen(false)}
+        />
+      )}
+
+      <Dialog open={showMirrorMgmt} onOpenChange={(_, data) => setShowMirrorMgmt(data.open)}>
+        <DialogSurface style={{ width: '80vw', maxWidth: '1200px', height: '80vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}>
+          <DialogBody style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
+            <DialogTitle style={{ padding: '16px 24px', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>Server & Remotes</DialogTitle>
+            <DialogContent style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '16px 24px' }}>
+              <MirrorManagement />
+            </DialogContent>
+            <DialogActions style={{ padding: '12px 24px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>
+              <Button appearance="secondary" onClick={() => setShowMirrorMgmt(false)}>Close</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      <Dialog open={showObbConfirmDialog} onOpenChange={(_, data) => !data.open && handleObbCancelCopy()}>
+        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
+          <DialogBody>
+            <DialogTitle>{t('confirmObbCopy')}</DialogTitle>
+            <DialogContent>
+              <div style={{ marginBottom: tokens.spacingVerticalM }}>
+                <Text>
+                  {t('obbNoPackageFound')} &quot;{obbFolderToConfirm?.split(/[/\\]/).pop()}&quot;.
+                </Text>
+                <div style={{ marginTop: tokens.spacingVerticalS }}>
+                  <Text>{t('obbCopyConfirm')}</Text>
+                </div>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="primary" onClick={handleObbConfirmCopy} disabled={isManualInstalling}>
+                {t('copyAnyway')}
+              </Button>
+              <Button appearance="secondary" onClick={handleObbCancelCopy} disabled={isManualInstalling}>
+                {t('cancel')}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </>
+  )
+
+  // ════════════ SIDELOADER MODE ════════════
+  // No server configured → a pure drag-and-drop sideloading deck over the
+  // cyberdeck background. No sidebar, no game list.
+  if (!isServerMode) {
+    const cssVars = {
+      '--colorNeutralBackground1': '#050514',
+      '--colorNeutralForeground1': 'var(--vrcd-neon)',
+      '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.75)',
+      '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.2)',
+      '--colorBrandBackground': 'var(--vrcd-neon)',
+      '--colorNeutralForegroundOnBrand': '#050514'
+    } as React.CSSProperties
+
+    return (
+      <div className={styles.root} style={cssVars}>
+        <div className="sideloader-stage" style={{ backgroundImage: `url(${sideloaderBg})` }}>
+          <div className="sideloader-screen">
+            {/* Device chip */}
+            <div className="sideloader-devicechip">
+              {selectedDeviceDetails ? (
+                <>
+                  <span className="dot online" />
+                  <span className="name">
+                    {selectedDeviceDetails.friendlyModelName || 'Connected Device'}
+                  </span>
+                  {selectedDeviceDetails.batteryLevel !== null && (
+                    <span className="pill">
+                      <BatteryChargeRegular /> {selectedDeviceDetails.batteryLevel}%
+                    </span>
+                  )}
+                  {selectedDeviceDetails.storageFree && (
+                    <span className="pill">{selectedDeviceDetails.storageFree} free</span>
+                  )}
+                  {isConnected && (
+                    <button
+                      className="chip-x"
+                      title={t('disconnectFromDevice')}
+                      onClick={() => {
+                        requestUploadCheck()
+                        disconnectDevice()
+                      }}
+                    >
+                      <PlugDisconnectedRegular /> Disconnect
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="dot offline" />
+                  <span className="name" style={{ color: '#ff6a6a' }}>
+                    No device connected
+                  </span>
+                  <button className="chip-x" onClick={onBackToDevices}>
+                    Connect a headset
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Drag & drop deck */}
+            <div
+              className={`sideloader-dropzone${isDragOver ? ' is-dragover' : ''}${!isConnected ? ' is-disabled' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (isConnected) setIsDragOver(true)
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setIsDragOver(false)
+              }}
+              onDrop={handleSideloadDrop}
+            >
+              <div className="dz-frame" />
+              <svg className="dz-icon" width="60" height="60" viewBox="0 0 64 64" fill="none">
+                <path d="M32 8v30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                <path d="M20 28l12 12 12-12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 46v6a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4v-6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <div className="dz-title">
+                {isManualInstalling ? t('manualInstalling') : 'DROP TO SIDELOAD'}
+              </div>
+              <div className="dz-sub">
+                Drag an <b>APK</b>, a <b>.zip</b>, a game <b>folder</b> (APK + OBB + install.txt),
+                <br />or an <b>OBB folder</b> named after its package — dropped here to deploy.
+              </div>
+              {!isConnected && <div className="dz-warn">{'// CONNECT A DEVICE TO SIDELOAD'}</div>}
+            </div>
+
+            {/* Primary install actions */}
+            <div className="sideloader-actions">
+              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={() => handleManualInstall('apk')}>
+                <DocumentRegular /><span>{t('installApkFile')}</span>
+              </button>
+              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={() => handleManualInstall('folder')}>
+                <FolderAddRegular /><span>{t('installFolder')}</span>
+              </button>
+              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={handleCopyObbFolder}>
+                <CopyRegular /><span>{t('copyObbFolder')}</span>
+              </button>
+            </div>
+
+            {/* Secondary deck controls */}
+            <div className="sideloader-actions secondary">
+              <button className="cyber-deck-btn purple" onClick={() => setShowMirrorMgmt(true)}>
+                <CloudIcon /><span>Manage Remotes</span>
+              </button>
+              <button className="cyber-deck-btn" disabled={!isConnected} onClick={() => setShellDialogOpen(true)}>
+                <WindowConsoleRegular /><span>ADB Shell</span>
+              </button>
+              <button className="cyber-deck-btn purple" onClick={onTransfers}>
+                <ArrowSyncRegular /><span>Installs</span>
+                {activeTransferCount > 0 && (
+                  <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: 4 }}>
+                    {activeTransferCount}
+                  </Badge>
+                )}
+              </button>
+              <button className="cyber-deck-btn" onClick={onSettings}>
+                <SettingsRegular /><span>Other Settings</span>
+              </button>
+            </div>
+
+            {/* Footer: version + github */}
+            <div className="sideloader-footer">
+              {appVersion && <span className="ver">v{appVersion}</span>}
+              <a href="https://github.com/DeliciousMeatPop/VRCD" target="_blank" rel="noopener noreferrer">
+                GITHUB
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {installDialogs}
+      </div>
+    )
+  }
+
   return (
     <div className={styles.root} style={{ '--colorNeutralBackground1': '#050514', '--colorNeutralBackground2': '#060615', '--colorNeutralBackground3': '#060615', '--colorNeutralForeground1': 'var(--vrcd-neon)', '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.75)', '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.2)', '--colorNeutralStrokeAccessible': 'rgba(var(--vrcd-neon-raw),0.3)', '--colorBrandBackground': 'var(--vrcd-neon)', '--colorNeutralForegroundOnBrand': '#050514' } as React.CSSProperties}>
       <div className={styles.layout}>
@@ -1686,7 +2030,6 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: 'auto' }}>{activeTransferCount}</Badge>
                 )}
               </Button>
-              {isUsingVrSrcEndpoint && <LocalUploadDialog />}
               <Menu>
                 <MenuTrigger disableButtonEnhancement>
                   <Button appearance="subtle" size="small" icon={<FolderAddRegular />} disabled={isBusy || !isConnected}
@@ -1706,24 +2049,6 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
 
           </div>
 
-          {/* ── DONATION BANNER — only shown when using the default vrSrc endpoint ── */}
-          {isUsingVrSrcEndpoint && (
-            <div style={{ flexShrink: 0, margin: '0', padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`, borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.15)', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)', background: 'rgba(var(--vrcd-neon-raw),0.04)' }}>
-              <Text size={100} style={{ display: 'block', color: 'rgba(var(--vrcd-neon-raw),0.65)', fontFamily: 'monospace', fontSize: '9px', letterSpacing: '0.08em', lineHeight: '1.5', textAlign: 'center' }}>
-                Want this server to remain free and public?
-              </Text>
-              <Text size={100} style={{ display: 'block', color: 'rgba(var(--vrcd-neon-raw),0.65)', fontFamily: 'monospace', fontSize: '9px', letterSpacing: '0.08em', lineHeight: '1.5', textAlign: 'center' }}>
-                Consider donating Crypto here:
-              </Text>
-              <div style={{ textAlign: 'center', marginTop: '4px' }}>
-                <a href="https://vrsrc.fyi/donate" target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '9px', letterSpacing: '0.1em', textDecoration: 'none', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.4)', paddingBottom: '1px' }}>
-                  vrsrc.fyi/donate
-                </a>
-              </div>
-            </div>
-          )}
-
           {/* ── SIDEBAR FOOTER — outside scroll so always visible ── */}
           <div style={{ flexShrink: 0, borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.10)', padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM} 10px`, display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
             {appVersion && (
@@ -1732,12 +2057,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               </Text>
             )}
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="https://github.com/kaladindmp/vr-cyberdeck" target="_blank" rel="noopener noreferrer"
+              <a href="https://github.com/DeliciousMeatPop/VRCD" target="_blank" rel="noopener noreferrer"
                 style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '9px', letterSpacing: '0.1em', textDecoration: 'none', fontFamily: 'monospace' }}>G|THU|3</a>
-              <a href="https://t.me/s/the_vrSrc/2" target="_blank" rel="noopener noreferrer"
-                style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '9px', letterSpacing: '0.1em', textDecoration: 'none', fontFamily: 'monospace' }}>T3/_3GR4M</a>
-              <a href="https://qpmegathread.top" target="_blank" rel="noopener noreferrer"
-                style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '9px', letterSpacing: '0.1em', textDecoration: 'none', fontFamily: 'monospace' }}>|V|3G4THR34D</a>
             </div>
             <Text size={100} style={{ color: 'rgba(var(--vrcd-neon-raw),0.3)', textAlign: 'center', fontFamily: 'monospace', fontSize: '8px' }}>
               {t('lastSynced')} {formatDate(lastSyncTime)}
@@ -2146,97 +2467,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         />
       )}
 
-      <Dialog open={showInstallDialog} onOpenChange={(_, data) => !data.open && closeInstallDialog()}>
-        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
-          <DialogBody>
-            <DialogTitle>{t('manualOperation')}</DialogTitle>
-            <DialogContent>
-              <div style={{ marginBottom: tokens.spacingVerticalM }}>
-                <Text>{installStatusMessage}</Text>
-              </div>
-              {isManualInstalling && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalM }}>
-                  <Spinner size="small" />
-                  <Text>{t('processing')}</Text>
-                </div>
-              )}
-              {installSuccess !== null && (
-                <div
-                  style={{
-                    marginTop: tokens.spacingVerticalM,
-                    padding: tokens.spacingVerticalS,
-                    borderRadius: tokens.borderRadiusMedium,
-                    backgroundColor: installSuccess ? tokens.colorPaletteGreenBackground1 : tokens.colorPaletteRedBackground1,
-                    color: installSuccess ? tokens.colorPaletteGreenForeground1 : tokens.colorPaletteRedForeground1
-                  }}
-                >
-                  <Text weight="semibold">
-                    {installSuccess ? t('operationSuccess') : t('operationFailed')}
-                  </Text>
-                  {!installSuccess && (
-                    <div style={{ marginTop: tokens.spacingVerticalXS }}>
-                      <Text size={200}>{t('checkLogs')}</Text>
-                    </div>
-                  )}
-                </div>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button appearance="primary" onClick={closeInstallDialog} disabled={isManualInstalling}>
-                {isManualInstalling ? t('processing') : t('close')}
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-
-      {selectedDevice && (
-        <AdbShellDialog
-          deviceId={selectedDevice}
-          isOpen={shellDialogOpen}
-          onDismiss={() => setShellDialogOpen(false)}
-        />
-      )}
-
-      <Dialog open={showMirrorMgmt} onOpenChange={(_, data) => setShowMirrorMgmt(data.open)}>
-        <DialogSurface style={{ width: '80vw', maxWidth: '1200px', height: '80vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}>
-          <DialogBody style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
-            <DialogTitle style={{ padding: '16px 24px', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>Server & Remotes</DialogTitle>
-            <DialogContent style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '16px 24px' }}>
-              <MirrorManagement />
-            </DialogContent>
-            <DialogActions style={{ padding: '12px 24px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>
-              <Button appearance="secondary" onClick={() => setShowMirrorMgmt(false)}>Close</Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-
-      <Dialog open={showObbConfirmDialog} onOpenChange={(_, data) => !data.open && handleObbCancelCopy()}>
-        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
-          <DialogBody>
-            <DialogTitle>{t('confirmObbCopy')}</DialogTitle>
-            <DialogContent>
-              <div style={{ marginBottom: tokens.spacingVerticalM }}>
-                <Text>
-                  {t('obbNoPackageFound')} &quot;{obbFolderToConfirm?.split(/[/\\]/).pop()}&quot;.
-                </Text>
-                <div style={{ marginTop: tokens.spacingVerticalS }}>
-                  <Text>{t('obbCopyConfirm')}</Text>
-                </div>
-              </div>
-            </DialogContent>
-            <DialogActions>
-              <Button appearance="primary" onClick={handleObbConfirmCopy} disabled={isManualInstalling}>
-                {t('copyAnyway')}
-              </Button>
-              <Button appearance="secondary" onClick={handleObbCancelCopy} disabled={isManualInstalling}>
-                {t('cancel')}
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
+      {installDialogs}
     </div>
   )
 }

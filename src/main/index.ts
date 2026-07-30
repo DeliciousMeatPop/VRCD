@@ -245,15 +245,12 @@ function createWindow(): void {
             const gameServiceStatus = await gameService.initialize()
             console.log(`Game Service initialization status: ${gameServiceStatus}`)
             const vrpConfig = await gameService.getVrpConfig()
-            // Initialize Download Service (needs VRP config from gameService)
-            if (vrpConfig) {
-              await downloadService.initialize(vrpConfig) // Pass VRP config
-              console.log('Download Service initialized.')
-            } else {
-              console.warn(
-                'vrpConfig did not initialize correctly, skipping download service initialization.'
-              )
-            }
+            // Initialize Download Service. In sideloader-only mode there is no
+            // server config, but the download service still powers manual APK /
+            // folder / OBB installs, so it must always initialize. Server-backed
+            // downloads simply stay unused until a server is configured.
+            await downloadService.initialize(vrpConfig ?? { baseUri: '', password: '' })
+            console.log('Download Service initialized.')
             // Initialize Upload Service
             await uploadService.initialize()
             console.log('Upload Service initialized.')
@@ -985,6 +982,44 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('downloads:copy-obb-folder', async (_event, folderPath, deviceId) => {
     console.log(`[IPC] OBB folder copy requested for ${folderPath} on device ${deviceId}`)
     return await downloadService.copyObbFolder(folderPath, deviceId)
+  })
+
+  // Inspect a dropped/selected path and classify it so the sideloader UI knows
+  // whether to install it (APK / ZIP / game folder) or copy it as an OBB folder.
+  typedIpcMain.handle('manual:classify-path', async (_event, targetPath) => {
+    const name = targetPath.split(/[/\\]/).filter(Boolean).pop() || targetPath
+    try {
+      const stat = await fs.stat(targetPath)
+      if (stat.isFile()) {
+        const lower = targetPath.toLowerCase()
+        if (lower.endsWith('.apk')) return { kind: 'apk' as const, name }
+        if (lower.endsWith('.zip')) return { kind: 'zip' as const, name }
+        return { kind: 'unknown' as const, name }
+      }
+      if (stat.isDirectory()) {
+        const entries = await fs.readdir(targetPath, { withFileTypes: true })
+        // A game/install folder is one that directly contains an APK or an
+        // install.txt script (VRP-style sideload payloads).
+        const hasApkOrScript = entries.some(
+          (e) =>
+            e.isFile() &&
+            (e.name.toLowerCase().endsWith('.apk') || e.name.toLowerCase() === 'install.txt')
+        )
+        if (hasApkOrScript) return { kind: 'gameFolder' as const, name }
+        // Otherwise, if it carries .obb payloads (or is named like a package —
+        // com.company.game) treat it as an OBB folder to drop into Android/obb.
+        const hasObb = entries.some((e) => e.isFile() && e.name.toLowerCase().endsWith('.obb'))
+        const looksLikePackage = /^[a-z0-9_]+(\.[a-z0-9_]+)+$/i.test(name)
+        if (hasObb || looksLikePackage) return { kind: 'obbFolder' as const, name }
+        // A parent folder of several game subfolders still routes to install,
+        // which batch-installs each subfolder.
+        return { kind: 'gameFolder' as const, name }
+      }
+      return { kind: 'unknown' as const, name }
+    } catch (err) {
+      console.error(`[IPC] Failed to classify path ${targetPath}:`, err)
+      return { kind: 'unknown' as const, name }
+    }
   })
 
   // Validate that all IPC channels have handlers registered
