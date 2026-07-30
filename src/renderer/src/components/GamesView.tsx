@@ -2274,16 +2274,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   {isTls ? (
                     <>
                       <strong style={{ color: '#ff7070' }}>Game list sync failed — TLS error.</strong>
-                      {' '}Your ISP or router is blocking the connection. Try{' '}
-                      <a
-                        href="https://github.com/Curious4Tech/DNS-over-HTTPS-Set-Up#setting-up-doh-on-windows-11"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: 'var(--vrcd-neon)' }}
-                      >
-                        enabling DNS-over-HTTPS
-                      </a>
-                      {' '}or a VPN, then click Refresh Games.
+                      {' '}Your ISP or router is blocking the connection. Try a VPN
+                      {' '}(ProtonVPN or Cloudflare WARP, both free), then click Refresh Games.
                     </>
                   ) : (
                     <>
