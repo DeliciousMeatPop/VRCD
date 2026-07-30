@@ -12,14 +12,14 @@
 
 ```
 [ STATUS ] ONLINE
-[ TARGET ] META QUEST // ALL MODELS
+[ TARGET ] ANDROID // META QUEST // ALL MODELS
 [ STACK  ] ELECTRON · REACT · TYPESCRIPT
 ```
 I REMOVED DISCUSSIONS SINCE PEOPLE WERE ONLY USING IT AS A WAY TO AVOID ADDING LOGS TO AN ISSUE IT SEEMS, EVEN IF THAT WAS NOT THE INTENTION, IN ACTUALITY THAT WAS THE RESULT
 
 ---
 
-VR CyberDeck is a cross-platform desktop deck for managing, sideloading, and uploading content to Meta Quest devices. It plugs into a community-run game library, runs the whole download → install → metadata → upload pipeline for you, and wraps the whole thing in a neon terminal aesthetic that doesn't feel like a 2014 sideloader.
+VR CyberDeck is a cross-platform desktop deck for managing, sideloading, and uploading content to android devices and Meta Quest devices. You can connect to your own personal library or just use it as a sideloader or wraps the whole thing in a neon terminal aesthetic that doesn't feel like a 2014 sideloader.
 
 ---
 
@@ -30,7 +30,7 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 | | ApprenticeVR | VR CyberDeck |
 |---|---|---|
 | **Theme** | Stock Fluent UI | Fully optional cyberpunk / neon-terminal rebrand |
-| **Onboarding** | Hardcoded (original) /Configure server before use (forks) | Bundled server defaults — works on first launch |
+| **Onboarding** | Hardcoded (original) /Configure server before use (forks) | Easily configure an rclone config or json file |
 | **Intro** | None | `UNAUTHORIZED → AUTHORIZED` glitch boot |
 | **Identity** | None | Matrix-style random `g33ky_u$3rn4m3$` per session |
 | **Console** | None | In-header Hacker Console + ADB Shell with quick-command shortcuts and user macros |
@@ -134,11 +134,11 @@ chmod +x vr-cyberdeck-x.x.x-x86_64.AppImage
 1. Install the build for your OS
 2. Plug in your Quest via USB (data-capable cable)
 3. Allow USB Debugging on the headset
-4. Browse the library and hit download
+4. Sideload games
 
-That's it. The bundled server config means there's nothing to configure on first run.
+That's it.
 
-> Want to point at a custom server, swap in your own rclone config, or upload from PC? See **Settings** — every advanced flow lives there.
+> Want to point at a custom server, swap in your own rclone config, or upload from PC? See **Other Settings** — every advanced flow lives there.
 
 > Power user? Open the **ADB Shell** from the sidebar — the shortcut panel above the terminal covers most Quest tweaks in one click, and you can save your own commands as `MY MACROS` pills.
 
