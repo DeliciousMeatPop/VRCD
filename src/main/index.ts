@@ -206,11 +206,14 @@ function createWindow(): void {
     }
   })
 
-  // Forward renderer console to main process stdout for debugging
-  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-    const tag = level === 2 ? '[RENDERER ERROR]' : '[RENDERER]'
-    console.log(`${tag} ${message} (${sourceId}:${line})`)
-  })
+  // NOTE: Do NOT forward renderer 'console-message' back into the main-process
+  // console. main's console is patched to electron-log (Object.assign above),
+  // and electron-log's main transport forwards main logs to the renderer, whose
+  // electron-log/renderer writes them to the renderer console — which re-fires
+  // 'console-message'. Logging those here closes an infinite feedback loop that
+  // grows each pass and saturates the main thread (window never leaves the boot
+  // screen). Renderer logs are already captured into the main log file by
+  // electron-log/renderer, so no forwarding is needed.
   app.on('child-process-gone', (_event, details) => {
     console.error('[Main] Child process gone:', details.type, details.reason, details.exitCode)
   })
