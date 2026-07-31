@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { promises as fs, existsSync } from 'fs'
-import { join, dirname, basename } from 'path'
+import { join, dirname, basename, parse } from 'path'
 import { hostname, userInfo } from 'os'
 import { EventEmitter } from 'events'
 import crypto from 'crypto'
@@ -8,6 +8,7 @@ import { execa } from 'execa'
 import adbService from './adbService'
 import dependencyService from './dependencyService'
 import gameService from './gameService'
+import settingsService from './settingsService'
 import {
   ServiceStatus,
   UploadPreparationProgress,
@@ -42,9 +43,52 @@ class UploadService extends EventEmitter {
 
   constructor() {
     super()
-    this.uploadsBasePath = join(app.getPath('userData'), 'uploads')
+    // Stage APK/OBB pulls under the user's chosen download folder rather than
+    // userData (the system drive). A single OBB can be several GB; keeping this
+    // on the same (typically roomier, user-selected) volume as downloads avoids
+    // filling C: and the ENOSPC failures that come with it. Follow runtime
+    // changes to the download path so staging moves with it.
+    this.uploadsBasePath = join(settingsService.getDownloadPath(), 'uploads')
+    settingsService.on('download-path-changed', (path: string) => {
+      this.setUploadsBasePath(join(path, 'uploads'))
+    })
     // upload.config is written by the VRP sync into vrp-data/.meta after first connect
     this.configFilePath = join(app.getPath('userData'), 'vrp-data', '.meta', 'upload.config')
+  }
+
+  private setUploadsBasePath(path: string): void {
+    this.uploadsBasePath = path
+    // Ensure the new location exists so the next pull doesn't race a missing dir.
+    void fs.mkdir(this.uploadsBasePath, { recursive: true }).catch((err) => {
+      console.error('[UploadService] Failed to create uploads dir after path change:', err)
+    })
+  }
+
+  /** True when an error is a filesystem "out of space" failure (ENOSPC). */
+  private isNoSpaceError(error: unknown): boolean {
+    if (error && typeof error === 'object' && (error as { code?: string }).code === 'ENOSPC') {
+      return true
+    }
+    return error instanceof Error && /ENOSPC|no space left on device/i.test(error.message)
+  }
+
+  /**
+   * Human-readable "disk full" message that names the specific drive that ran
+   * out of space and how to fix it. Uploads are staged under the download
+   * folder, so the fix is to free space on that drive or point the download
+   * folder at a roomier one.
+   */
+  private describeDiskFullError(): string {
+    const stagePath = this.uploadsBasePath
+    const root = parse(stagePath).root || stagePath
+    // On Windows name the drive ("C:"); on posix use the filesystem root ("/").
+    const drive = process.platform === 'win32' ? root.replace(/[\\/]+$/, '') || root : root
+    return (
+      `No space left on ${drive}. This game is staged at ${stagePath} before ` +
+      `uploading, and that drive is full. Free up space on ${drive}, or move your ` +
+      `download folder to a drive with more room (Settings → Download location) — ` +
+      `upload staging follows your download folder.`
+    )
   }
 
   public async initialize(): Promise<ServiceStatus> {
@@ -251,7 +295,11 @@ class UploadService extends EventEmitter {
 
       if (nextItem.isLocalUpload) {
         const success = await this.processLocalUpload(nextItem)
-        if (!success && nextItem.status !== 'Cancelled') {
+        // Re-read the item: updateItemStatus replaces the object, so processLocalUpload
+        // may have already set a specific Error (e.g. disk full) or Cancelled status
+        // that we must not clobber with the generic message.
+        const current = this.findItem(nextItem.packageName)
+        if (!success && current?.status !== 'Cancelled' && current?.status !== 'Error') {
           this.updateItemStatus(nextItem.packageName, 'Error', 0, 'Error', 'Upload failed')
         }
       } else {
@@ -285,7 +333,11 @@ class UploadService extends EventEmitter {
         'Error',
         0,
         'Error',
-        error instanceof Error ? error.message : 'Unknown error'
+        this.isNoSpaceError(error)
+          ? this.describeDiskFullError()
+          : error instanceof Error
+            ? error.message
+            : 'Unknown error'
       )
     } finally {
       this.isProcessing = false
@@ -498,6 +550,17 @@ class UploadService extends EventEmitter {
       }
     } catch (error) {
       console.error(`[UploadService] Error processing local upload for ${item.gameName}:`, error)
+      this.updateItemStatus(
+        item.packageName,
+        'Error',
+        0,
+        'Error',
+        this.isNoSpaceError(error)
+          ? this.describeDiskFullError()
+          : error instanceof Error
+            ? error.message
+            : 'Upload failed'
+      )
       this.emitProgress(item.packageName, 'Error', 0)
       return false
     }

@@ -134,6 +134,19 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     this.processQueue()
   }
 
+  /**
+   * Push updated server credentials into the download and extraction
+   * processors after the service has already initialized. This lets a server
+   * added or changed at runtime (via Settings) take effect immediately,
+   * instead of only being read once at app startup — without this, downloads
+   * fail with "Missing server configuration" until the app is restarted.
+   */
+  updateVrpConfig(vrpConfig: VrpConfig): void {
+    this.downloadProcessor.setVrpConfig(vrpConfig)
+    this.extractionProcessor.setVrpConfig(vrpConfig)
+    console.log('[DownloadService] Server config updated at runtime - baseUri:', !!vrpConfig.baseUri)
+  }
+
   public getQueue(): Promise<DownloadItem[]> {
     return Promise.resolve(this.queueManager.getQueue())
   }

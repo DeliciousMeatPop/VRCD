@@ -186,17 +186,12 @@ const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: Error
       summary:
         'The connection to the server was blocked or intercepted before a secure channel could be established. This usually means your ISP or router is interfering with HTTPS traffic — not a problem with VR CyberDeck or the server.',
       suggestions: [
-        'Enable DNS-over-HTTPS (DoH) in Windows Settings → Network & Internet → DNS — this is the most reliable fix.',
-        'Use a VPN such as ProtonVPN or Cloudflare WARP (both free).',
+        'Use a VPN such as ProtonVPN or Cloudflare WARP (both free) — this is the most reliable fix.',
+        'Change your DNS to Cloudflare (1.1.1.1) or Google (8.8.8.8).',
         'Try a mobile hotspot to confirm whether it is your ISP or router.',
         'Click Retry after applying one of the above.'
       ],
-      links: [
-        {
-          label: 'How to set up DNS-over-HTTPS on Windows 11',
-          url: 'https://github.com/Curious4Tech/DNS-over-HTTPS-Set-Up#setting-up-doh-on-windows-11'
-        }
-      ]
+      links: []
     })
   },
   // rclone / network

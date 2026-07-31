@@ -733,9 +733,15 @@ app.whenReady().then(async () => {
   )
 
   typedIpcMain.handle('settings:get-server-config', () => settingsService.getServerConfig())
-  typedIpcMain.handle('settings:set-server-config', (_event, config) =>
+  typedIpcMain.handle('settings:set-server-config', async (_event, config) => {
     settingsService.setServerConfig(config)
-  )
+    // Propagate the new credentials into the already-initialized services so a
+    // server added or changed here takes effect immediately. Without this the
+    // download/extraction processors keep the config captured at boot, and
+    // downloads fail with "Missing server configuration" until an app restart.
+    await gameService.setServerConfig(config)
+    downloadService.updateVrpConfig(config)
+  })
   typedIpcMain.handle('settings:get-language', () => settingsService.getLanguage())
   typedIpcMain.handle('settings:set-language', (_event, lang) => settingsService.setLanguage(lang))
 

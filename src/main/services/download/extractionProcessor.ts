@@ -338,8 +338,8 @@ export class ExtractionProcessor {
 
     let decodedPassword = ''
     if (!this.vrpConfig?.password) {
-      console.error(`[ExtractProc] Missing VRP password for extraction of ${item.releaseName}.`)
-      this.updateItemStatus(item.releaseName, 'Error', 100, 'Missing VRP password for extraction')
+      console.error(`[ExtractProc] Missing server password for extraction of ${item.releaseName}.`)
+      this.updateItemStatus(item.releaseName, 'Error', 100, 'Missing server password for extraction')
       return false
     }
     try {
