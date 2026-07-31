@@ -8,6 +8,7 @@ import { execa } from 'execa'
 import adbService from './adbService'
 import dependencyService from './dependencyService'
 import gameService from './gameService'
+import settingsService from './settingsService'
 import {
   ServiceStatus,
   UploadPreparationProgress,
@@ -42,9 +43,25 @@ class UploadService extends EventEmitter {
 
   constructor() {
     super()
-    this.uploadsBasePath = join(app.getPath('userData'), 'uploads')
+    // Stage APK/OBB pulls under the user's chosen download folder rather than
+    // userData (the system drive). A single OBB can be several GB; keeping this
+    // on the same (typically roomier, user-selected) volume as downloads avoids
+    // filling C: and the ENOSPC failures that come with it. Follow runtime
+    // changes to the download path so staging moves with it.
+    this.uploadsBasePath = join(settingsService.getDownloadPath(), 'uploads')
+    settingsService.on('download-path-changed', (path: string) => {
+      this.setUploadsBasePath(join(path, 'uploads'))
+    })
     // upload.config is written by the VRP sync into vrp-data/.meta after first connect
     this.configFilePath = join(app.getPath('userData'), 'vrp-data', '.meta', 'upload.config')
+  }
+
+  private setUploadsBasePath(path: string): void {
+    this.uploadsBasePath = path
+    // Ensure the new location exists so the next pull doesn't race a missing dir.
+    void fs.mkdir(this.uploadsBasePath, { recursive: true }).catch((err) => {
+      console.error('[UploadService] Failed to create uploads dir after path change:', err)
+    })
   }
 
   public async initialize(): Promise<ServiceStatus> {
