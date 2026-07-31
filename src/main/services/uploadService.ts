@@ -683,8 +683,11 @@ class UploadService extends EventEmitter {
         const localObbFolder = join(packageFolderPath, packageFolderName)
         await fs.mkdir(localObbFolder, { recursive: true })
 
-        // List all files in the OBB folder recursively with their sizes
-        const listFilesCmd = `find "${obbFolderPath}" -type f -printf "%s %p\\n"`
+        // List all files in the OBB folder recursively with their sizes.
+        // NOTE: Quest ships toybox `find`, which does NOT support GNU's
+        // `-printf`. Use `-exec stat -c '%s %n'` instead, which toybox
+        // supports and still yields "<size> <path>" lines for the parser below.
+        const listFilesCmd = `find "${obbFolderPath}" -type f -exec stat -c '%s %n' {} \\;`
         const filesListOutput = await adbService.runShellCommand(deviceId, listFilesCmd)
         this.updateProgress(packageName, UploadStage.AnalyzingObb, 100)
 

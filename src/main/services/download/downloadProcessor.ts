@@ -120,8 +120,8 @@ export class DownloadProcessor {
     console.log(`[DownProc] Starting download for ${item.releaseName}...`)
 
     if (!this.vrpConfig?.baseUri || !this.vrpConfig?.password) {
-      console.error('[DownProc] Missing VRP baseUri or password.')
-      this.updateItemStatus(item.releaseName, 'Error', 0, 'Missing VRP configuration')
+      console.error('[DownProc] Missing server baseUri or password.')
+      this.updateItemStatus(item.releaseName, 'Error', 0, 'Missing server configuration')
       return { success: false, startExtraction: false }
     }
 
@@ -218,8 +218,8 @@ export class DownloadProcessor {
     console.log(`[DownProc] ${isResume ? 'Resuming' : 'Starting'} rclone copy download for ${item.releaseName}...`)
 
     if (!this.vrpConfig?.baseUri || !this.vrpConfig?.password) {
-      console.error('[DownProc] Missing VRP baseUri or password.')
-      this.updateItemStatus(item.releaseName, 'Error', 0, 'Missing VRP configuration')
+      console.error('[DownProc] Missing server baseUri or password.')
+      this.updateItemStatus(item.releaseName, 'Error', 0, 'Missing server configuration')
       return { success: false, startExtraction: false }
     }
 

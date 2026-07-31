@@ -919,7 +919,28 @@ class GameService extends EventEmitter implements GamesAPI {
     return Promise.resolve(this.vrpConfig?.lastSync || null)
   }
 
-  // Added method to expose VRP config needed by DownloadService
+  /**
+   * Update the in-memory server config at runtime (e.g. when the user saves
+   * new credentials in Settings) so meta sync and the getVrpConfig() consumers
+   * stay consistent without an app restart. Passing an empty baseUri/password
+   * clears it back to pure sideloader mode.
+   */
+  async setServerConfig(config: { baseUri?: string; password?: string }): Promise<void> {
+    if (config?.baseUri && config?.password) {
+      this.vrpConfig = {
+        baseUri: config.baseUri,
+        password: config.password,
+        lastSync: this.vrpConfig?.lastSync
+      }
+      await this.saveConfig()
+      console.log('[GameService] Server config updated at runtime - baseUri:', !!this.vrpConfig.baseUri)
+    } else {
+      this.vrpConfig = null
+      console.log('[GameService] Server config cleared at runtime (sideloader mode).')
+    }
+  }
+
+  // Added method to expose server config needed by DownloadService
   getVrpConfig(): Promise<{ baseUri?: string; password?: string } | null> {
     if (!this.vrpConfig) {
       console.warn('Attempted to get VRP config before it was loaded.')
