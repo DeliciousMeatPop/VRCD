@@ -866,21 +866,25 @@ class AdbService extends EventEmitter implements AdbAPI {
       throw new Error('[ADB Service] adb service not initialized!')
     }
     console.log(`Pulling ${serial}:${remotePath} to ${localPath}...`)
-    try {
-      const deviceClient = this.client.getDevice(serial)
-      const transfer = await deviceClient.pull(remotePath)
-      const stream = fs.createWriteStream(localPath)
-      await new Promise((resolve, reject) => {
-        transfer.pipe(stream)
-        transfer.on('end', resolve)
-        transfer.on('error', reject)
-      })
-      console.log(`[ADB Service] Successfully pulled ${remotePath} to ${localPath}.`)
-      return false // Return false until fully implemented
-    } catch (error) {
-      console.error(`[ADB Service] Error pulling ${remotePath} from ${serial}:`, error)
-      return false
-    }
+    const deviceClient = this.client.getDevice(serial)
+    const transfer = await deviceClient.pull(remotePath)
+    const stream = fs.createWriteStream(localPath)
+    await new Promise<void>((resolve, reject) => {
+      // Attach an 'error' listener to BOTH the transfer and the write stream,
+      // and resolve only once the file is fully flushed to disk ('finish').
+      // A write-side failure — most importantly ENOSPC when the disk fills
+      // mid-pull on a large OBB — emits 'error' on the write stream. Without a
+      // listener there, Node escalates it to an uncaught exception and this
+      // await never settles, wedging the caller (e.g. an upload stuck at the
+      // OBB stage that can no longer be cancelled). Rejecting lets the caller
+      // surface it as a normal failure instead.
+      transfer.on('error', reject)
+      stream.on('error', reject)
+      stream.on('finish', () => resolve())
+      transfer.pipe(stream)
+    })
+    console.log(`[ADB Service] Successfully pulled ${remotePath} to ${localPath}.`)
+    return true
   }
 
   /**
