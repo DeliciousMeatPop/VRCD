@@ -1,85 +1,73 @@
-import { IpcRenderer } from "electron";
+import { IpcRenderer } from 'electron'
 import {
-	AdbAPIRenderer,
-	DependencyStatus,
-	DownloadAPIRenderer,
-	GameAPIRenderer,
-	SettingsAPIRenderer,
-	UploadAPIRenderer,
-	UpdateAPIRenderer,
-	DependencyAPIRenderer,
-	LogsAPIRenderer,
-	MirrorAPIRenderer,
-	WiFiBookmark,
-	BackupAPIRenderer,
-} from "@shared/types";
+  AdbAPIRenderer,
+  DependencyStatus,
+  DownloadAPIRenderer,
+  GameAPIRenderer,
+  SettingsAPIRenderer,
+  UploadAPIRenderer,
+  UpdateAPIRenderer,
+  DependencyAPIRenderer,
+  LogsAPIRenderer,
+  MirrorAPIRenderer,
+  WiFiBookmark,
+  BackupAPIRenderer
+} from '@shared/types'
 
 declare global {
-	interface Window {
-		ipcRenderer: IpcRenderer;
-		api: {
-			app: {
-				getVersion: () => Promise<string>;
-				getLocale: () => Promise<string>;
-				getSystemUsername: () => Promise<string>;
-				setZoomFactor: (factor: number) => void;
-				confirmClose: () => void;
-				onCloseRequested: (callback: () => void) => () => void;
-				getSound: (name: string) => Promise<string | null>;
-				resetAppData: () => Promise<{ success: boolean; error?: string }>;
-				showNotification: (title: string, body: string) => void;
-			};
-			dependency: DependencyAPIRenderer;
-			adb: AdbAPIRenderer;
-			games: GameAPIRenderer;
-			downloads: DownloadAPIRenderer;
-			settings: SettingsAPIRenderer;
-			uploads: UploadAPIRenderer;
-			updates: UpdateAPIRenderer;
-			logs: LogsAPIRenderer;
-			backup: BackupAPIRenderer;
-			mirrors: MirrorAPIRenderer;
-			dialog: {
-				showDirectoryPicker: () => Promise<string | null>;
-				showFilePicker: (options?: {
-					filters?: { name: string; extensions: string[] }[];
-				}) => Promise<string | null>;
-				showManualInstallPicker: () => Promise<string | null>;
-				showApkFilePicker: () => Promise<string | null>;
-				showFolderPicker: () => Promise<string | null>;
-				showLocalFolderPicker: () => Promise<string[] | null>;
-				showLocalZipPicker: () => Promise<string[] | null>;
-				getPathForFile: (file: File) => string;
-				classifyPath: (path: string) => Promise<{
-					kind: "apk" | "zip" | "gameFolder" | "obbFolder" | "unknown";
-					name: string;
-				}>;
-			};
-			wifiBookmarks: {
-				getAll: () => Promise<WiFiBookmark[]>;
-				add: (
-					name: string,
-					ipAddress: string,
-					port: number,
-				) => Promise<boolean>;
-				remove: (id: string) => Promise<boolean>;
-				updateLastConnected: (id: string) => Promise<void>;
-			};
-			onDependencyProgress: (
-				callback: (
-					status: DependencyStatus,
-					progress: { name: string; percentage: number },
-				) => void,
-			) => () => void;
-			onDependencySetupComplete: (
-				callback: (status: DependencyStatus) => void,
-			) => () => void;
-			onDependencySetupError: (
-				callback: (errorInfo: {
-					message: string;
-					status: DependencyStatus;
-				}) => void,
-			) => () => void;
-		};
-	}
+  interface Window {
+    ipcRenderer: IpcRenderer
+    api: {
+      app: {
+        getVersion: () => Promise<string>
+        getLocale: () => Promise<string>
+        getSystemUsername: () => Promise<string>
+        setZoomFactor: (factor: number) => void
+        confirmClose: () => void
+        onCloseRequested: (callback: () => void) => () => void
+        getSound: (name: string) => Promise<string | null>
+        resetAppData: () => Promise<{ success: boolean; error?: string }>
+        showNotification: (title: string, body: string) => void
+      }
+      dependency: DependencyAPIRenderer
+      adb: AdbAPIRenderer
+      games: GameAPIRenderer
+      downloads: DownloadAPIRenderer
+      settings: SettingsAPIRenderer
+      uploads: UploadAPIRenderer
+      updates: UpdateAPIRenderer
+      logs: LogsAPIRenderer
+      backup: BackupAPIRenderer
+      mirrors: MirrorAPIRenderer
+      dialog: {
+        showDirectoryPicker: () => Promise<string | null>
+        showFilePicker: (options?: {
+          filters?: { name: string; extensions: string[] }[]
+        }) => Promise<string | null>
+        showManualInstallPicker: () => Promise<string | null>
+        showApkFilePicker: () => Promise<string | null>
+        showFolderPicker: () => Promise<string | null>
+        showLocalFolderPicker: () => Promise<string[] | null>
+        showLocalZipPicker: () => Promise<string[] | null>
+        getPathForFile: (file: File) => string
+        classifyPath: (path: string) => Promise<{
+          kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown'
+          name: string
+        }>
+      }
+      wifiBookmarks: {
+        getAll: () => Promise<WiFiBookmark[]>
+        add: (name: string, ipAddress: string, port: number) => Promise<boolean>
+        remove: (id: string) => Promise<boolean>
+        updateLastConnected: (id: string) => Promise<void>
+      }
+      onDependencyProgress: (
+        callback: (status: DependencyStatus, progress: { name: string; percentage: number }) => void
+      ) => () => void
+      onDependencySetupComplete: (callback: (status: DependencyStatus) => void) => () => void
+      onDependencySetupError: (
+        callback: (errorInfo: { message: string; status: DependencyStatus }) => void
+      ) => () => void
+    }
+  }
 }

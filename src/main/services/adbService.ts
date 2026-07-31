@@ -1,16 +1,16 @@
-import { Adb, DeviceClient } from "@devicefarmer/adbkit";
-import Tracker from "@devicefarmer/adbkit/dist/src/adb/tracker";
-import { BrowserWindow } from "electron";
-import { EventEmitter } from "events";
-import { exec } from "child_process";
-import dependencyService from "./dependencyService";
-import settingsService from "./settingsService";
-import fs, { Dirent } from "fs";
-import { promises as fsPromises } from "fs";
-import path from "path";
-import ping from "pingman";
-import { AdbAPI, DeviceInfo, PackageInfo, ServiceStatus } from "@shared/types";
-import { typedWebContentsSend } from "@shared/ipc-utils";
+import { Adb, DeviceClient } from '@devicefarmer/adbkit'
+import Tracker from '@devicefarmer/adbkit/dist/src/adb/tracker'
+import { BrowserWindow } from 'electron'
+import { EventEmitter } from 'events'
+import { exec } from 'child_process'
+import dependencyService from './dependencyService'
+import settingsService from './settingsService'
+import fs, { Dirent } from 'fs'
+import { promises as fsPromises } from 'fs'
+import path from 'path'
+import ping from 'pingman'
+import { AdbAPI, DeviceInfo, PackageInfo, ServiceStatus } from '@shared/types'
+import { typedWebContentsSend } from '@shared/ipc-utils'
 
 /**
  * Thrown by installPackage when ADB reports INSTALL_FAILED_UPDATE_INCOMPATIBLE,
@@ -20,1586 +20,1341 @@ import { typedWebContentsSend } from "@shared/ipc-utils";
  * surface this to the user instead of resolving it silently.
  */
 export class SignatureMismatchError extends Error {
-	packageName: string;
+  packageName: string
 
-	constructor(packageName: string) {
-		super(
-			`INSTALL_FAILED_UPDATE_INCOMPATIBLE: ${packageName || "the installed app"} was signed with a different certificate than this build.`,
-		);
-		this.name = "SignatureMismatchError";
-		this.packageName = packageName;
-	}
+  constructor(packageName: string) {
+    super(
+      `INSTALL_FAILED_UPDATE_INCOMPATIBLE: ${packageName || 'the installed app'} was signed with a different certificate than this build.`
+    )
+    this.name = 'SignatureMismatchError'
+    this.packageName = packageName
+  }
 }
 
-const QUEST_MODELS = [
-	"monterey",
-	"hollywood",
-	"seacliff",
-	"eureka",
-	"panther",
-	"sekiu",
-] as const;
-type QuestModel = (typeof QUEST_MODELS)[number];
+const QUEST_MODELS = ['monterey', 'hollywood', 'seacliff', 'eureka', 'panther', 'sekiu'] as const
+type QuestModel = (typeof QUEST_MODELS)[number]
 
 // Mapping from codename (ro.product.device) to friendly name
 const QUEST_MODEL_NAMES: Record<QuestModel, string> = {
-	monterey: "Oculus Quest",
-	hollywood: "Meta Quest 2",
-	seacliff: "Meta Quest Pro",
-	eureka: "Meta Quest 3",
-	panther: "Meta Quest 3S / Lite",
-	sekiu: "Meta XR Simulator",
-};
-
-class AdbService extends EventEmitter implements AdbAPI {
-	private client: ReturnType<typeof Adb.createClient> | null;
-	private deviceTracker: Tracker | null = null;
-	private isTracking = false;
-	private status: ServiceStatus = "NOT_INITIALIZED";
-	private aaptPushed = false;
-
-	constructor() {
-		super();
-		this.client = null;
-	}
-
-	public async initialize(): Promise<ServiceStatus> {
-		if (this.status === "INITIALIZING") {
-			console.warn("AdbService is already initializing, skipping.");
-			return "INITIALIZING";
-		}
-		if (this.status === "INITIALIZED") {
-			console.warn("AdbService is already initialized, skipping.");
-			return "INITIALIZED";
-		}
-
-		this.status = "INITIALIZING";
-		try {
-			this.client = Adb.createClient({
-				bin: dependencyService.getAdbPath(),
-			});
-		} catch (error) {
-			console.error("Error initializing AdbService:", error);
-			this.status = "ERROR";
-			return "ERROR";
-		}
-
-		this.status = "INITIALIZED";
-		return "INITIALIZED";
-	}
-
-	private async getDeviceDetails(serial: string): Promise<DeviceInfo | null> {
-		if (!this.client) {
-			console.warn("ADB client not initialized, cannot get device details.");
-			return null;
-		}
-		const device = this.client.getDevice(serial);
-
-		try {
-			// Get product model
-			const manufacturerOutput = await device.shell(
-				"getprop ro.product.manufacturer",
-			);
-			const manufacturerResult = (await Adb.util.readAll(manufacturerOutput))
-				.toString()
-				.trim()
-				.toLowerCase();
-
-			const modelOutput = await device.shell("getprop ro.product.device");
-			const modelResult = (await Adb.util.readAll(modelOutput))
-				.toString()
-				.trim()
-				.toLowerCase() as QuestModel;
-
-			const isQuestDevice =
-				manufacturerResult === "oculus" && QUEST_MODELS.includes(modelResult);
-
-			// Determine friendly name
-			const friendlyModelName = isQuestDevice
-				? QUEST_MODEL_NAMES[modelResult]
-				: `Unknown Device (${manufacturerResult} ${modelResult})`;
-
-			// Get IP address
-			let ipAddress: string | null = null;
-			try {
-				const ipOutput = await device.shell("ip route");
-				const ipResult = (await Adb.util.readAll(ipOutput)).toString().trim();
-				// Parse IP from "192.168.178.0/24 dev wlan0 proto kernel scope link src 192.168.178.106"
-				const ipMatch = ipResult.match(/src\s+(\d+\.\d+\.\d+\.\d+)/);
-				if (ipMatch && ipMatch[1]) {
-					ipAddress = ipMatch[1];
-				}
-			} catch (ipError) {
-				console.warn(`Could not fetch IP address for ${serial}:`, ipError);
-			}
-
-			// Get battery level
-			let batteryLevel: number | null = null;
-			try {
-				const batteryOutput = await device.shell(
-					"dumpsys battery | grep level",
-				);
-				const batteryResult = (await Adb.util.readAll(batteryOutput))
-					.toString()
-					.trim();
-				const batteryMatch = batteryResult.match(/level: (\d+)/);
-				if (batteryMatch && batteryMatch[1]) {
-					batteryLevel = parseInt(batteryMatch[1], 10);
-				}
-			} catch (batteryError) {
-				console.warn(
-					`Could not fetch battery level for ${serial}:`,
-					batteryError,
-				);
-			}
-
-			// Get storage (df -h /data)
-			// Output format is like:
-			// Filesystem      Size  Used Avail Use% Mounted on
-			// /dev/block/dm-5 107G   53G   55G  50% /data
-			let storageTotal: string | null = null;
-			let storageFree: string | null = null;
-			try {
-				const storageOutput = await device.shell("df -h /data");
-				const storageResult = (await Adb.util.readAll(storageOutput))
-					.toString()
-					.trim();
-				const lines = storageResult.split("\n");
-				if (lines.length > 1) {
-					const dataLine = lines[1].split(/\s+/);
-					if (dataLine.length >= 4) {
-						storageTotal = dataLine[1]; // Size
-						storageFree = dataLine[3]; // Avail
-					}
-				}
-			} catch (storageError) {
-				console.warn(
-					`Could not fetch storage info for ${serial}:`,
-					storageError,
-				);
-			}
-
-			return {
-				id: serial,
-				type: "device",
-				model: modelResult,
-				isQuestDevice,
-				batteryLevel,
-				storageTotal,
-				storageFree,
-				friendlyModelName,
-				ipAddress,
-			};
-		} catch (error) {
-			console.error(`Error getting details for device ${serial}:`, error);
-			return null; // Or a default object indicating failure
-		}
-	}
-
-	async listDevices(): Promise<DeviceInfo[]> {
-		if (!this.client) {
-			throw new Error("adb service not initialized!");
-		}
-		try {
-			const devices = await this.client.listDevices();
-			const extendedDevices: DeviceInfo[] = [];
-
-			for (const device of devices) {
-				// For 'device' and 'emulator' types, always try to get details.
-				// For other types (offline, unauthorized, unknown), create a basic ExtendedDevice.
-				if (device.type === "device" || device.type === "emulator") {
-					const details = await this.getDeviceDetails(device.id);
-					// Include the device even if details are null or it's not a Quest device.
-					// The 'isQuestDevice' field in 'details' (or lack thereof) will guide the UI.
-					extendedDevices.push({
-						...device,
-						...(details || {
-							model: null,
-							isQuestDevice: false,
-							batteryLevel: null,
-							storageTotal: null,
-							storageFree: null,
-							friendlyModelName: null,
-							ipAddress: null,
-						}),
-					});
-				} else {
-					// For offline, unauthorized, unknown devices, we don't fetch extended details.
-					// We still want to list them.
-					extendedDevices.push({
-						...device,
-						model: null,
-						isQuestDevice: false, // Not a connectable Quest device in this state
-						batteryLevel: null,
-						storageTotal: null,
-						storageFree: null,
-						friendlyModelName: null,
-						ipAddress: null,
-					});
-				}
-			}
-			return extendedDevices;
-		} catch (error) {
-			console.error("Error listing devices:", error);
-			return [];
-		}
-	}
-
-	async startTrackingDevices(mainWindow?: BrowserWindow): Promise<void> {
-		if (this.isTracking) {
-			return;
-		}
-		if (!this.client) {
-			throw new Error("adb service not initialized!");
-		}
-
-		this.isTracking = true;
-
-		const tracker = await this.client.trackDevices();
-		this.deviceTracker = tracker;
-
-		tracker.on("add", async (device: DeviceInfo) => {
-			console.log("Device added:", device);
-			if (device.type === "device" || device.type === "emulator") {
-				const details = await this.getDeviceDetails(device.id);
-				const extendedDevice: DeviceInfo = {
-					...device,
-					...(details || {
-						model: null,
-						isQuestDevice: false,
-						batteryLevel: null,
-						storageTotal: null,
-						storageFree: null,
-						friendlyModelName: null,
-						ipAddress: null,
-					}),
-				};
-				// Emit event for our internal listeners
-				this.emit("adb:device-added", extendedDevice);
-				// Send to UI if window exists
-				if (mainWindow) {
-					typedWebContentsSend.send(
-						mainWindow,
-						"adb:device-added",
-						extendedDevice,
-					);
-				}
-			} else {
-				// For 'offline', 'unauthorized', 'unknown' devices
-				const extendedDevice: DeviceInfo = {
-					...device,
-					model: null,
-					isQuestDevice: false,
-					batteryLevel: null,
-					storageTotal: null,
-					storageFree: null,
-					friendlyModelName: null,
-					ipAddress: null,
-				};
-				this.emit("adb:device-added", extendedDevice);
-				if (mainWindow) {
-					typedWebContentsSend.send(
-						mainWindow,
-						"adb:device-added",
-						extendedDevice,
-					);
-				}
-			}
-		});
-
-		tracker.on("remove", (device) => {
-			console.log("Device removed:", device);
-
-			// Send a basic device object, details aren't relevant for removal
-			const deviceInfo = {
-				id: device.id,
-				type: device.type,
-				model: null,
-				isQuestDevice: false,
-				batteryLevel: null,
-				storageTotal: null,
-				storageFree: null,
-				friendlyModelName: null,
-				ipAddress: null,
-			} satisfies DeviceInfo;
-
-			this.emit("adb:device-removed", deviceInfo);
-			if (mainWindow) {
-				typedWebContentsSend.send(mainWindow, "adb:device-removed", deviceInfo);
-			}
-		});
-
-		tracker.on("change", async (device: DeviceInfo) => {
-			console.log("Device changed:", device);
-			// This event typically signifies a device coming online (e.g., from 'offline' to 'device')
-			// or a device's properties changing.
-			if (device.type === "device" || device.type === "emulator") {
-				const details = await this.getDeviceDetails(device.id);
-				const extendedDevice: DeviceInfo = {
-					...device,
-					...(details || {
-						model: null,
-						isQuestDevice: false,
-						batteryLevel: null,
-						storageTotal: null,
-						storageFree: null,
-						friendlyModelName: null,
-						ipAddress: null,
-					}),
-				};
-				this.emit("adb:device-changed", extendedDevice);
-				if (mainWindow) {
-					typedWebContentsSend.send(
-						mainWindow,
-						"adb:device-changed",
-						extendedDevice,
-					);
-				}
-			} else {
-				// Handle changes for devices becoming offline, unauthorized, etc.
-				const extendedDevice: DeviceInfo = {
-					...device,
-					model: null,
-					isQuestDevice: false,
-					batteryLevel: null,
-					storageTotal: null,
-					storageFree: null,
-					friendlyModelName: null,
-					ipAddress: null,
-				};
-				this.emit("adb:device-changed", extendedDevice);
-				if (mainWindow) {
-					typedWebContentsSend.send(
-						mainWindow,
-						"adb:device-changed",
-						extendedDevice,
-					);
-				}
-			}
-		});
-
-		tracker.on("error", (error) => {
-			console.error("Device tracker error:", error);
-			this.emit("tracker-error", error.message);
-			if (mainWindow) {
-				typedWebContentsSend.send(
-					mainWindow,
-					"adb:device-tracker-error",
-					error.message,
-				);
-			}
-			this.stopTrackingDevices();
-		});
-	}
-
-	stopTrackingDevices(): void {
-		if (this.deviceTracker) {
-			this.deviceTracker.end();
-			this.deviceTracker = null;
-		}
-		this.isTracking = false;
-	}
-
-	async connectDevice(serial: string): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("adb service not initialized!");
-		}
-		try {
-			// Create a device instance
-			const deviceClient = this.client.getDevice(serial);
-
-			// Test connection by getting device properties
-			await deviceClient.getProperties();
-			return true;
-		} catch (error) {
-			console.error(`Error connecting to device ${serial}:`, error);
-			return false;
-		}
-	}
-
-	async connectTcpDevice(
-		ipAddress: string,
-		port: number = 5555,
-	): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("adb service not initialized!");
-		}
-		try {
-			console.log(
-				`[ADB Service] Attempting to connect to TCP device ${ipAddress}:${port}...`,
-			);
-
-			// Use adb connect command
-			await this.client.connect(ipAddress, port);
-
-			// Verify connection by trying to get device properties
-			const deviceClient = this.client.getDevice(`${ipAddress}:${port}`);
-			await deviceClient.getProperties();
-
-			console.log(
-				`[ADB Service] Successfully connected to TCP device ${ipAddress}:${port}`,
-			);
-			return true;
-		} catch (error) {
-			console.error(
-				`Error connecting to TCP device ${ipAddress}:${port}:`,
-				error,
-			);
-			return false;
-		}
-	}
-
-	async disconnectTcpDevice(
-		ipAddress: string,
-		port: number = 5555,
-	): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("adb service not initialized!");
-		}
-		try {
-			console.log(
-				`[ADB Service] Attempting to disconnect from TCP device ${ipAddress}:${port}...`,
-			);
-
-			// Use adb disconnect command
-			await this.client.disconnect(ipAddress, port);
-
-			console.log(
-				`[ADB Service] Successfully disconnected from TCP device ${ipAddress}:${port}`,
-			);
-			return true;
-		} catch (error) {
-			console.error(
-				`Error disconnecting from TCP device ${ipAddress}:${port}:`,
-				error,
-			);
-			return false;
-		}
-	}
-
-	async getDeviceIp(serial: string): Promise<string | null> {
-		if (!this.client) {
-			throw new Error("adb service not initialized!");
-		}
-		try {
-			const deviceClient = this.client.getDevice(serial);
-			const ipOutput = await deviceClient.shell("ip route");
-			const ipResult = (await Adb.util.readAll(ipOutput)).toString().trim();
-
-			// Parse IP from "192.168.178.0/24 dev wlan0 proto kernel scope link src 192.168.178.106"
-			const ipMatch = ipResult.match(/src\s+(\d+\.\d+\.\d+\.\d+)/);
-			if (ipMatch && ipMatch[1]) {
-				console.log(
-					`[ADB Service] Found IP address for ${serial}: ${ipMatch[1]}`,
-				);
-				return ipMatch[1];
-			}
-
-			console.log(`[ADB Service] No IP address found for ${serial}`);
-			return null;
-		} catch (error) {
-			console.error(`Error getting IP address for device ${serial}:`, error);
-			return null;
-		}
-	}
-
-	async getInstalledPackages(serial: string): Promise<PackageInfo[]> {
-		if (!this.client) {
-			throw new Error("adb service not initialized!");
-		}
-		try {
-			const deviceClient = this.client.getDevice(serial);
-
-			// Execute the shell command to list third-party packages with version codes
-			const output = await deviceClient.shell(
-				"pm list packages --show-versioncode -3",
-			);
-			const result = await Adb.util.readAll(output);
-
-			// Convert the buffer to string and parse the packages
-			const packages = result.toString().trim().split("\n");
-
-			// Extract package names and version codes (format is "package:com.example.package versionCode:123")
-			const packageInfoList = packages
-				.filter((line) => line.startsWith("package:"))
-				.map((line) => {
-					const packageMatch = line.match(/package:([^\s]+)/);
-					const versionMatch = line.match(/versionCode:(\d+)/);
-
-					const packageName = packageMatch ? packageMatch[1].trim() : "";
-					const versionCode = versionMatch ? parseInt(versionMatch[1], 10) : 0;
-
-					return { packageName, versionCode };
-				});
-
-			return packageInfoList;
-		} catch (error) {
-			console.error(
-				`Error getting installed packages for device ${serial}:`,
-				error,
-			);
-			return [];
-		}
-	}
-
-	async getUserName(serial: string): Promise<string> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-		const userName =
-			(await this.runShellCommand(serial, "settings get global username")) ??
-			"";
-		console.log("[ADB Service] User name:", userName);
-		const trimmedUserName = userName.trim();
-		if (trimmedUserName === "" || trimmedUserName === "null") {
-			return "[Unset]";
-		}
-		return trimmedUserName;
-	}
-
-	async setUserName(serial: string, name: string): Promise<void> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-		const deviceClient = this.client.getDevice(serial);
-		console.log("[ADB Service] Setting user name:", name);
-		await deviceClient.shell(`settings put global username "${name.trim()}"`);
-	}
-
-	async installPackage(
-		serial: string,
-		apkPath: string,
-		options?: { flags?: string[] },
-	): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-		console.log(
-			`[ADB Service] Attempting to install ${apkPath} on ${serial}${options?.flags ? ` with flags: ${options.flags.join(" ")}` : ""}...`,
-		);
-		const deviceClient = this.client.getDevice(serial);
-
-		if (options?.flags && options.flags.length > 0) {
-			const apkFileName = path.basename(apkPath);
-			const remoteTempApkPath = `/data/local/tmp/${apkFileName}`;
-
-			try {
-				// 1. Push APK to temporary location
-				console.log(
-					`[ADB Service] Pushing ${apkPath} to ${remoteTempApkPath}...`,
-				);
-				const pushTransfer = await deviceClient.push(
-					apkPath,
-					remoteTempApkPath,
-				);
-				await new Promise<void>((resolve, reject) => {
-					pushTransfer.on("end", resolve);
-					pushTransfer.on("error", (err: Error) => {
-						console.error(
-							`[ADB Service] Error pushing APK ${apkPath} to ${remoteTempApkPath}:`,
-							err,
-						);
-						reject(err);
-					});
-				});
-				console.log(
-					`[ADB Service] Successfully pushed ${apkPath} to ${remoteTempApkPath}.`,
-				);
-
-				// 2. Construct and execute pm install command
-				const installCommand = `pm install ${options.flags.join(" ")} "${remoteTempApkPath}"`;
-				console.log(`[ADB Service] Running install command: ${installCommand}`);
-				const output = await this.runShellCommand(serial, installCommand); // runShellCommand already logs
-
-				// 3. Clean up temporary APK
-				console.log(
-					`[ADB Service] Cleaning up temporary APK: ${remoteTempApkPath}`,
-				);
-				const cleanupOutput = await this.runShellCommand(
-					serial,
-					`rm -f "${remoteTempApkPath}"`,
-				);
-				if (
-					cleanupOutput === null ||
-					!cleanupOutput.includes("No such file or directory")
-				) {
-					// Consider logging if rm -f didn't behave as expected (e.g. permission errors other than file not found)
-					if (cleanupOutput !== null && cleanupOutput.trim() !== "") {
-						console.warn(
-							`[ADB Service] Output during cleanup of ${remoteTempApkPath}: ${cleanupOutput}`,
-						);
-					} else if (cleanupOutput === null) {
-						console.warn(
-							`[ADB Service] Failed to execute cleanup command for ${remoteTempApkPath} or no output.`,
-						);
-					}
-				}
-
-				if (output?.includes("Success")) {
-					console.log(
-						`[ADB Service] Successfully installed ${apkPath} with flags. Output: ${output}`,
-					);
-					return true;
-				}
-
-				console.error(
-					`[ADB Service] Installation of ${apkPath} with flags failed or success not confirmed. Output: ${output || "No output"}`,
-				);
-				// Attempt to extract common failure reasons. Note: we intentionally do NOT
-				// auto-uninstall+retry on a signature mismatch - that would silently wipe
-				// the user's save data. Instead we surface a dedicated error so the UI can
-				// ask the user to choose between keeping the current install or
-				// uninstalling (and losing save data) to apply the update.
-				if (output?.includes("INSTALL_FAILED_UPDATE_INCOMPATIBLE")) {
-					const packageNameMatch = output.match(/Package ([a-zA-Z0-9_.]+)/);
-					const packageName = packageNameMatch?.[1] ?? "";
-					console.error(
-						`[ADB Service] Detailed error: INSTALL_FAILED_UPDATE_INCOMPATIBLE for ${packageName || "unknown package"}. Signatures do not match.`,
-					);
-					throw new SignatureMismatchError(packageName);
-				} else if (output?.includes("INSTALL_FAILED_VERSION_DOWNGRADE")) {
-					console.error(
-						"[ADB Service] Detailed error: INSTALL_FAILED_VERSION_DOWNGRADE. Cannot downgrade versions with these flags.",
-					);
-				} else if (output?.includes("INSTALL_FAILED_ALREADY_EXISTS")) {
-					console.error(
-						"[ADB Service] Detailed error: INSTALL_FAILED_ALREADY_EXISTS. Package already exists.",
-					);
-				}
-				throw new Error(
-					`Installation failed. Output: ${output || "No output"}`,
-				);
-			} catch (error) {
-				if (error instanceof SignatureMismatchError) {
-					throw error;
-				}
-				console.error(
-					`[ADB Service] Error during flagged installation of ${apkPath} on device ${serial}:`,
-					error,
-				);
-				// Ensure cleanup is attempted even if earlier steps fail
-				try {
-					console.log(
-						`[ADB Service] Attempting cleanup of ${remoteTempApkPath} after error...`,
-					);
-					await this.runShellCommand(serial, `rm -f "${remoteTempApkPath}"`);
-				} catch (cleanupError) {
-					console.error(
-						`[ADB Service] Error during cleanup of ${remoteTempApkPath} after initial error:`,
-						cleanupError,
-					);
-				}
-				if (
-					error instanceof Error &&
-					error.message.startsWith("Installation failed.")
-				) {
-					throw error;
-				}
-				return false;
-			}
-		} else {
-			try {
-				const success = await deviceClient.install(apkPath);
-				if (success) {
-					console.log(
-						`[ADB Service] Successfully installed ${apkPath} using adbkit.install.`,
-					);
-				} else {
-					console.error(
-						`[ADB Service] Installation of ${apkPath} reported failure by adbkit.install.`,
-					);
-				}
-				return success;
-			} catch (error) {
-				console.error(
-					`[ADB Service] Error installing package ${apkPath} on device ${serial} (adbkit.install):`,
-					error,
-				);
-				if (
-					error instanceof Error &&
-					error.message.includes("INSTALL_FAILED")
-				) {
-					console.error(
-						`[ADB Service] Install failed with code: ${error.message}`,
-					);
-					if (error.message.includes("INSTALL_FAILED_UPDATE_INCOMPATIBLE")) {
-						const packageNameMatch = error.message.match(
-							/Package ([a-zA-Z0-9_.]+)/,
-						);
-						throw new SignatureMismatchError(packageNameMatch?.[1] ?? "");
-					}
-				}
-				return false;
-			}
-		}
-	}
-
-	async runShellCommand(
-		serial: string,
-		command: string,
-	): Promise<string | null> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-		console.log(`[ADB Service] Running command on ${serial}: ${command}`);
-		try {
-			const deviceClient = this.client.getDevice(serial);
-			const stream = await deviceClient.shell(command);
-			const outputBuffer = await Adb.util.readAll(stream);
-			const output = outputBuffer.toString().trim();
-			console.log(`[ADB Service] Command output: ${output}`);
-			return output;
-		} catch (error) {
-			console.error(
-				`[ADB Service] Error running shell command "${command}" on device ${serial}:`,
-				error,
-			);
-			return null;
-		}
-	}
-
-	/**
-	 * Run a raw `adb` command using the bundled adb binary, separate from the
-	 * adbkit client. Used by the in-app shell when the user types `adb …`
-	 * (e.g. `adb tcpip 5555`). Returns combined stdout+stderr.
-	 */
-	async runLocalAdbCommand(args: string): Promise<string> {
-		const adbPath = dependencyService.getAdbPath();
-		return new Promise<string>((resolve) => {
-			exec(
-				`"${adbPath}" ${args}`,
-				{ timeout: 15000 },
-				(err, stdout, stderr) => {
-					resolve(
-						(stdout || "") + (stderr || "") || (err?.message ?? "(no output)"),
-					);
-				},
-			);
-		});
-	}
-
-	private async _pushDirectoryRecursive(
-		serial: string,
-		localDirPath: string,
-		remoteDirPath: string,
-		deviceClient: DeviceClient,
-	): Promise<boolean> {
-		// 1. Create the remote directory
-		try {
-			console.log(
-				`[AdbService Recursive] Ensuring remote directory exists: ${remoteDirPath}`,
-			);
-			const mkdirOutput = await this.runShellCommand(
-				serial,
-				`mkdir -p "${remoteDirPath}"`,
-			);
-			if (mkdirOutput === null) {
-				console.error(
-					`[AdbService Recursive] Failed to create remote directory ${remoteDirPath} (runShellCommand indicated failure).`,
-				);
-				return false;
-			}
-		} catch (error) {
-			console.error(
-				`[AdbService Recursive] Exception while creating remote directory ${remoteDirPath}:`,
-				error,
-			);
-			return false;
-		}
-
-		// 2. Read entries in localDirPath
-		let entries: Dirent[];
-		try {
-			entries = await fs.promises.readdir(localDirPath, {
-				withFileTypes: true,
-			});
-		} catch (readDirError) {
-			console.error(
-				`[AdbService Recursive] Failed to read local directory ${localDirPath}:`,
-				readDirError,
-			);
-			return false;
-		}
-
-		// 3. For each entry
-		for (const entry of entries) {
-			const localEntryPath = path.join(localDirPath, entry.name);
-			const remoteEntryPath = path.posix.join(remoteDirPath, entry.name);
-
-			if (entry.isFile()) {
-				console.log(
-					`[AdbService Recursive] Pushing file ${localEntryPath} to ${serial}:${remoteEntryPath}`,
-				);
-				try {
-					const transfer = await deviceClient.push(
-						localEntryPath,
-						remoteEntryPath,
-					);
-					const filePushSuccess = await new Promise<boolean>((resolve) => {
-						transfer.on("end", () => resolve(true));
-						transfer.on("error", (err: Error) => {
-							console.error(
-								`[AdbService Recursive] Error pushing file ${localEntryPath} to ${remoteEntryPath}:`,
-								err,
-							);
-							resolve(false);
-						});
-					});
-
-					if (!filePushSuccess) {
-						console.error(
-							`[AdbService Recursive] Failed to push file ${localEntryPath}. Aborting directory push.`,
-						);
-						return false;
-					}
-				} catch (filePushError) {
-					console.error(
-						`[AdbService Recursive] Exception during push of file ${localEntryPath}:`,
-						filePushError,
-					);
-					return false;
-				}
-			} else if (entry.isDirectory()) {
-				console.log(
-					`[AdbService Recursive] Pushing directory ${localEntryPath} to ${serial}:${remoteEntryPath}`,
-				);
-				const subdirPushSuccess = await this._pushDirectoryRecursive(
-					serial,
-					localEntryPath,
-					remoteEntryPath,
-					deviceClient,
-				);
-				if (!subdirPushSuccess) {
-					console.error(
-						`[AdbService Recursive] Failed to push subdirectory ${localEntryPath}. Aborting directory push.`,
-					);
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-
-	async pushFileOrFolder(
-		serial: string,
-		localPath: string,
-		remotePath: string,
-		skipEnsureParentDir = false,
-	): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-
-		// let finalRemotePath = remotePath // Will be determined in the try block
-		// Initialize with normalized remotePath to ensure it's always defined for logging in catch block
-		let finalRemotePath: string = remotePath.replace(/\\/g, "/");
-
-		try {
-			const localStat = await fs.promises.stat(localPath);
-			const normalizedOriginalRemotePath = remotePath.replace(/\\/g, "/"); // Already done for finalRemotePath init, but keep for clarity if preferred
-
-			// Determine the final remote path based on whether it's a file or directory
-			// and if the remote path needs basename appending.
-			if (localStat.isFile()) {
-				if (normalizedOriginalRemotePath.endsWith("/")) {
-					finalRemotePath = path.posix.join(
-						normalizedOriginalRemotePath,
-						path.basename(localPath),
-					);
-				} else {
-					// If remotePath does not end with '/',
-					// remotePath is assumed to be the full target file path.
-					finalRemotePath = normalizedOriginalRemotePath;
-				}
-			} else if (localStat.isDirectory()) {
-				if (normalizedOriginalRemotePath.endsWith("/")) {
-					// e.g., localPath="dir", remotePath="/sdcard/" => finalRemotePath="/sdcard/dir"
-					finalRemotePath = path.posix.join(
-						normalizedOriginalRemotePath,
-						path.basename(localPath),
-					);
-				} else {
-					// If remotePath does not end with a slash (e.g., "/sdcard/targetdir"),
-					// it's assumed to be the explicit full path for the target directory.
-					finalRemotePath = normalizedOriginalRemotePath;
-				}
-			} else {
-				// This case should ideally not be reached if localStat succeeds
-				console.error(
-					`[AdbService] Local path ${localPath} is neither a file nor a directory after stat.`,
-				);
-				return false;
-			}
-
-			const deviceClient = this.client.getDevice(serial);
-
-			if (localStat.isDirectory()) {
-				console.log(
-					`[AdbService] Pushing directory ${localPath} to ${serial}:${finalRemotePath} using recursive method.`,
-				);
-				return await this._pushDirectoryRecursive(
-					serial,
-					localPath,
-					finalRemotePath,
-					deviceClient,
-				);
-			} else {
-				// It's a file — ensure the parent directory exists on the device first.
-				// This is required on Quest 3 (and generally) when the destination folder
-				// may not yet exist (e.g. /sdcard/Android/obb/<pkg>/ on a fresh device).
-				const remoteParentDir = path.posix.dirname(finalRemotePath);
-				if (
-					!skipEnsureParentDir &&
-					remoteParentDir &&
-					remoteParentDir !== "."
-				) {
-					console.log(
-						`[ADB Service] Ensuring remote parent directory exists: ${remoteParentDir}`,
-					);
-					await this.runShellCommand(serial, `mkdir -p "${remoteParentDir}"`);
-				}
-
-				console.log(
-					`[ADB Service] Pushing file ${localPath} to ${serial}:${finalRemotePath}...`,
-				);
-				const transfer = await deviceClient.push(localPath, finalRemotePath);
-				return new Promise<boolean>((resolve, reject) => {
-					transfer.on("end", () => {
-						console.log(
-							`[ADB Service] Successfully pushed file ${localPath} to ${finalRemotePath}.`,
-						);
-						resolve(true);
-					});
-					transfer.on("error", (err) => {
-						console.error(
-							`[ADB Service] Error pushing file ${localPath} to ${finalRemotePath}:`,
-							err,
-						);
-						reject(err); // This will be caught by the outer catch block
-					});
-				});
-			}
-		} catch (error: unknown) {
-			if (
-				error &&
-				typeof error === "object" &&
-				"code" in error &&
-				(error as { code: string }).code === "ENOENT"
-			) {
-				console.error(
-					`[AdbService] Local file/folder not found for push: ${localPath}. Code: ${(error as { code: string }).code}`,
-				);
-			} else {
-				console.error(
-					`[AdbService] Error during push operation for ${localPath} to ${serial}:${finalRemotePath} (original remote: ${remotePath.replace(/\\/g, "/") /* Log normalized path here too for clarity */}):`,
-					error,
-				);
-			}
-			return false;
-		}
-	}
-
-	async pullFile(
-		serial: string,
-		remotePath: string,
-		localPath: string,
-	): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-		console.log(`Pulling ${serial}:${remotePath} to ${localPath}...`);
-		const deviceClient = this.client.getDevice(serial);
-		const transfer = await deviceClient.pull(remotePath);
-		const stream = fs.createWriteStream(localPath);
-		await new Promise<void>((resolve, reject) => {
-			// Attach an 'error' listener to BOTH the transfer and the write stream,
-			// and resolve only once the file is fully flushed to disk ('finish').
-			// A write-side failure — most importantly ENOSPC when the disk fills
-			// mid-pull on a large OBB — emits 'error' on the write stream. Without a
-			// listener there, Node escalates it to an uncaught exception and this
-			// await never settles, wedging the caller (e.g. an upload stuck at the
-			// OBB stage that can no longer be cancelled). Rejecting lets the caller
-			// surface it as a normal failure instead.
-			transfer.on("error", reject);
-			stream.on("error", reject);
-			stream.on("finish", () => resolve());
-			transfer.pipe(stream);
-		});
-		console.log(
-			`[ADB Service] Successfully pulled ${remotePath} to ${localPath}.`,
-		);
-		return true;
-	}
-
-	/**
-	 * Returns true if the given remote path exists on the device (file or dir).
-	 * Used by the save-backup module to check for a package's save directory
-	 * before attempting a backup or restore.
-	 */
-	async remotePathExists(serial: string, remotePath: string): Promise<boolean> {
-		const escaped = remotePath.replace(/"/g, '\\"');
-		const out = await this.runShellCommand(
-			serial,
-			`[ -e "${escaped}" ] && echo __VRCD_EXISTS__ || echo __VRCD_MISSING__`,
-		);
-		return (out ?? "").includes("__VRCD_EXISTS__");
-	}
-
-	/**
-	 * Recursively pull a remote directory to a local directory, preserving the
-	 * relative tree. Returns the number of files copied and the total bytes on
-	 * disk afterwards. Powers the save-backup module's snapshot of
-	 * /sdcard/Android/data/<pkg>. Throws if the ADB client is unavailable; an
-	 * empty/missing remote directory resolves to { fileCount: 0, totalBytes: 0 }.
-	 */
-	async pullDirectory(
-		serial: string,
-		remoteDir: string,
-		localDir: string,
-	): Promise<{ fileCount: number; totalBytes: number }> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-
-		// Strip trailing slashes so relative-path math below is stable.
-		const normRemote = remoteDir.replace(/\/+$/, "");
-		const escaped = normRemote.replace(/"/g, '\\"');
-
-		// Enumerate every regular file under the tree. stderr is discarded so
-		// "Permission denied" noise on inaccessible subpaths doesn't pollute the
-		// file list.
-		const listing = await this.runShellCommand(
-			serial,
-			`find "${escaped}" -type f 2>/dev/null`,
-		);
-		const remoteFiles = (listing ?? "")
-			.split(/\r?\n/)
-			.map((l) => l.trim())
-			.filter(
-				(l) =>
-					l.length > 0 && (l === normRemote || l.startsWith(normRemote + "/")),
-			);
-
-		if (remoteFiles.length === 0) {
-			console.log(
-				`[ADB Service] pullDirectory: no files found under ${normRemote} on ${serial}`,
-			);
-			return { fileCount: 0, totalBytes: 0 };
-		}
-
-		const deviceClient = this.client.getDevice(serial);
-		let fileCount = 0;
-		let totalBytes = 0;
-
-		for (const remoteFile of remoteFiles) {
-			// Path relative to the tree root, mapped into localDir.
-			const rel = remoteFile.slice(normRemote.length).replace(/^\/+/, "");
-			const localFile = path.join(localDir, ...rel.split("/"));
-			await fs.promises.mkdir(path.dirname(localFile), { recursive: true });
-
-			try {
-				const transfer = await deviceClient.pull(remoteFile);
-				await new Promise<void>((resolve, reject) => {
-					const ws = fs.createWriteStream(localFile);
-					transfer.on("error", reject);
-					ws.on("error", reject);
-					ws.on("finish", () => resolve());
-					transfer.pipe(ws);
-				});
-				try {
-					totalBytes += (await fs.promises.stat(localFile)).size;
-				} catch {
-					/* stat failure is non-fatal for the byte tally */
-				}
-				fileCount++;
-			} catch (err) {
-				console.error(
-					`[ADB Service] pullDirectory: failed to pull ${remoteFile}:`,
-					err,
-				);
-				throw err;
-			}
-		}
-
-		console.log(
-			`[ADB Service] pullDirectory: pulled ${fileCount} file(s), ${totalBytes} bytes from ${normRemote}`,
-		);
-		return { fileCount, totalBytes };
-	}
-
-	// ── Private internal app data via run-as (save-backup profiles) ───────────────
-	// Games that keep progress in PlayerPrefs / shared_prefs store it under
-	// /data/data/<pkg>, which is not world-readable and not reachable by a normal
-	// adb pull. `run-as` lets us act as the app's own UID — but ONLY for debuggable
-	// builds. All of the methods below are best-effort: on a non-debuggable app (the
-	// common case for store/sideload releases) they resolve cleanly to "not
-	// accessible" and log why, so the failure is diagnosable rather than silent.
-
-	/** Total internal bytes we're willing to pull before truncating (safety cap). */
-	private static readonly INTERNAL_PULL_CAP_BYTES = 32 * 1024 * 1024;
-
-	/**
-	 * Returns true if `run-as <pkg>` works on this device — i.e. the app build is
-	 * debuggable and its private data can be read/written as the app UID.
-	 */
-	async isPackageDebuggable(
-		serial: string,
-		packageName: string,
-	): Promise<boolean> {
-		const out = await this.runShellCommand(
-			serial,
-			`run-as ${packageName} echo __VRCD_RUNAS_OK__`,
-		);
-		if (!out) return false;
-		if (
-			/not debuggable|unknown package|is unknown|Package .* is not/i.test(out)
-		)
-			return false;
-		return out.includes("__VRCD_RUNAS_OK__");
-	}
-
-	/**
-	 * Best-effort pull of `/data/data/<pkg>` (minus cache/code_cache) into
-	 * `localDir`, reading each file as base64 through `run-as` so binary content
-	 * survives. Returns { accessible:false } when the app isn't debuggable.
-	 */
-	async pullInternalDataViaRunAs(
-		serial: string,
-		packageName: string,
-		localDir: string,
-	): Promise<{
-		accessible: boolean;
-		fileCount: number;
-		totalBytes: number;
-		reason?: string;
-	}> {
-		if (!(await this.isPackageDebuggable(serial, packageName))) {
-			return {
-				accessible: false,
-				fileCount: 0,
-				totalBytes: 0,
-				reason:
-					"app is not debuggable (run-as denied) — internal data cannot be read over ADB",
-			};
-		}
-
-		const base = `/data/data/${packageName}`;
-		// Relative (./…) paths so we can map them straight into localDir.
-		const listing = await this.runShellCommand(
-			serial,
-			`run-as ${packageName} sh -c "cd ${base} && find . -type f ! -path './cache/*' ! -path './code_cache/*' ! -path './lib/*' 2>/dev/null"`,
-		);
-		const rels = (listing ?? "")
-			.split(/\r?\n/)
-			.map((l) => l.trim().replace(/^\.\//, ""))
-			.filter((l) => l.length > 0 && !l.startsWith("run-as:"));
-
-		if (rels.length === 0) {
-			return {
-				accessible: true,
-				fileCount: 0,
-				totalBytes: 0,
-				reason: "no internal files found",
-			};
-		}
-
-		let fileCount = 0;
-		let totalBytes = 0;
-		for (const rel of rels) {
-			if (totalBytes >= AdbService.INTERNAL_PULL_CAP_BYTES) {
-				console.warn(
-					`[ADB Service] run-as pull: hit ${AdbService.INTERNAL_PULL_CAP_BYTES}-byte cap, stopping.`,
-				);
-				break;
-			}
-			const remoteFile = `${base}/${rel}`;
-			const b64 = await this.runShellCommand(
-				serial,
-				`run-as ${packageName} base64 "${remoteFile}"`,
-			);
-			if (
-				b64 === null ||
-				/run-as:|No such file|base64: not found|inaccessible/i.test(b64)
-			) {
-				console.warn(
-					`[ADB Service] run-as pull: could not read ${remoteFile}; skipping.`,
-				);
-				continue;
-			}
-			let buf: Buffer;
-			try {
-				buf = Buffer.from(b64.replace(/\s+/g, ""), "base64");
-			} catch {
-				continue;
-			}
-			const localFile = path.join(localDir, ...rel.split("/"));
-			await fs.promises.mkdir(path.dirname(localFile), { recursive: true });
-			await fs.promises.writeFile(localFile, buf);
-			totalBytes += buf.length;
-			fileCount++;
-		}
-
-		console.log(
-			`[ADB Service] run-as pull: captured ${fileCount} internal file(s), ${totalBytes} bytes from ${base}`,
-		);
-		return { accessible: true, fileCount, totalBytes };
-	}
-
-	/**
-	 * Best-effort restore of a locally-mirrored internal tree back into
-	 * `/data/data/<pkg>` via `run-as`. Stages files through a world-readable temp
-	 * dir on /sdcard, then copies them in as the app UID. Returns false (and logs)
-	 * when the app isn't debuggable or any copy fails.
-	 */
-	async pushInternalDataViaRunAs(
-		serial: string,
-		packageName: string,
-		localDir: string,
-	): Promise<boolean> {
-		if (!(await this.isPackageDebuggable(serial, packageName))) {
-			console.warn(
-				`[ADB Service] run-as restore: ${packageName} is not debuggable — cannot restore internal data.`,
-			);
-			return false;
-		}
-		if (!this.client)
-			throw new Error("[ADB Service] adb service not initialized!");
-
-		// Collect local files relative to localDir.
-		const files: string[] = [];
-		const walk = async (dir: string, prefix: string): Promise<void> => {
-			const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-			for (const e of entries) {
-				const rel = prefix ? `${prefix}/${e.name}` : e.name;
-				if (e.isDirectory()) await walk(path.join(dir, e.name), rel);
-				else if (e.isFile()) files.push(rel);
-			}
-		};
-		try {
-			await walk(localDir, "");
-		} catch (err) {
-			console.error(
-				"[ADB Service] run-as restore: failed to read local internal tree:",
-				err,
-			);
-			return false;
-		}
-		if (files.length === 0) return true;
-
-		const stage = `/sdcard/__vrcd_int_restore/${packageName}`;
-		const base = `/data/data/${packageName}`;
-		const deviceClient = this.client.getDevice(serial);
-		let ok = true;
-		try {
-			await this.runShellCommand(
-				serial,
-				`rm -rf "${stage}"; mkdir -p "${stage}"`,
-			);
-			for (const rel of files) {
-				const localFile = path.join(localDir, ...rel.split("/"));
-				const stagedFile = `${stage}/${rel}`;
-				const stagedParent = path.posix.dirname(stagedFile);
-				await this.runShellCommand(serial, `mkdir -p "${stagedParent}"`);
-				// Push to the world-readable staging area, then copy in as the app UID.
-				const transfer = await deviceClient.push(localFile, stagedFile);
-				const pushed = await new Promise<boolean>((resolve) => {
-					transfer.on("end", () => resolve(true));
-					transfer.on("error", () => resolve(false));
-				});
-				if (!pushed) {
-					ok = false;
-					continue;
-				}
-				await this.runShellCommand(serial, `chmod 644 "${stagedFile}"`);
-				const dest = `${base}/${rel}`;
-				const cp = await this.runShellCommand(
-					serial,
-					`run-as ${packageName} sh -c 'mkdir -p "$(dirname "${dest}")" && cp -f "${stagedFile}" "${dest}"'`,
-				);
-				if (
-					cp !== null &&
-					/run-as:|No such file|Permission denied|cannot/i.test(cp)
-				) {
-					console.warn(
-						`[ADB Service] run-as restore: failed to place ${dest}: ${cp}`,
-					);
-					ok = false;
-				}
-			}
-		} catch (err) {
-			console.error("[ADB Service] run-as restore: exception:", err);
-			ok = false;
-		} finally {
-			await this.runShellCommand(serial, `rm -rf "${stage}"`).catch(() => {});
-		}
-		return ok;
-	}
-
-	/**
-	 * Count the regular files under a remote path (used by the save-backup
-	 * post-restore sanity check). Returns -1 if the path can't be listed.
-	 */
-	async countRemoteFiles(serial: string, remotePath: string): Promise<number> {
-		const escaped = remotePath.replace(/"/g, '\\"');
-		const out = await this.runShellCommand(
-			serial,
-			`find "${escaped}" -type f 2>/dev/null | wc -l`,
-		);
-		if (out === null) return -1;
-		const n = parseInt(out.trim(), 10);
-		return Number.isFinite(n) ? n : -1;
-	}
-
-	async deleteGameFiles(releaseName: string): Promise<{
-		deleted: boolean;
-		path: string;
-		error?: string;
-	}> {
-		const downloadPath = settingsService.getDownloadPath();
-		const gamePath = path.join(downloadPath, releaseName);
-		console.log(`[ADB Service] deleteGameFiles - Deleting ${gamePath}`);
-		try {
-			await fsPromises.stat(gamePath);
-			await fsPromises.rm(gamePath, { recursive: true, force: true });
-			console.log(`[ADB Service] deleteGameFiles - Deleted ${gamePath}`);
-			return { deleted: true, path: gamePath };
-		} catch (error) {
-			if (
-				error instanceof Error &&
-				"code" in error &&
-				(error as NodeJS.ErrnoException).code === "ENOENT"
-			) {
-				console.log(
-					`[ADB Service] deleteGameFiles - Path not found: ${gamePath}`,
-				);
-				return {
-					deleted: false,
-					path: gamePath,
-					error: "Game files not found in current download folder",
-				};
-			}
-			console.error(
-				`[ADB Service] deleteGameFiles - Error deleting ${gamePath}:`,
-				error,
-			);
-			return { deleted: false, path: gamePath, error: String(error) };
-		}
-	}
-
-	async uninstallPackage(
-		serial: string,
-		packageName: string,
-	): Promise<boolean> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-		console.log(
-			`[ADB Service] Attempting to uninstall ${packageName} from ${serial}...`,
-		);
-		try {
-			const deviceClient = this.client.getDevice(serial);
-
-			// 1. Uninstall the package
-			console.log(`[ADB Service] Running: pm uninstall ${packageName}`);
-			await deviceClient.uninstall(packageName);
-			console.log(`[ADB Service] Successfully uninstalled ${packageName}.`);
-
-			// 2. Remove OBB directory (ignore errors)
-			const obbPath = `/sdcard/Android/obb/${packageName}`;
-			console.log(`[ADB Service] Running: rm -r ${obbPath} || true`);
-			try {
-				await deviceClient.shell(`rm -r ${obbPath}`);
-				console.log(
-					`[ADB Service] Successfully removed ${obbPath} (if it existed).`,
-				);
-			} catch (obbError) {
-				// Check if error is because the directory doesn't exist (common case)
-				if (
-					obbError instanceof Error &&
-					obbError.message.includes("No such file or directory")
-				) {
-					console.log(`[ADB Service] OBB directory ${obbPath} did not exist.`);
-				} else {
-					// Log other potential errors but continue
-					console.warn(
-						`[ADB Service] Could not remove OBB directory ${obbPath}:`,
-						obbError,
-					);
-				}
-			}
-
-			// 3. Remove Data directory (ignore errors)
-			const dataPath = `/sdcard/Android/data/${packageName}`;
-			console.log(`[ADB Service] Running: rm -r ${dataPath} || true`);
-			try {
-				await deviceClient.shell(`rm -r ${dataPath}`);
-				console.log(
-					`[ADB Service] Successfully removed ${dataPath} (if it existed).`,
-				);
-			} catch (dataError) {
-				if (
-					dataError instanceof Error &&
-					dataError.message.includes("No such file or directory")
-				) {
-					console.log(
-						`[ADB Service] Data directory ${dataPath} did not exist.`,
-					);
-				} else {
-					console.warn(
-						`[ADB Service] Could not remove Data directory ${dataPath}:`,
-						dataError,
-					);
-				}
-			}
-
-			console.log(
-				`[ADB Service] Uninstall process completed for ${packageName}.`,
-			);
-
-			return true;
-		} catch (error) {
-			console.error(
-				`[ADB Service] Error uninstalling package ${packageName} on device ${serial}:`,
-				error,
-			);
-			// Rethrow or return false based on how you want to handle errors upstream
-			return false;
-		}
-	}
-
-	public async getApplicationLabel(
-		serial: string,
-		packageName: string,
-	): Promise<string | null> {
-		if (!this.client) {
-			throw new Error("[ADB Service] adb service not initialized!");
-		}
-		const aaptRemotePath = "/data/local/tmp/aapt";
-
-		try {
-			if (!this.aaptPushed) {
-				// 1. Push the aapt binary to the device (assuming it's bundled with the app)
-				const aaptLocalPath = dependencyService.getAaptPath();
-
-				console.log(
-					`[AdbService] Pushing aapt binary to ${serial}:${aaptRemotePath}...`,
-				);
-				const pushSuccess = await this.pushFileOrFolder(
-					serial,
-					aaptLocalPath,
-					aaptRemotePath,
-				);
-
-				if (!pushSuccess) {
-					console.error("[AdbService] Failed to push aapt binary to device");
-					return null;
-				}
-
-				// 2. Make the binary executable
-				console.log(`[AdbService] Making aapt executable...`);
-				await this.runShellCommand(serial, `chmod 755 ${aaptRemotePath}`);
-				this.aaptPushed = true;
-			} else {
-				console.log("[AdbService] aapt binary already pushed to device");
-			}
-
-			// 3. Get the path to the APK file
-			console.log(`[AdbService] Getting APK path for ${packageName}...`);
-			const pathOutput = await this.runShellCommand(
-				serial,
-				`pm path ${packageName}`,
-			);
-
-			if (!pathOutput || !pathOutput.startsWith("package:")) {
-				console.error(
-					`[AdbService] Could not find package path for ${packageName}`,
-				);
-				return null;
-			}
-
-			const apkPath = pathOutput.trim().substring(8); // Remove 'package:' prefix
-
-			// 4. Use aapt to extract the application label
-			console.log(
-				`[AdbService] Extracting application label for ${apkPath}...`,
-			);
-			const labelOutput = await this.runShellCommand(
-				serial,
-				`${aaptRemotePath} dump badging "${apkPath}" | grep "application-label:"`,
-			);
-
-			if (!labelOutput) {
-				console.error(
-					`[AdbService] Could not extract application label for ${packageName}`,
-				);
-				return null;
-			}
-
-			// Parse the output: application-label:'AppName'
-			const labelMatch = labelOutput.match(/application-label:'([^']*)'/);
-			if (labelMatch && labelMatch[1]) {
-				console.log(
-					`[AdbService] Found application label for ${packageName}: ${labelMatch[1]}`,
-				);
-				return labelMatch[1];
-			}
-
-			console.error(
-				`[AdbService] Could not parse application label from: ${labelOutput}`,
-			);
-			return null;
-		} catch (error) {
-			console.error(
-				`[AdbService] Error getting application label for ${packageName}:`,
-				error,
-			);
-			return null;
-		}
-	}
-
-	public async pingDevice(
-		ipAddress: string,
-	): Promise<{ reachable: boolean; responseTime?: number }> {
-		console.log(`[ADB Service] Pinging ${ipAddress}...`);
-
-		try {
-			const response = await ping(ipAddress, {
-				timeout: 3, // 3 second timeout
-				numberOfEchos: 1, // Single ping
-			});
-
-			if (response.alive) {
-				const responseTime = response.time; // time in ms for first successful ping
-				console.log(
-					`[ADB Service] Ping to ${ipAddress} successful (${responseTime || "unknown"}ms)`,
-				);
-				return {
-					reachable: true,
-					responseTime: responseTime ? Math.round(responseTime) : undefined,
-				};
-			} else {
-				console.log(
-					`[ADB Service] Ping to ${ipAddress} failed - host not alive`,
-				);
-				return { reachable: false };
-			}
-		} catch (error) {
-			console.error(`[ADB Service] Error pinging ${ipAddress}:`, error);
-			return { reachable: false };
-		}
-	}
-
-	killServer(): void {
-		try {
-			const adbPath = dependencyService.getAdbPath();
-			exec(`"${adbPath}" kill-server`, { timeout: 5000 }, (err) => {
-				if (err) console.warn("[ADB Service] kill-server error:", err.message);
-				else console.log("[ADB Service] kill-server OK");
-			});
-		} catch (e) {
-			console.warn("[ADB Service] Could not run kill-server:", e);
-		}
-	}
+  monterey: 'Oculus Quest',
+  hollywood: 'Meta Quest 2',
+  seacliff: 'Meta Quest Pro',
+  eureka: 'Meta Quest 3',
+  panther: 'Meta Quest 3S / Lite',
+  sekiu: 'Meta XR Simulator'
 }
 
-export default new AdbService();
+class AdbService extends EventEmitter implements AdbAPI {
+  private client: ReturnType<typeof Adb.createClient> | null
+  private deviceTracker: Tracker | null = null
+  private isTracking = false
+  private status: ServiceStatus = 'NOT_INITIALIZED'
+  private aaptPushed = false
+
+  constructor() {
+    super()
+    this.client = null
+  }
+
+  public async initialize(): Promise<ServiceStatus> {
+    if (this.status === 'INITIALIZING') {
+      console.warn('AdbService is already initializing, skipping.')
+      return 'INITIALIZING'
+    }
+    if (this.status === 'INITIALIZED') {
+      console.warn('AdbService is already initialized, skipping.')
+      return 'INITIALIZED'
+    }
+
+    this.status = 'INITIALIZING'
+    try {
+      this.client = Adb.createClient({
+        bin: dependencyService.getAdbPath()
+      })
+    } catch (error) {
+      console.error('Error initializing AdbService:', error)
+      this.status = 'ERROR'
+      return 'ERROR'
+    }
+
+    this.status = 'INITIALIZED'
+    return 'INITIALIZED'
+  }
+
+  private async getDeviceDetails(serial: string): Promise<DeviceInfo | null> {
+    if (!this.client) {
+      console.warn('ADB client not initialized, cannot get device details.')
+      return null
+    }
+    const device = this.client.getDevice(serial)
+
+    try {
+      // Get product model
+      const manufacturerOutput = await device.shell('getprop ro.product.manufacturer')
+      const manufacturerResult = (await Adb.util.readAll(manufacturerOutput))
+        .toString()
+        .trim()
+        .toLowerCase()
+
+      const modelOutput = await device.shell('getprop ro.product.device')
+      const modelResult = (await Adb.util.readAll(modelOutput))
+        .toString()
+        .trim()
+        .toLowerCase() as QuestModel
+
+      const isQuestDevice = manufacturerResult === 'oculus' && QUEST_MODELS.includes(modelResult)
+
+      // Determine friendly name
+      const friendlyModelName = isQuestDevice
+        ? QUEST_MODEL_NAMES[modelResult]
+        : `Unknown Device (${manufacturerResult} ${modelResult})`
+
+      // Get IP address
+      let ipAddress: string | null = null
+      try {
+        const ipOutput = await device.shell('ip route')
+        const ipResult = (await Adb.util.readAll(ipOutput)).toString().trim()
+        // Parse IP from "192.168.178.0/24 dev wlan0 proto kernel scope link src 192.168.178.106"
+        const ipMatch = ipResult.match(/src\s+(\d+\.\d+\.\d+\.\d+)/)
+        if (ipMatch && ipMatch[1]) {
+          ipAddress = ipMatch[1]
+        }
+      } catch (ipError) {
+        console.warn(`Could not fetch IP address for ${serial}:`, ipError)
+      }
+
+      // Get battery level
+      let batteryLevel: number | null = null
+      try {
+        const batteryOutput = await device.shell('dumpsys battery | grep level')
+        const batteryResult = (await Adb.util.readAll(batteryOutput)).toString().trim()
+        const batteryMatch = batteryResult.match(/level: (\d+)/)
+        if (batteryMatch && batteryMatch[1]) {
+          batteryLevel = parseInt(batteryMatch[1], 10)
+        }
+      } catch (batteryError) {
+        console.warn(`Could not fetch battery level for ${serial}:`, batteryError)
+      }
+
+      // Get storage (df -h /data)
+      // Output format is like:
+      // Filesystem      Size  Used Avail Use% Mounted on
+      // /dev/block/dm-5 107G   53G   55G  50% /data
+      let storageTotal: string | null = null
+      let storageFree: string | null = null
+      try {
+        const storageOutput = await device.shell('df -h /data')
+        const storageResult = (await Adb.util.readAll(storageOutput)).toString().trim()
+        const lines = storageResult.split('\n')
+        if (lines.length > 1) {
+          const dataLine = lines[1].split(/\s+/)
+          if (dataLine.length >= 4) {
+            storageTotal = dataLine[1] // Size
+            storageFree = dataLine[3] // Avail
+          }
+        }
+      } catch (storageError) {
+        console.warn(`Could not fetch storage info for ${serial}:`, storageError)
+      }
+
+      return {
+        id: serial,
+        type: 'device',
+        model: modelResult,
+        isQuestDevice,
+        batteryLevel,
+        storageTotal,
+        storageFree,
+        friendlyModelName,
+        ipAddress
+      }
+    } catch (error) {
+      console.error(`Error getting details for device ${serial}:`, error)
+      return null // Or a default object indicating failure
+    }
+  }
+
+  async listDevices(): Promise<DeviceInfo[]> {
+    if (!this.client) {
+      throw new Error('adb service not initialized!')
+    }
+    try {
+      const devices = await this.client.listDevices()
+      const extendedDevices: DeviceInfo[] = []
+
+      for (const device of devices) {
+        // For 'device' and 'emulator' types, always try to get details.
+        // For other types (offline, unauthorized, unknown), create a basic ExtendedDevice.
+        if (device.type === 'device' || device.type === 'emulator') {
+          const details = await this.getDeviceDetails(device.id)
+          // Include the device even if details are null or it's not a Quest device.
+          // The 'isQuestDevice' field in 'details' (or lack thereof) will guide the UI.
+          extendedDevices.push({
+            ...device,
+            ...(details || {
+              model: null,
+              isQuestDevice: false,
+              batteryLevel: null,
+              storageTotal: null,
+              storageFree: null,
+              friendlyModelName: null,
+              ipAddress: null
+            })
+          })
+        } else {
+          // For offline, unauthorized, unknown devices, we don't fetch extended details.
+          // We still want to list them.
+          extendedDevices.push({
+            ...device,
+            model: null,
+            isQuestDevice: false, // Not a connectable Quest device in this state
+            batteryLevel: null,
+            storageTotal: null,
+            storageFree: null,
+            friendlyModelName: null,
+            ipAddress: null
+          })
+        }
+      }
+      return extendedDevices
+    } catch (error) {
+      console.error('Error listing devices:', error)
+      return []
+    }
+  }
+
+  async startTrackingDevices(mainWindow?: BrowserWindow): Promise<void> {
+    if (this.isTracking) {
+      return
+    }
+    if (!this.client) {
+      throw new Error('adb service not initialized!')
+    }
+
+    this.isTracking = true
+
+    const tracker = await this.client.trackDevices()
+    this.deviceTracker = tracker
+
+    tracker.on('add', async (device: DeviceInfo) => {
+      console.log('Device added:', device)
+      if (device.type === 'device' || device.type === 'emulator') {
+        const details = await this.getDeviceDetails(device.id)
+        const extendedDevice: DeviceInfo = {
+          ...device,
+          ...(details || {
+            model: null,
+            isQuestDevice: false,
+            batteryLevel: null,
+            storageTotal: null,
+            storageFree: null,
+            friendlyModelName: null,
+            ipAddress: null
+          })
+        }
+        // Emit event for our internal listeners
+        this.emit('adb:device-added', extendedDevice)
+        // Send to UI if window exists
+        if (mainWindow) {
+          typedWebContentsSend.send(mainWindow, 'adb:device-added', extendedDevice)
+        }
+      } else {
+        // For 'offline', 'unauthorized', 'unknown' devices
+        const extendedDevice: DeviceInfo = {
+          ...device,
+          model: null,
+          isQuestDevice: false,
+          batteryLevel: null,
+          storageTotal: null,
+          storageFree: null,
+          friendlyModelName: null,
+          ipAddress: null
+        }
+        this.emit('adb:device-added', extendedDevice)
+        if (mainWindow) {
+          typedWebContentsSend.send(mainWindow, 'adb:device-added', extendedDevice)
+        }
+      }
+    })
+
+    tracker.on('remove', (device) => {
+      console.log('Device removed:', device)
+
+      // Send a basic device object, details aren't relevant for removal
+      const deviceInfo = {
+        id: device.id,
+        type: device.type,
+        model: null,
+        isQuestDevice: false,
+        batteryLevel: null,
+        storageTotal: null,
+        storageFree: null,
+        friendlyModelName: null,
+        ipAddress: null
+      } satisfies DeviceInfo
+
+      this.emit('adb:device-removed', deviceInfo)
+      if (mainWindow) {
+        typedWebContentsSend.send(mainWindow, 'adb:device-removed', deviceInfo)
+      }
+    })
+
+    tracker.on('change', async (device: DeviceInfo) => {
+      console.log('Device changed:', device)
+      // This event typically signifies a device coming online (e.g., from 'offline' to 'device')
+      // or a device's properties changing.
+      if (device.type === 'device' || device.type === 'emulator') {
+        const details = await this.getDeviceDetails(device.id)
+        const extendedDevice: DeviceInfo = {
+          ...device,
+          ...(details || {
+            model: null,
+            isQuestDevice: false,
+            batteryLevel: null,
+            storageTotal: null,
+            storageFree: null,
+            friendlyModelName: null,
+            ipAddress: null
+          })
+        }
+        this.emit('adb:device-changed', extendedDevice)
+        if (mainWindow) {
+          typedWebContentsSend.send(mainWindow, 'adb:device-changed', extendedDevice)
+        }
+      } else {
+        // Handle changes for devices becoming offline, unauthorized, etc.
+        const extendedDevice: DeviceInfo = {
+          ...device,
+          model: null,
+          isQuestDevice: false,
+          batteryLevel: null,
+          storageTotal: null,
+          storageFree: null,
+          friendlyModelName: null,
+          ipAddress: null
+        }
+        this.emit('adb:device-changed', extendedDevice)
+        if (mainWindow) {
+          typedWebContentsSend.send(mainWindow, 'adb:device-changed', extendedDevice)
+        }
+      }
+    })
+
+    tracker.on('error', (error) => {
+      console.error('Device tracker error:', error)
+      this.emit('tracker-error', error.message)
+      if (mainWindow) {
+        typedWebContentsSend.send(mainWindow, 'adb:device-tracker-error', error.message)
+      }
+      this.stopTrackingDevices()
+    })
+  }
+
+  stopTrackingDevices(): void {
+    if (this.deviceTracker) {
+      this.deviceTracker.end()
+      this.deviceTracker = null
+    }
+    this.isTracking = false
+  }
+
+  async connectDevice(serial: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('adb service not initialized!')
+    }
+    try {
+      // Create a device instance
+      const deviceClient = this.client.getDevice(serial)
+
+      // Test connection by getting device properties
+      await deviceClient.getProperties()
+      return true
+    } catch (error) {
+      console.error(`Error connecting to device ${serial}:`, error)
+      return false
+    }
+  }
+
+  async connectTcpDevice(ipAddress: string, port: number = 5555): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('adb service not initialized!')
+    }
+    try {
+      console.log(`[ADB Service] Attempting to connect to TCP device ${ipAddress}:${port}...`)
+
+      // Use adb connect command
+      await this.client.connect(ipAddress, port)
+
+      // Verify connection by trying to get device properties
+      const deviceClient = this.client.getDevice(`${ipAddress}:${port}`)
+      await deviceClient.getProperties()
+
+      console.log(`[ADB Service] Successfully connected to TCP device ${ipAddress}:${port}`)
+      return true
+    } catch (error) {
+      console.error(`Error connecting to TCP device ${ipAddress}:${port}:`, error)
+      return false
+    }
+  }
+
+  async disconnectTcpDevice(ipAddress: string, port: number = 5555): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('adb service not initialized!')
+    }
+    try {
+      console.log(`[ADB Service] Attempting to disconnect from TCP device ${ipAddress}:${port}...`)
+
+      // Use adb disconnect command
+      await this.client.disconnect(ipAddress, port)
+
+      console.log(`[ADB Service] Successfully disconnected from TCP device ${ipAddress}:${port}`)
+      return true
+    } catch (error) {
+      console.error(`Error disconnecting from TCP device ${ipAddress}:${port}:`, error)
+      return false
+    }
+  }
+
+  async getDeviceIp(serial: string): Promise<string | null> {
+    if (!this.client) {
+      throw new Error('adb service not initialized!')
+    }
+    try {
+      const deviceClient = this.client.getDevice(serial)
+      const ipOutput = await deviceClient.shell('ip route')
+      const ipResult = (await Adb.util.readAll(ipOutput)).toString().trim()
+
+      // Parse IP from "192.168.178.0/24 dev wlan0 proto kernel scope link src 192.168.178.106"
+      const ipMatch = ipResult.match(/src\s+(\d+\.\d+\.\d+\.\d+)/)
+      if (ipMatch && ipMatch[1]) {
+        console.log(`[ADB Service] Found IP address for ${serial}: ${ipMatch[1]}`)
+        return ipMatch[1]
+      }
+
+      console.log(`[ADB Service] No IP address found for ${serial}`)
+      return null
+    } catch (error) {
+      console.error(`Error getting IP address for device ${serial}:`, error)
+      return null
+    }
+  }
+
+  async getInstalledPackages(serial: string): Promise<PackageInfo[]> {
+    if (!this.client) {
+      throw new Error('adb service not initialized!')
+    }
+    try {
+      const deviceClient = this.client.getDevice(serial)
+
+      // Execute the shell command to list third-party packages with version codes
+      const output = await deviceClient.shell('pm list packages --show-versioncode -3')
+      const result = await Adb.util.readAll(output)
+
+      // Convert the buffer to string and parse the packages
+      const packages = result.toString().trim().split('\n')
+
+      // Extract package names and version codes (format is "package:com.example.package versionCode:123")
+      const packageInfoList = packages
+        .filter((line) => line.startsWith('package:'))
+        .map((line) => {
+          const packageMatch = line.match(/package:([^\s]+)/)
+          const versionMatch = line.match(/versionCode:(\d+)/)
+
+          const packageName = packageMatch ? packageMatch[1].trim() : ''
+          const versionCode = versionMatch ? parseInt(versionMatch[1], 10) : 0
+
+          return { packageName, versionCode }
+        })
+
+      return packageInfoList
+    } catch (error) {
+      console.error(`Error getting installed packages for device ${serial}:`, error)
+      return []
+    }
+  }
+
+  async getUserName(serial: string): Promise<string> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+    const userName = (await this.runShellCommand(serial, 'settings get global username')) ?? ''
+    console.log('[ADB Service] User name:', userName)
+    const trimmedUserName = userName.trim()
+    if (trimmedUserName === '' || trimmedUserName === 'null') {
+      return '[Unset]'
+    }
+    return trimmedUserName
+  }
+
+  async setUserName(serial: string, name: string): Promise<void> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+    const deviceClient = this.client.getDevice(serial)
+    console.log('[ADB Service] Setting user name:', name)
+    await deviceClient.shell(`settings put global username "${name.trim()}"`)
+  }
+
+  async installPackage(
+    serial: string,
+    apkPath: string,
+    options?: { flags?: string[] }
+  ): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+    console.log(
+      `[ADB Service] Attempting to install ${apkPath} on ${serial}${options?.flags ? ` with flags: ${options.flags.join(' ')}` : ''}...`
+    )
+    const deviceClient = this.client.getDevice(serial)
+
+    if (options?.flags && options.flags.length > 0) {
+      const apkFileName = path.basename(apkPath)
+      const remoteTempApkPath = `/data/local/tmp/${apkFileName}`
+
+      try {
+        // 1. Push APK to temporary location
+        console.log(`[ADB Service] Pushing ${apkPath} to ${remoteTempApkPath}...`)
+        const pushTransfer = await deviceClient.push(apkPath, remoteTempApkPath)
+        await new Promise<void>((resolve, reject) => {
+          pushTransfer.on('end', resolve)
+          pushTransfer.on('error', (err: Error) => {
+            console.error(
+              `[ADB Service] Error pushing APK ${apkPath} to ${remoteTempApkPath}:`,
+              err
+            )
+            reject(err)
+          })
+        })
+        console.log(`[ADB Service] Successfully pushed ${apkPath} to ${remoteTempApkPath}.`)
+
+        // 2. Construct and execute pm install command
+        const installCommand = `pm install ${options.flags.join(' ')} "${remoteTempApkPath}"`
+        console.log(`[ADB Service] Running install command: ${installCommand}`)
+        const output = await this.runShellCommand(serial, installCommand) // runShellCommand already logs
+
+        // 3. Clean up temporary APK
+        console.log(`[ADB Service] Cleaning up temporary APK: ${remoteTempApkPath}`)
+        const cleanupOutput = await this.runShellCommand(serial, `rm -f "${remoteTempApkPath}"`)
+        if (cleanupOutput === null || !cleanupOutput.includes('No such file or directory')) {
+          // Consider logging if rm -f didn't behave as expected (e.g. permission errors other than file not found)
+          if (cleanupOutput !== null && cleanupOutput.trim() !== '') {
+            console.warn(
+              `[ADB Service] Output during cleanup of ${remoteTempApkPath}: ${cleanupOutput}`
+            )
+          } else if (cleanupOutput === null) {
+            console.warn(
+              `[ADB Service] Failed to execute cleanup command for ${remoteTempApkPath} or no output.`
+            )
+          }
+        }
+
+        if (output?.includes('Success')) {
+          console.log(
+            `[ADB Service] Successfully installed ${apkPath} with flags. Output: ${output}`
+          )
+          return true
+        }
+
+        console.error(
+          `[ADB Service] Installation of ${apkPath} with flags failed or success not confirmed. Output: ${output || 'No output'}`
+        )
+        // Attempt to extract common failure reasons. Note: we intentionally do NOT
+        // auto-uninstall+retry on a signature mismatch - that would silently wipe
+        // the user's save data. Instead we surface a dedicated error so the UI can
+        // ask the user to choose between keeping the current install or
+        // uninstalling (and losing save data) to apply the update.
+        if (output?.includes('INSTALL_FAILED_UPDATE_INCOMPATIBLE')) {
+          const packageNameMatch = output.match(/Package ([a-zA-Z0-9_.]+)/)
+          const packageName = packageNameMatch?.[1] ?? ''
+          console.error(
+            `[ADB Service] Detailed error: INSTALL_FAILED_UPDATE_INCOMPATIBLE for ${packageName || 'unknown package'}. Signatures do not match.`
+          )
+          throw new SignatureMismatchError(packageName)
+        } else if (output?.includes('INSTALL_FAILED_VERSION_DOWNGRADE')) {
+          console.error(
+            '[ADB Service] Detailed error: INSTALL_FAILED_VERSION_DOWNGRADE. Cannot downgrade versions with these flags.'
+          )
+        } else if (output?.includes('INSTALL_FAILED_ALREADY_EXISTS')) {
+          console.error(
+            '[ADB Service] Detailed error: INSTALL_FAILED_ALREADY_EXISTS. Package already exists.'
+          )
+        }
+        throw new Error(`Installation failed. Output: ${output || 'No output'}`)
+      } catch (error) {
+        if (error instanceof SignatureMismatchError) {
+          throw error
+        }
+        console.error(
+          `[ADB Service] Error during flagged installation of ${apkPath} on device ${serial}:`,
+          error
+        )
+        // Ensure cleanup is attempted even if earlier steps fail
+        try {
+          console.log(`[ADB Service] Attempting cleanup of ${remoteTempApkPath} after error...`)
+          await this.runShellCommand(serial, `rm -f "${remoteTempApkPath}"`)
+        } catch (cleanupError) {
+          console.error(
+            `[ADB Service] Error during cleanup of ${remoteTempApkPath} after initial error:`,
+            cleanupError
+          )
+        }
+        if (error instanceof Error && error.message.startsWith('Installation failed.')) {
+          throw error
+        }
+        return false
+      }
+    } else {
+      try {
+        const success = await deviceClient.install(apkPath)
+        if (success) {
+          console.log(`[ADB Service] Successfully installed ${apkPath} using adbkit.install.`)
+        } else {
+          console.error(
+            `[ADB Service] Installation of ${apkPath} reported failure by adbkit.install.`
+          )
+        }
+        return success
+      } catch (error) {
+        console.error(
+          `[ADB Service] Error installing package ${apkPath} on device ${serial} (adbkit.install):`,
+          error
+        )
+        if (error instanceof Error && error.message.includes('INSTALL_FAILED')) {
+          console.error(`[ADB Service] Install failed with code: ${error.message}`)
+          if (error.message.includes('INSTALL_FAILED_UPDATE_INCOMPATIBLE')) {
+            const packageNameMatch = error.message.match(/Package ([a-zA-Z0-9_.]+)/)
+            throw new SignatureMismatchError(packageNameMatch?.[1] ?? '')
+          }
+        }
+        return false
+      }
+    }
+  }
+
+  async runShellCommand(serial: string, command: string): Promise<string | null> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+    console.log(`[ADB Service] Running command on ${serial}: ${command}`)
+    try {
+      const deviceClient = this.client.getDevice(serial)
+      const stream = await deviceClient.shell(command)
+      const outputBuffer = await Adb.util.readAll(stream)
+      const output = outputBuffer.toString().trim()
+      console.log(`[ADB Service] Command output: ${output}`)
+      return output
+    } catch (error) {
+      console.error(
+        `[ADB Service] Error running shell command "${command}" on device ${serial}:`,
+        error
+      )
+      return null
+    }
+  }
+
+  /**
+   * Run a raw `adb` command using the bundled adb binary, separate from the
+   * adbkit client. Used by the in-app shell when the user types `adb …`
+   * (e.g. `adb tcpip 5555`). Returns combined stdout+stderr.
+   */
+  async runLocalAdbCommand(args: string): Promise<string> {
+    const adbPath = dependencyService.getAdbPath()
+    return new Promise<string>((resolve) => {
+      exec(`"${adbPath}" ${args}`, { timeout: 15000 }, (err, stdout, stderr) => {
+        resolve((stdout || '') + (stderr || '') || (err?.message ?? '(no output)'))
+      })
+    })
+  }
+
+  private async _pushDirectoryRecursive(
+    serial: string,
+    localDirPath: string,
+    remoteDirPath: string,
+    deviceClient: DeviceClient
+  ): Promise<boolean> {
+    // 1. Create the remote directory
+    try {
+      console.log(`[AdbService Recursive] Ensuring remote directory exists: ${remoteDirPath}`)
+      const mkdirOutput = await this.runShellCommand(serial, `mkdir -p "${remoteDirPath}"`)
+      if (mkdirOutput === null) {
+        console.error(
+          `[AdbService Recursive] Failed to create remote directory ${remoteDirPath} (runShellCommand indicated failure).`
+        )
+        return false
+      }
+    } catch (error) {
+      console.error(
+        `[AdbService Recursive] Exception while creating remote directory ${remoteDirPath}:`,
+        error
+      )
+      return false
+    }
+
+    // 2. Read entries in localDirPath
+    let entries: Dirent[]
+    try {
+      entries = await fs.promises.readdir(localDirPath, {
+        withFileTypes: true
+      })
+    } catch (readDirError) {
+      console.error(
+        `[AdbService Recursive] Failed to read local directory ${localDirPath}:`,
+        readDirError
+      )
+      return false
+    }
+
+    // 3. For each entry
+    for (const entry of entries) {
+      const localEntryPath = path.join(localDirPath, entry.name)
+      const remoteEntryPath = path.posix.join(remoteDirPath, entry.name)
+
+      if (entry.isFile()) {
+        console.log(
+          `[AdbService Recursive] Pushing file ${localEntryPath} to ${serial}:${remoteEntryPath}`
+        )
+        try {
+          const transfer = await deviceClient.push(localEntryPath, remoteEntryPath)
+          const filePushSuccess = await new Promise<boolean>((resolve) => {
+            transfer.on('end', () => resolve(true))
+            transfer.on('error', (err: Error) => {
+              console.error(
+                `[AdbService Recursive] Error pushing file ${localEntryPath} to ${remoteEntryPath}:`,
+                err
+              )
+              resolve(false)
+            })
+          })
+
+          if (!filePushSuccess) {
+            console.error(
+              `[AdbService Recursive] Failed to push file ${localEntryPath}. Aborting directory push.`
+            )
+            return false
+          }
+        } catch (filePushError) {
+          console.error(
+            `[AdbService Recursive] Exception during push of file ${localEntryPath}:`,
+            filePushError
+          )
+          return false
+        }
+      } else if (entry.isDirectory()) {
+        console.log(
+          `[AdbService Recursive] Pushing directory ${localEntryPath} to ${serial}:${remoteEntryPath}`
+        )
+        const subdirPushSuccess = await this._pushDirectoryRecursive(
+          serial,
+          localEntryPath,
+          remoteEntryPath,
+          deviceClient
+        )
+        if (!subdirPushSuccess) {
+          console.error(
+            `[AdbService Recursive] Failed to push subdirectory ${localEntryPath}. Aborting directory push.`
+          )
+          return false
+        }
+      }
+    }
+    return true
+  }
+
+  async pushFileOrFolder(
+    serial: string,
+    localPath: string,
+    remotePath: string,
+    skipEnsureParentDir = false
+  ): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+
+    // let finalRemotePath = remotePath // Will be determined in the try block
+    // Initialize with normalized remotePath to ensure it's always defined for logging in catch block
+    let finalRemotePath: string = remotePath.replace(/\\/g, '/')
+
+    try {
+      const localStat = await fs.promises.stat(localPath)
+      const normalizedOriginalRemotePath = remotePath.replace(/\\/g, '/') // Already done for finalRemotePath init, but keep for clarity if preferred
+
+      // Determine the final remote path based on whether it's a file or directory
+      // and if the remote path needs basename appending.
+      if (localStat.isFile()) {
+        if (normalizedOriginalRemotePath.endsWith('/')) {
+          finalRemotePath = path.posix.join(normalizedOriginalRemotePath, path.basename(localPath))
+        } else {
+          // If remotePath does not end with '/',
+          // remotePath is assumed to be the full target file path.
+          finalRemotePath = normalizedOriginalRemotePath
+        }
+      } else if (localStat.isDirectory()) {
+        if (normalizedOriginalRemotePath.endsWith('/')) {
+          // e.g., localPath="dir", remotePath="/sdcard/" => finalRemotePath="/sdcard/dir"
+          finalRemotePath = path.posix.join(normalizedOriginalRemotePath, path.basename(localPath))
+        } else {
+          // If remotePath does not end with a slash (e.g., "/sdcard/targetdir"),
+          // it's assumed to be the explicit full path for the target directory.
+          finalRemotePath = normalizedOriginalRemotePath
+        }
+      } else {
+        // This case should ideally not be reached if localStat succeeds
+        console.error(
+          `[AdbService] Local path ${localPath} is neither a file nor a directory after stat.`
+        )
+        return false
+      }
+
+      const deviceClient = this.client.getDevice(serial)
+
+      if (localStat.isDirectory()) {
+        console.log(
+          `[AdbService] Pushing directory ${localPath} to ${serial}:${finalRemotePath} using recursive method.`
+        )
+        return await this._pushDirectoryRecursive(serial, localPath, finalRemotePath, deviceClient)
+      } else {
+        // It's a file — ensure the parent directory exists on the device first.
+        // This is required on Quest 3 (and generally) when the destination folder
+        // may not yet exist (e.g. /sdcard/Android/obb/<pkg>/ on a fresh device).
+        const remoteParentDir = path.posix.dirname(finalRemotePath)
+        if (!skipEnsureParentDir && remoteParentDir && remoteParentDir !== '.') {
+          console.log(`[ADB Service] Ensuring remote parent directory exists: ${remoteParentDir}`)
+          await this.runShellCommand(serial, `mkdir -p "${remoteParentDir}"`)
+        }
+
+        console.log(`[ADB Service] Pushing file ${localPath} to ${serial}:${finalRemotePath}...`)
+        const transfer = await deviceClient.push(localPath, finalRemotePath)
+        return new Promise<boolean>((resolve, reject) => {
+          transfer.on('end', () => {
+            console.log(
+              `[ADB Service] Successfully pushed file ${localPath} to ${finalRemotePath}.`
+            )
+            resolve(true)
+          })
+          transfer.on('error', (err) => {
+            console.error(
+              `[ADB Service] Error pushing file ${localPath} to ${finalRemotePath}:`,
+              err
+            )
+            reject(err) // This will be caught by the outer catch block
+          })
+        })
+      }
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as { code: string }).code === 'ENOENT'
+      ) {
+        console.error(
+          `[AdbService] Local file/folder not found for push: ${localPath}. Code: ${(error as { code: string }).code}`
+        )
+      } else {
+        console.error(
+          `[AdbService] Error during push operation for ${localPath} to ${serial}:${finalRemotePath} (original remote: ${remotePath.replace(/\\/g, '/') /* Log normalized path here too for clarity */}):`,
+          error
+        )
+      }
+      return false
+    }
+  }
+
+  async pullFile(serial: string, remotePath: string, localPath: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+    console.log(`Pulling ${serial}:${remotePath} to ${localPath}...`)
+    const deviceClient = this.client.getDevice(serial)
+    const transfer = await deviceClient.pull(remotePath)
+    const stream = fs.createWriteStream(localPath)
+    await new Promise<void>((resolve, reject) => {
+      // Attach an 'error' listener to BOTH the transfer and the write stream,
+      // and resolve only once the file is fully flushed to disk ('finish').
+      // A write-side failure — most importantly ENOSPC when the disk fills
+      // mid-pull on a large OBB — emits 'error' on the write stream. Without a
+      // listener there, Node escalates it to an uncaught exception and this
+      // await never settles, wedging the caller (e.g. an upload stuck at the
+      // OBB stage that can no longer be cancelled). Rejecting lets the caller
+      // surface it as a normal failure instead.
+      transfer.on('error', reject)
+      stream.on('error', reject)
+      stream.on('finish', () => resolve())
+      transfer.pipe(stream)
+    })
+    console.log(`[ADB Service] Successfully pulled ${remotePath} to ${localPath}.`)
+    return true
+  }
+
+  /**
+   * Returns true if the given remote path exists on the device (file or dir).
+   * Used by the save-backup module to check for a package's save directory
+   * before attempting a backup or restore.
+   */
+  async remotePathExists(serial: string, remotePath: string): Promise<boolean> {
+    const escaped = remotePath.replace(/"/g, '\\"')
+    const out = await this.runShellCommand(
+      serial,
+      `[ -e "${escaped}" ] && echo __VRCD_EXISTS__ || echo __VRCD_MISSING__`
+    )
+    return (out ?? '').includes('__VRCD_EXISTS__')
+  }
+
+  /**
+   * Recursively pull a remote directory to a local directory, preserving the
+   * relative tree. Returns the number of files copied and the total bytes on
+   * disk afterwards. Powers the save-backup module's snapshot of
+   * /sdcard/Android/data/<pkg>. Throws if the ADB client is unavailable; an
+   * empty/missing remote directory resolves to { fileCount: 0, totalBytes: 0 }.
+   */
+  async pullDirectory(
+    serial: string,
+    remoteDir: string,
+    localDir: string
+  ): Promise<{ fileCount: number; totalBytes: number }> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+
+    // Strip trailing slashes so relative-path math below is stable.
+    const normRemote = remoteDir.replace(/\/+$/, '')
+    const escaped = normRemote.replace(/"/g, '\\"')
+
+    // Enumerate every regular file under the tree. stderr is discarded so
+    // "Permission denied" noise on inaccessible subpaths doesn't pollute the
+    // file list.
+    const listing = await this.runShellCommand(serial, `find "${escaped}" -type f 2>/dev/null`)
+    const remoteFiles = (listing ?? '')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && (l === normRemote || l.startsWith(normRemote + '/')))
+
+    if (remoteFiles.length === 0) {
+      console.log(`[ADB Service] pullDirectory: no files found under ${normRemote} on ${serial}`)
+      return { fileCount: 0, totalBytes: 0 }
+    }
+
+    const deviceClient = this.client.getDevice(serial)
+    let fileCount = 0
+    let totalBytes = 0
+
+    for (const remoteFile of remoteFiles) {
+      // Path relative to the tree root, mapped into localDir.
+      const rel = remoteFile.slice(normRemote.length).replace(/^\/+/, '')
+      const localFile = path.join(localDir, ...rel.split('/'))
+      await fs.promises.mkdir(path.dirname(localFile), { recursive: true })
+
+      try {
+        const transfer = await deviceClient.pull(remoteFile)
+        await new Promise<void>((resolve, reject) => {
+          const ws = fs.createWriteStream(localFile)
+          transfer.on('error', reject)
+          ws.on('error', reject)
+          ws.on('finish', () => resolve())
+          transfer.pipe(ws)
+        })
+        try {
+          totalBytes += (await fs.promises.stat(localFile)).size
+        } catch {
+          /* stat failure is non-fatal for the byte tally */
+        }
+        fileCount++
+      } catch (err) {
+        console.error(`[ADB Service] pullDirectory: failed to pull ${remoteFile}:`, err)
+        throw err
+      }
+    }
+
+    console.log(
+      `[ADB Service] pullDirectory: pulled ${fileCount} file(s), ${totalBytes} bytes from ${normRemote}`
+    )
+    return { fileCount, totalBytes }
+  }
+
+  // ── Private internal app data via run-as (save-backup profiles) ───────────────
+  // Games that keep progress in PlayerPrefs / shared_prefs store it under
+  // /data/data/<pkg>, which is not world-readable and not reachable by a normal
+  // adb pull. `run-as` lets us act as the app's own UID — but ONLY for debuggable
+  // builds. All of the methods below are best-effort: on a non-debuggable app (the
+  // common case for store/sideload releases) they resolve cleanly to "not
+  // accessible" and log why, so the failure is diagnosable rather than silent.
+
+  /** Total internal bytes we're willing to pull before truncating (safety cap). */
+  private static readonly INTERNAL_PULL_CAP_BYTES = 32 * 1024 * 1024
+
+  /**
+   * Returns true if `run-as <pkg>` works on this device — i.e. the app build is
+   * debuggable and its private data can be read/written as the app UID.
+   */
+  async isPackageDebuggable(serial: string, packageName: string): Promise<boolean> {
+    const out = await this.runShellCommand(serial, `run-as ${packageName} echo __VRCD_RUNAS_OK__`)
+    if (!out) return false
+    if (/not debuggable|unknown package|is unknown|Package .* is not/i.test(out)) return false
+    return out.includes('__VRCD_RUNAS_OK__')
+  }
+
+  /**
+   * Best-effort pull of `/data/data/<pkg>` (minus cache/code_cache) into
+   * `localDir`, reading each file as base64 through `run-as` so binary content
+   * survives. Returns { accessible:false } when the app isn't debuggable.
+   */
+  async pullInternalDataViaRunAs(
+    serial: string,
+    packageName: string,
+    localDir: string
+  ): Promise<{
+    accessible: boolean
+    fileCount: number
+    totalBytes: number
+    reason?: string
+  }> {
+    if (!(await this.isPackageDebuggable(serial, packageName))) {
+      return {
+        accessible: false,
+        fileCount: 0,
+        totalBytes: 0,
+        reason: 'app is not debuggable (run-as denied) — internal data cannot be read over ADB'
+      }
+    }
+
+    const base = `/data/data/${packageName}`
+    // Relative (./…) paths so we can map them straight into localDir.
+    const listing = await this.runShellCommand(
+      serial,
+      `run-as ${packageName} sh -c "cd ${base} && find . -type f ! -path './cache/*' ! -path './code_cache/*' ! -path './lib/*' 2>/dev/null"`
+    )
+    const rels = (listing ?? '')
+      .split(/\r?\n/)
+      .map((l) => l.trim().replace(/^\.\//, ''))
+      .filter((l) => l.length > 0 && !l.startsWith('run-as:'))
+
+    if (rels.length === 0) {
+      return {
+        accessible: true,
+        fileCount: 0,
+        totalBytes: 0,
+        reason: 'no internal files found'
+      }
+    }
+
+    let fileCount = 0
+    let totalBytes = 0
+    for (const rel of rels) {
+      if (totalBytes >= AdbService.INTERNAL_PULL_CAP_BYTES) {
+        console.warn(
+          `[ADB Service] run-as pull: hit ${AdbService.INTERNAL_PULL_CAP_BYTES}-byte cap, stopping.`
+        )
+        break
+      }
+      const remoteFile = `${base}/${rel}`
+      const b64 = await this.runShellCommand(serial, `run-as ${packageName} base64 "${remoteFile}"`)
+      if (b64 === null || /run-as:|No such file|base64: not found|inaccessible/i.test(b64)) {
+        console.warn(`[ADB Service] run-as pull: could not read ${remoteFile}; skipping.`)
+        continue
+      }
+      let buf: Buffer
+      try {
+        buf = Buffer.from(b64.replace(/\s+/g, ''), 'base64')
+      } catch {
+        continue
+      }
+      const localFile = path.join(localDir, ...rel.split('/'))
+      await fs.promises.mkdir(path.dirname(localFile), { recursive: true })
+      await fs.promises.writeFile(localFile, buf)
+      totalBytes += buf.length
+      fileCount++
+    }
+
+    console.log(
+      `[ADB Service] run-as pull: captured ${fileCount} internal file(s), ${totalBytes} bytes from ${base}`
+    )
+    return { accessible: true, fileCount, totalBytes }
+  }
+
+  /**
+   * Best-effort restore of a locally-mirrored internal tree back into
+   * `/data/data/<pkg>` via `run-as`. Stages files through a world-readable temp
+   * dir on /sdcard, then copies them in as the app UID. Returns false (and logs)
+   * when the app isn't debuggable or any copy fails.
+   */
+  async pushInternalDataViaRunAs(
+    serial: string,
+    packageName: string,
+    localDir: string
+  ): Promise<boolean> {
+    if (!(await this.isPackageDebuggable(serial, packageName))) {
+      console.warn(
+        `[ADB Service] run-as restore: ${packageName} is not debuggable — cannot restore internal data.`
+      )
+      return false
+    }
+    if (!this.client) throw new Error('[ADB Service] adb service not initialized!')
+
+    // Collect local files relative to localDir.
+    const files: string[] = []
+    const walk = async (dir: string, prefix: string): Promise<void> => {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+      for (const e of entries) {
+        const rel = prefix ? `${prefix}/${e.name}` : e.name
+        if (e.isDirectory()) await walk(path.join(dir, e.name), rel)
+        else if (e.isFile()) files.push(rel)
+      }
+    }
+    try {
+      await walk(localDir, '')
+    } catch (err) {
+      console.error('[ADB Service] run-as restore: failed to read local internal tree:', err)
+      return false
+    }
+    if (files.length === 0) return true
+
+    const stage = `/sdcard/__vrcd_int_restore/${packageName}`
+    const base = `/data/data/${packageName}`
+    const deviceClient = this.client.getDevice(serial)
+    let ok = true
+    try {
+      await this.runShellCommand(serial, `rm -rf "${stage}"; mkdir -p "${stage}"`)
+      for (const rel of files) {
+        const localFile = path.join(localDir, ...rel.split('/'))
+        const stagedFile = `${stage}/${rel}`
+        const stagedParent = path.posix.dirname(stagedFile)
+        await this.runShellCommand(serial, `mkdir -p "${stagedParent}"`)
+        // Push to the world-readable staging area, then copy in as the app UID.
+        const transfer = await deviceClient.push(localFile, stagedFile)
+        const pushed = await new Promise<boolean>((resolve) => {
+          transfer.on('end', () => resolve(true))
+          transfer.on('error', () => resolve(false))
+        })
+        if (!pushed) {
+          ok = false
+          continue
+        }
+        await this.runShellCommand(serial, `chmod 644 "${stagedFile}"`)
+        const dest = `${base}/${rel}`
+        const cp = await this.runShellCommand(
+          serial,
+          `run-as ${packageName} sh -c 'mkdir -p "$(dirname "${dest}")" && cp -f "${stagedFile}" "${dest}"'`
+        )
+        if (cp !== null && /run-as:|No such file|Permission denied|cannot/i.test(cp)) {
+          console.warn(`[ADB Service] run-as restore: failed to place ${dest}: ${cp}`)
+          ok = false
+        }
+      }
+    } catch (err) {
+      console.error('[ADB Service] run-as restore: exception:', err)
+      ok = false
+    } finally {
+      await this.runShellCommand(serial, `rm -rf "${stage}"`).catch(() => {})
+    }
+    return ok
+  }
+
+  /**
+   * Count the regular files under a remote path (used by the save-backup
+   * post-restore sanity check). Returns -1 if the path can't be listed.
+   */
+  async countRemoteFiles(serial: string, remotePath: string): Promise<number> {
+    const escaped = remotePath.replace(/"/g, '\\"')
+    const out = await this.runShellCommand(serial, `find "${escaped}" -type f 2>/dev/null | wc -l`)
+    if (out === null) return -1
+    const n = parseInt(out.trim(), 10)
+    return Number.isFinite(n) ? n : -1
+  }
+
+  async deleteGameFiles(releaseName: string): Promise<{
+    deleted: boolean
+    path: string
+    error?: string
+  }> {
+    const downloadPath = settingsService.getDownloadPath()
+    const gamePath = path.join(downloadPath, releaseName)
+    console.log(`[ADB Service] deleteGameFiles - Deleting ${gamePath}`)
+    try {
+      await fsPromises.stat(gamePath)
+      await fsPromises.rm(gamePath, { recursive: true, force: true })
+      console.log(`[ADB Service] deleteGameFiles - Deleted ${gamePath}`)
+      return { deleted: true, path: gamePath }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
+      ) {
+        console.log(`[ADB Service] deleteGameFiles - Path not found: ${gamePath}`)
+        return {
+          deleted: false,
+          path: gamePath,
+          error: 'Game files not found in current download folder'
+        }
+      }
+      console.error(`[ADB Service] deleteGameFiles - Error deleting ${gamePath}:`, error)
+      return { deleted: false, path: gamePath, error: String(error) }
+    }
+  }
+
+  async uninstallPackage(serial: string, packageName: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+    console.log(`[ADB Service] Attempting to uninstall ${packageName} from ${serial}...`)
+    try {
+      const deviceClient = this.client.getDevice(serial)
+
+      // 1. Uninstall the package
+      console.log(`[ADB Service] Running: pm uninstall ${packageName}`)
+      await deviceClient.uninstall(packageName)
+      console.log(`[ADB Service] Successfully uninstalled ${packageName}.`)
+
+      // 2. Remove OBB directory (ignore errors)
+      const obbPath = `/sdcard/Android/obb/${packageName}`
+      console.log(`[ADB Service] Running: rm -r ${obbPath} || true`)
+      try {
+        await deviceClient.shell(`rm -r ${obbPath}`)
+        console.log(`[ADB Service] Successfully removed ${obbPath} (if it existed).`)
+      } catch (obbError) {
+        // Check if error is because the directory doesn't exist (common case)
+        if (obbError instanceof Error && obbError.message.includes('No such file or directory')) {
+          console.log(`[ADB Service] OBB directory ${obbPath} did not exist.`)
+        } else {
+          // Log other potential errors but continue
+          console.warn(`[ADB Service] Could not remove OBB directory ${obbPath}:`, obbError)
+        }
+      }
+
+      // 3. Remove Data directory (ignore errors)
+      const dataPath = `/sdcard/Android/data/${packageName}`
+      console.log(`[ADB Service] Running: rm -r ${dataPath} || true`)
+      try {
+        await deviceClient.shell(`rm -r ${dataPath}`)
+        console.log(`[ADB Service] Successfully removed ${dataPath} (if it existed).`)
+      } catch (dataError) {
+        if (dataError instanceof Error && dataError.message.includes('No such file or directory')) {
+          console.log(`[ADB Service] Data directory ${dataPath} did not exist.`)
+        } else {
+          console.warn(`[ADB Service] Could not remove Data directory ${dataPath}:`, dataError)
+        }
+      }
+
+      console.log(`[ADB Service] Uninstall process completed for ${packageName}.`)
+
+      return true
+    } catch (error) {
+      console.error(
+        `[ADB Service] Error uninstalling package ${packageName} on device ${serial}:`,
+        error
+      )
+      // Rethrow or return false based on how you want to handle errors upstream
+      return false
+    }
+  }
+
+  public async getApplicationLabel(serial: string, packageName: string): Promise<string | null> {
+    if (!this.client) {
+      throw new Error('[ADB Service] adb service not initialized!')
+    }
+    const aaptRemotePath = '/data/local/tmp/aapt'
+
+    try {
+      if (!this.aaptPushed) {
+        // 1. Push the aapt binary to the device (assuming it's bundled with the app)
+        const aaptLocalPath = dependencyService.getAaptPath()
+
+        console.log(`[AdbService] Pushing aapt binary to ${serial}:${aaptRemotePath}...`)
+        const pushSuccess = await this.pushFileOrFolder(serial, aaptLocalPath, aaptRemotePath)
+
+        if (!pushSuccess) {
+          console.error('[AdbService] Failed to push aapt binary to device')
+          return null
+        }
+
+        // 2. Make the binary executable
+        console.log(`[AdbService] Making aapt executable...`)
+        await this.runShellCommand(serial, `chmod 755 ${aaptRemotePath}`)
+        this.aaptPushed = true
+      } else {
+        console.log('[AdbService] aapt binary already pushed to device')
+      }
+
+      // 3. Get the path to the APK file
+      console.log(`[AdbService] Getting APK path for ${packageName}...`)
+      const pathOutput = await this.runShellCommand(serial, `pm path ${packageName}`)
+
+      if (!pathOutput || !pathOutput.startsWith('package:')) {
+        console.error(`[AdbService] Could not find package path for ${packageName}`)
+        return null
+      }
+
+      const apkPath = pathOutput.trim().substring(8) // Remove 'package:' prefix
+
+      // 4. Use aapt to extract the application label
+      console.log(`[AdbService] Extracting application label for ${apkPath}...`)
+      const labelOutput = await this.runShellCommand(
+        serial,
+        `${aaptRemotePath} dump badging "${apkPath}" | grep "application-label:"`
+      )
+
+      if (!labelOutput) {
+        console.error(`[AdbService] Could not extract application label for ${packageName}`)
+        return null
+      }
+
+      // Parse the output: application-label:'AppName'
+      const labelMatch = labelOutput.match(/application-label:'([^']*)'/)
+      if (labelMatch && labelMatch[1]) {
+        console.log(`[AdbService] Found application label for ${packageName}: ${labelMatch[1]}`)
+        return labelMatch[1]
+      }
+
+      console.error(`[AdbService] Could not parse application label from: ${labelOutput}`)
+      return null
+    } catch (error) {
+      console.error(`[AdbService] Error getting application label for ${packageName}:`, error)
+      return null
+    }
+  }
+
+  public async pingDevice(
+    ipAddress: string
+  ): Promise<{ reachable: boolean; responseTime?: number }> {
+    console.log(`[ADB Service] Pinging ${ipAddress}...`)
+
+    try {
+      const response = await ping(ipAddress, {
+        timeout: 3, // 3 second timeout
+        numberOfEchos: 1 // Single ping
+      })
+
+      if (response.alive) {
+        const responseTime = response.time // time in ms for first successful ping
+        console.log(
+          `[ADB Service] Ping to ${ipAddress} successful (${responseTime || 'unknown'}ms)`
+        )
+        return {
+          reachable: true,
+          responseTime: responseTime ? Math.round(responseTime) : undefined
+        }
+      } else {
+        console.log(`[ADB Service] Ping to ${ipAddress} failed - host not alive`)
+        return { reachable: false }
+      }
+    } catch (error) {
+      console.error(`[ADB Service] Error pinging ${ipAddress}:`, error)
+      return { reachable: false }
+    }
+  }
+
+  killServer(): void {
+    try {
+      const adbPath = dependencyService.getAdbPath()
+      exec(`"${adbPath}" kill-server`, { timeout: 5000 }, (err) => {
+        if (err) console.warn('[ADB Service] kill-server error:', err.message)
+        else console.log('[ADB Service] kill-server OK')
+      })
+    } catch (e) {
+      console.warn('[ADB Service] Could not run kill-server:', e)
+    }
+  }
+}
+
+export default new AdbService()
