@@ -1,2511 +1,3904 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import React, {
+	useState,
+	useMemo,
+	useEffect,
+	useRef,
+	useCallback,
+} from "react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  ColumnDef,
-  flexRender,
-  SortingState,
-  FilterFn,
-  ColumnFiltersState,
-  Row,
-  ColumnSizingState
-} from '@tanstack/react-table'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { useAdb } from '../hooks/useAdb'
-import { useGames } from '../hooks/useGames'
-import { useDownload } from '../hooks/useDownload'
-import { useLanguage } from '../hooks/useLanguage'
-import { GameInfo, isSignatureMismatchError } from '@shared/types'
-import placeholderImage from '../assets/images/game-placeholder.png'
-import sideloaderBg from '../assets/images/sideloader-bg.png'
+	useReactTable,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getSortedRowModel,
+	ColumnDef,
+	flexRender,
+	SortingState,
+	FilterFn,
+	ColumnFiltersState,
+	Row,
+	ColumnSizingState,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useAdb } from "../hooks/useAdb";
+import { useGames } from "../hooks/useGames";
+import { useDownload } from "../hooks/useDownload";
+import { useLanguage } from "../hooks/useLanguage";
+import { GameInfo, isSignatureMismatchError } from "@shared/types";
+import placeholderImage from "../assets/images/game-placeholder.png";
+import sideloaderBg from "../assets/images/sideloader-bg.png";
 import {
-  Button,
-  tokens,
-  shorthands,
-  makeStyles,
-  mergeClasses,
-  Text,
-  Input,
-  Badge,
-  ProgressBar,
-  Spinner,
-  Menu,
-  MenuTrigger,
-  MenuList,
-  MenuItem,
-  MenuPopover,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Popover,
-  PopoverTrigger,
-  PopoverSurface,
-  Slider,
-  Switch
-} from '@fluentui/react-components'
+	Button,
+	tokens,
+	shorthands,
+	makeStyles,
+	mergeClasses,
+	Text,
+	Input,
+	Badge,
+	ProgressBar,
+	Spinner,
+	Menu,
+	MenuTrigger,
+	MenuList,
+	MenuItem,
+	MenuPopover,
+	Dialog,
+	DialogSurface,
+	DialogBody,
+	DialogTitle,
+	DialogContent,
+	DialogActions,
+	Popover,
+	PopoverTrigger,
+	PopoverSurface,
+	Slider,
+	Switch,
+} from "@fluentui/react-components";
 import {
-  ArrowClockwiseRegular,
-  PlugDisconnectedRegular,
-  CheckmarkCircleRegular,
-  DesktopRegular,
-  BatteryChargeRegular,
-  FolderAddRegular,
-  DocumentRegular,
-  CopyRegular,
-  WindowConsoleRegular,
-  OptionsRegular,
-  GridRegular,
-  TableRegular,
-  SettingsRegular,
-  ArrowSyncRegular,
-  DismissRegular,
-  CloudRegular as CloudIcon,
-  ServerRegular as ServerIcon
-} from '@fluentui/react-icons'
-import GameDetailsDialog from './GameDetailsDialog'
-import UninstallWarningDialog from './UninstallWarningDialog'
-import { getSkipUninstallWarning, setSkipUninstallWarning } from '@renderer/hooks/useExtrasSettings'
-import { useGameDialog } from '@renderer/hooks/useGameDialog'
-import MirrorManagement from './MirrorManagement'
-import { AdbShellDialog } from './AdbShellDialog'
-import { useTablePreferences } from '@renderer/hooks/useTablePreferences'
-import { useSettings } from '../hooks/useSettings'
-import { useMirrors } from '../hooks/useMirrors'
+	ArrowClockwiseRegular,
+	PlugDisconnectedRegular,
+	CheckmarkCircleRegular,
+	DesktopRegular,
+	BatteryChargeRegular,
+	FolderAddRegular,
+	DocumentRegular,
+	CopyRegular,
+	WindowConsoleRegular,
+	OptionsRegular,
+	GridRegular,
+	TableRegular,
+	SettingsRegular,
+	ArrowSyncRegular,
+	DismissRegular,
+	CloudRegular as CloudIcon,
+	ServerRegular as ServerIcon,
+} from "@fluentui/react-icons";
+import GameDetailsDialog from "./GameDetailsDialog";
+import UninstallWarningDialog from "./UninstallWarningDialog";
+import {
+	getSideloadingDisabled,
+	getSkipUninstallWarning,
+	setSkipUninstallWarning,
+} from "@renderer/hooks/useExtrasSettings";
+import { useGameDialog } from "@renderer/hooks/useGameDialog";
+import MirrorManagement from "./MirrorManagement";
+import { AdbShellDialog } from "./AdbShellDialog";
+import { useTablePreferences } from "@renderer/hooks/useTablePreferences";
+import { useSettings } from "../hooks/useSettings";
+import { useMirrors } from "../hooks/useMirrors";
 
 // Column width constants
 const COLUMN_WIDTHS = {
-  STATUS: 60,
-  THUMBNAIL: 90,
-  VERSION: 180,
-  POPULARITY: 120,
-  SIZE: 90,
-  LAST_UPDATED: 180,
-  MIN_NAME_PACKAGE: 300 // Minimum width for name/package column
-}
+	STATUS: 60,
+	THUMBNAIL: 90,
+	VERSION: 180,
+	POPULARITY: 120,
+	SIZE: 90,
+	LAST_UPDATED: 180,
+	MIN_NAME_PACKAGE: 300, // Minimum width for name/package column
+};
 
 // Calculate fixed columns total width
 const FIXED_COLUMNS_WIDTH =
-  COLUMN_WIDTHS.STATUS +
-  COLUMN_WIDTHS.THUMBNAIL +
-  COLUMN_WIDTHS.VERSION +
-  COLUMN_WIDTHS.POPULARITY +
-  COLUMN_WIDTHS.SIZE +
-  COLUMN_WIDTHS.LAST_UPDATED
+	COLUMN_WIDTHS.STATUS +
+	COLUMN_WIDTHS.THUMBNAIL +
+	COLUMN_WIDTHS.VERSION +
+	COLUMN_WIDTHS.POPULARITY +
+	COLUMN_WIDTHS.SIZE +
+	COLUMN_WIDTHS.LAST_UPDATED;
 
-type FilterType = 'all' | 'installed' | 'update'
+type FilterType = "all" | "installed" | "update";
 
 // Parse "1.2 GB" / "500 MB" / "100 KB" to bytes for numeric sort
 const parseSizeBytes = (s: string): number => {
-  if (!s) return 0
-  const m = s.match(/([0-9.]+)\s*(GB|MB|KB|B)?/i)
-  if (!m) return 0
-  const n = parseFloat(m[1])
-  const u = (m[2] ?? 'B').toUpperCase()
-  return n * ({ B: 1, KB: 1024, MB: 1048576, GB: 1073741824 }[u] ?? 1)
-}
+	if (!s) return 0;
+	const m = s.match(/([0-9.]+)\s*(GB|MB|KB|B)?/i);
+	if (!m) return 0;
+	const n = parseFloat(m[1]);
+	const u = (m[2] ?? "B").toUpperCase();
+	return n * ({ B: 1, KB: 1024, MB: 1048576, GB: 1073741824 }[u] ?? 1);
+};
 
-const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000   // 30 days
-const UPDATED_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
+const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const UPDATED_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // Hard floor: snapshot tracking shipped on this date. Anything observed
 // before then was bulk-recorded as "always existed" (firstSeenAt = 0) so we
 // don't badge every game NEW after upgrading. Belt-and-suspenders: also
 // reject any firstSeenAt value that predates this date.
-const SNAPSHOT_TRACKING_EPOCH_MS = new Date('2026-04-20T00:00:00Z').getTime()
+const SNAPSHOT_TRACKING_EPOCH_MS = new Date("2026-04-20T00:00:00Z").getTime();
 
-function getGameBadge(game: GameInfo): 'new' | 'updated' | null {
-  const now = Date.now()
-  // NEW = packageName first appeared in our local library within the last
-  // 30 days, AND that "first seen" timestamp is after the day this feature
-  // shipped. Without the date floor, anything pre-tracking would slip
-  // through if firstSeenAt ever ended up unset or zero in a weird way.
-  if (
-    game.firstSeenAt &&
-    game.firstSeenAt > SNAPSHOT_TRACKING_EPOCH_MS &&
-    now - game.firstSeenAt <= NEW_THRESHOLD_MS
-  ) {
-    return 'new'
-  }
-  // UPDATED = the package's version changed (relative to the previous sync)
-  // within the last 7 days. Only applies to games we already had - genuinely
-  // new packages get NEW above and never fall through to UPDATED.
-  if (
-    game.versionChangedAt &&
-    game.versionChangedAt > SNAPSHOT_TRACKING_EPOCH_MS &&
-    now - game.versionChangedAt <= UPDATED_THRESHOLD_MS
-  ) {
-    return 'updated'
-  }
-  return null
+function getGameBadge(game: GameInfo): "new" | "updated" | null {
+	const now = Date.now();
+	// NEW = packageName first appeared in our local library within the last
+	// 30 days, AND that "first seen" timestamp is after the day this feature
+	// shipped. Without the date floor, anything pre-tracking would slip
+	// through if firstSeenAt ever ended up unset or zero in a weird way.
+	if (
+		game.firstSeenAt &&
+		game.firstSeenAt > SNAPSHOT_TRACKING_EPOCH_MS &&
+		now - game.firstSeenAt <= NEW_THRESHOLD_MS
+	) {
+		return "new";
+	}
+	// UPDATED = the package's version changed (relative to the previous sync)
+	// within the last 7 days. Only applies to games we already had - genuinely
+	// new packages get NEW above and never fall through to UPDATED.
+	if (
+		game.versionChangedAt &&
+		game.versionChangedAt > SNAPSHOT_TRACKING_EPOCH_MS &&
+		now - game.versionChangedAt <= UPDATED_THRESHOLD_MS
+	) {
+		return "updated";
+	}
+	return null;
 }
 
-const filterGameNameAndPackage: FilterFn<GameInfo> = (row, _columnId, filterValue) => {
-  const searchStr = String(filterValue).toLowerCase()
-  const gameName = String(row.original.name ?? '').toLowerCase()
-  const packageName = String(row.original.packageName ?? '').toLowerCase()
-  const releaseName = String(row.original.releaseName ?? '').toLowerCase()
-  return (
-    gameName.includes(searchStr) ||
-    packageName.includes(searchStr) ||
-    releaseName.includes(searchStr)
-  )
-}
+const filterGameNameAndPackage: FilterFn<GameInfo> = (
+	row,
+	_columnId,
+	filterValue,
+) => {
+	const searchStr = String(filterValue).toLowerCase();
+	const gameName = String(row.original.name ?? "").toLowerCase();
+	const packageName = String(row.original.packageName ?? "").toLowerCase();
+	const releaseName = String(row.original.releaseName ?? "").toLowerCase();
+	return (
+		gameName.includes(searchStr) ||
+		packageName.includes(searchStr) ||
+		releaseName.includes(searchStr)
+	);
+};
 
-declare module '@tanstack/react-table' {
-  interface FilterFns {
-    gameNameAndPackageFilter: FilterFn<GameInfo>
-  }
+declare module "@tanstack/react-table" {
+	interface FilterFns {
+		gameNameAndPackageFilter: FilterFn<GameInfo>;
+	}
 }
 
 const useStyles = makeStyles({
-  root: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: 'calc(100vh - 110px)',
-    overflow: 'hidden',
-    backgroundColor: '#050514'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    ...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalL),
-    ...shorthands.borderBottom(tokens.strokeWidthThin, 'solid', tokens.colorNeutralStroke1),
-    backgroundColor: tokens.colorNeutralBackground3,
-    flexShrink: 0
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS
-  },
-  deviceInfoBar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS
-  },
-  connectedDeviceText: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS
-  },
-  deviceWarningText: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    color: tokens.colorPaletteRedForeground1
-  },
-  tableContainer: {
-    flexGrow: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalL),
-    overflow: 'hidden'
-  },
-  toolbar: {
-    marginBottom: tokens.spacingVerticalL,
-    flexShrink: 0
-  },
-  filterButtons: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalS
-  },
-  toolbarRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalM
-  },
-  searchInput: {
-    width: '250px'
-  },
-  statusArea: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shorthands.padding(tokens.spacingVerticalXXL),
-    flexGrow: 1
-  },
-  progressBarContainer: {
-    width: '100%',
-    maxWidth: '400px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalS,
-    alignItems: 'center'
-  },
-  tableWrapper: {
-    flexGrow: 1,
-    overflow: 'auto',
-    position: 'relative'
-  },
-  namePackageCellContainer: {
-    position: 'relative',
-    paddingBottom: '8px',
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center'
-  },
-  namePackageCellText: {},
-  progressBarAcrossRow: {
-    position: 'absolute',
-    bottom: '0',
-    left: '0',
-    right: '0',
-    height: '4px'
-  },
-  statusIconCell: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%'
-  },
-  resizer: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    height: '100%',
-    width: '5px',
-    background: 'rgba(0, 0, 0, 0.1)',
-    cursor: 'col-resize',
-    userSelect: 'none',
-    touchAction: 'none',
-    opacity: 0,
-    transition: 'opacity 0.2s ease-in-out',
-    ':hover': {
-      opacity: 1
-    }
-  },
-  isResizing: {
-    background: tokens.colorBrandBackground,
-    opacity: 1
-  },
-  layout: {
-    display: 'flex',
-    flexDirection: 'row',
-    flex: 1,
-    overflow: 'hidden',
-    backgroundColor: '#050514'
-  },
-  sidebar: {
-    width: '240px',
-    minWidth: '240px',
-    display: 'flex',
-    flexDirection: 'column',
-    borderRight: '1px solid rgba(var(--vrcd-neon-raw),0.18)',
-    backgroundColor: '#07070f',
-    overflow: 'hidden',
-    transition: 'width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease',
-    flexShrink: 0,
-    position: 'relative'
-  },
-  sidebarCollapsed: {
-    width: '0px',
-    minWidth: '0px',
-    opacity: 0,
-    borderRight: 'none'
-  },
-  sidebarToggleBtn: {
-    position: 'absolute',
-    top: '8px',
-    right: '4px',
-    zIndex: 20,
-    width: '28px',
-    height: '28px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: '50%',
-    backgroundColor: '#07070f',
-    border: '1px solid rgba(var(--vrcd-neon-raw),0.4)',
-    color: 'var(--vrcd-neon)',
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 700,
-    boxShadow: '0 0 8px rgba(var(--vrcd-neon-raw),0.3)',
-    transition: 'all 0.15s ease',
-    flexShrink: 0
-  },
-  sidebarToggleFloating: {
-    position: 'fixed',
-    top: '120px',
-    left: '6px',
-    zIndex: 20,
-    width: '28px',
-    height: '28px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: '50%',
-    backgroundColor: '#07070f',
-    border: '1px solid rgba(var(--vrcd-neon-raw),0.4)',
-    color: 'var(--vrcd-neon)',
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 700,
-    boxShadow: '0 0 8px rgba(var(--vrcd-neon-raw),0.3)'
-  },
-  sidebarToggleRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
-    flexShrink: 0,
-    borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.12)'
-  },
-  sidebarScroll: {
-    flex: 1,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
-    gap: tokens.spacingVerticalS
-  },
-  sidebarSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-    paddingBottom: tokens.spacingVerticalM,
-    borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.10)'
-  },
-  sidebarLabel: {
-    fontSize: '10px',
-    fontWeight: '700',
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    color: 'var(--vrcd-neon)',
-    opacity: 0.7,
-    paddingBottom: tokens.spacingVerticalXXS
-  },
-  storageBarTrack: {
-    height: '4px',
-    borderRadius: '2px',
-    backgroundColor: tokens.colorNeutralStroke1,
-    overflow: 'hidden',
-    marginTop: tokens.spacingVerticalXS
-  },
-  storageBarFill: {
-    height: '100%',
-    borderRadius: '2px',
-    transition: 'width 0.3s ease'
-  },
-  deviceIdRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalXS,
-    cursor: 'pointer',
-    padding: `${tokens.spacingVerticalXXS} 0`,
-    overflow: 'hidden'
-  },
-  sidebarMain: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    backgroundColor: '#050514'
-  },
-  controlRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.12)',
-    backgroundColor: '#050514',
-    flexShrink: 0,
-    flexWrap: 'nowrap'
-  },
-  searchBoxWrap: {
-    flex: 1,
-    minWidth: '140px'
-  },
-  contentArea: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM} ${tokens.spacingVerticalM}`,
-    backgroundColor: '#050514'
-  }
-})
+	root: {
+		display: "flex",
+		flexDirection: "column",
+		height: "calc(100vh - 110px)",
+		overflow: "hidden",
+		backgroundColor: "#050514",
+	},
+	header: {
+		display: "flex",
+		justifyContent: "space-between",
+		alignItems: "center",
+		...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalL),
+		...shorthands.borderBottom(
+			tokens.strokeWidthThin,
+			"solid",
+			tokens.colorNeutralStroke1,
+		),
+		backgroundColor: tokens.colorNeutralBackground3,
+		flexShrink: 0,
+	},
+	headerLeft: {
+		display: "flex",
+		alignItems: "center",
+		gap: tokens.spacingHorizontalS,
+	},
+	deviceInfoBar: {
+		display: "flex",
+		alignItems: "center",
+		gap: tokens.spacingHorizontalS,
+	},
+	connectedDeviceText: {
+		display: "flex",
+		alignItems: "center",
+		gap: tokens.spacingHorizontalXS,
+	},
+	deviceWarningText: {
+		display: "flex",
+		alignItems: "center",
+		gap: tokens.spacingHorizontalXS,
+		color: tokens.colorPaletteRedForeground1,
+	},
+	tableContainer: {
+		flexGrow: 1,
+		display: "flex",
+		flexDirection: "column",
+		...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalL),
+		overflow: "hidden",
+	},
+	toolbar: {
+		marginBottom: tokens.spacingVerticalL,
+		flexShrink: 0,
+	},
+	filterButtons: {
+		display: "flex",
+		gap: tokens.spacingHorizontalS,
+	},
+	toolbarRight: {
+		display: "flex",
+		alignItems: "center",
+		gap: tokens.spacingHorizontalM,
+	},
+	searchInput: {
+		width: "250px",
+	},
+	statusArea: {
+		display: "flex",
+		flexDirection: "column",
+		alignItems: "center",
+		justifyContent: "center",
+		...shorthands.padding(tokens.spacingVerticalXXL),
+		flexGrow: 1,
+	},
+	progressBarContainer: {
+		width: "100%",
+		maxWidth: "400px",
+		display: "flex",
+		flexDirection: "column",
+		gap: tokens.spacingVerticalS,
+		alignItems: "center",
+	},
+	tableWrapper: {
+		flexGrow: 1,
+		overflow: "auto",
+		position: "relative",
+	},
+	namePackageCellContainer: {
+		position: "relative",
+		paddingBottom: "8px",
+		height: "100%",
+		display: "flex",
+		flexDirection: "column",
+		justifyContent: "center",
+	},
+	namePackageCellText: {},
+	progressBarAcrossRow: {
+		position: "absolute",
+		bottom: "0",
+		left: "0",
+		right: "0",
+		height: "4px",
+	},
+	statusIconCell: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		height: "100%",
+	},
+	resizer: {
+		position: "absolute",
+		right: 0,
+		top: 0,
+		height: "100%",
+		width: "5px",
+		background: "rgba(0, 0, 0, 0.1)",
+		cursor: "col-resize",
+		userSelect: "none",
+		touchAction: "none",
+		opacity: 0,
+		transition: "opacity 0.2s ease-in-out",
+		":hover": {
+			opacity: 1,
+		},
+	},
+	isResizing: {
+		background: tokens.colorBrandBackground,
+		opacity: 1,
+	},
+	layout: {
+		display: "flex",
+		flexDirection: "row",
+		flex: 1,
+		overflow: "hidden",
+		backgroundColor: "#050514",
+	},
+	sidebar: {
+		width: "240px",
+		minWidth: "240px",
+		display: "flex",
+		flexDirection: "column",
+		borderRight: "1px solid rgba(var(--vrcd-neon-raw),0.18)",
+		backgroundColor: "#07070f",
+		overflow: "hidden",
+		transition: "width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease",
+		flexShrink: 0,
+		position: "relative",
+	},
+	sidebarCollapsed: {
+		width: "0px",
+		minWidth: "0px",
+		opacity: 0,
+		borderRight: "none",
+	},
+	sidebarToggleBtn: {
+		position: "absolute",
+		top: "8px",
+		right: "4px",
+		zIndex: 20,
+		width: "28px",
+		height: "28px",
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: "50%",
+		backgroundColor: "#07070f",
+		border: "1px solid rgba(var(--vrcd-neon-raw),0.4)",
+		color: "var(--vrcd-neon)",
+		cursor: "pointer",
+		fontSize: "12px",
+		fontWeight: 700,
+		boxShadow: "0 0 8px rgba(var(--vrcd-neon-raw),0.3)",
+		transition: "all 0.15s ease",
+		flexShrink: 0,
+	},
+	sidebarToggleFloating: {
+		position: "fixed",
+		top: "120px",
+		left: "6px",
+		zIndex: 20,
+		width: "28px",
+		height: "28px",
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: "50%",
+		backgroundColor: "#07070f",
+		border: "1px solid rgba(var(--vrcd-neon-raw),0.4)",
+		color: "var(--vrcd-neon)",
+		cursor: "pointer",
+		fontSize: "12px",
+		fontWeight: 700,
+		boxShadow: "0 0 8px rgba(var(--vrcd-neon-raw),0.3)",
+	},
+	sidebarToggleRow: {
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "space-between",
+		padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
+		flexShrink: 0,
+		borderBottom: "1px solid rgba(var(--vrcd-neon-raw),0.12)",
+	},
+	sidebarScroll: {
+		flex: 1,
+		overflowY: "auto",
+		overflowX: "hidden",
+		display: "flex",
+		flexDirection: "column",
+		padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
+		gap: tokens.spacingVerticalS,
+	},
+	sidebarSection: {
+		display: "flex",
+		flexDirection: "column",
+		gap: tokens.spacingVerticalXS,
+		paddingBottom: tokens.spacingVerticalM,
+		borderBottom: "1px solid rgba(var(--vrcd-neon-raw),0.10)",
+	},
+	sidebarLabel: {
+		fontSize: "10px",
+		fontWeight: "700",
+		letterSpacing: "0.18em",
+		textTransform: "uppercase",
+		color: "var(--vrcd-neon)",
+		opacity: 0.7,
+		paddingBottom: tokens.spacingVerticalXXS,
+	},
+	storageBarTrack: {
+		height: "4px",
+		borderRadius: "2px",
+		backgroundColor: tokens.colorNeutralStroke1,
+		overflow: "hidden",
+		marginTop: tokens.spacingVerticalXS,
+	},
+	storageBarFill: {
+		height: "100%",
+		borderRadius: "2px",
+		transition: "width 0.3s ease",
+	},
+	deviceIdRow: {
+		display: "flex",
+		alignItems: "center",
+		gap: tokens.spacingHorizontalXS,
+		cursor: "pointer",
+		padding: `${tokens.spacingVerticalXXS} 0`,
+		overflow: "hidden",
+	},
+	sidebarMain: {
+		flex: 1,
+		display: "flex",
+		flexDirection: "column",
+		overflow: "hidden",
+		backgroundColor: "#050514",
+	},
+	controlRow: {
+		display: "flex",
+		alignItems: "center",
+		gap: tokens.spacingHorizontalS,
+		padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+		borderBottom: "1px solid rgba(var(--vrcd-neon-raw),0.12)",
+		backgroundColor: "#050514",
+		flexShrink: 0,
+		flexWrap: "nowrap",
+	},
+	searchBoxWrap: {
+		flex: 1,
+		minWidth: "140px",
+	},
+	contentArea: {
+		flex: 1,
+		display: "flex",
+		flexDirection: "column",
+		overflow: "hidden",
+		padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM} ${tokens.spacingVerticalM}`,
+		backgroundColor: "#050514",
+	},
+});
 
 interface GamesViewProps {
-  onBackToDevices: () => void
-  onTransfers: () => void
-  onSettings: () => void
+	onBackToDevices: () => void;
+	onTransfers: () => void;
+	onSettings: () => void;
 }
 
 function parseStorageGB(s: string | null | undefined): number {
-  if (!s) return 0
-  const m = s.match(/(\d+(?:\.\d+)?)\s*([GT])/i)
-  if (!m) return 0
-  return /T/i.test(m[2]) ? parseFloat(m[1]) * 1024 : parseFloat(m[1])
+	if (!s) return 0;
+	const m = s.match(/(\d+(?:\.\d+)?)\s*([GT])/i);
+	if (!m) return 0;
+	return /T/i.test(m[2]) ? parseFloat(m[1]) * 1024 : parseFloat(m[1]);
 }
 
 const COLOR_SWATCHES = [
-  { label: 'None',    value: 'transparent' },
-  { label: 'Cyan',    value: 'rgba(0, 212, 255, 0.07)' },
-  { label: 'Purple',  value: 'rgba(176, 64, 255, 0.07)' },
-  { label: 'Pink',    value: 'rgba(255, 0, 180, 0.06)' },
-  { label: 'Green',   value: 'rgba(0, 255, 128, 0.07)' },
-  { label: 'Blue',    value: 'rgba(40, 120, 255, 0.08)' },
-  { label: 'Subtle',  value: 'rgba(255, 255, 255, 0.05)' },
-] as const
-
-const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onSettings }) => {
-  const {
-    selectedDevice,
-    selectedDeviceDetails,
-    isConnected,
-    disconnectDevice,
-    isLoading: adbLoading,
-    loadPackages
-  } = useAdb()
-  const {
-    games,
-    isLoading: loadingGames,
-    error: gamesError,
-    syncError,
-    dismissSyncError,
-    lastSyncTime,
-    downloadProgress,
-    extractProgress,
-    refreshGames,
-    getNote,
-    requestUploadCheck
-  } = useGames()
-  const {
-    addToQueue: addDownloadToQueue,
-    queue: downloadQueue,
-    cancelDownload,
-    retryDownload,
-    deleteFiles,
-    removeFromQueueOnly
-  } = useDownload()
-
-  const styles = useStyles()
-  const { t } = useLanguage()
-  const { serverConfig } = useSettings()
-  const { activeMirror } = useMirrors()
-  // A server (public server JSON or an rclone config) has been configured.
-  const hasServerConfig = serverConfig.baseUri.trim().length > 0 || !!activeMirror
-  // Manual override so a configured server can be turned "off" without wiping
-  // its credentials — lets you flip between the library and the sideloader deck
-  // for testing a server setup. Persisted so the choice survives restarts.
-  const [serverDisabled, setServerDisabled] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('vrcyberdeck:serverDisabled') === 'true'
-    } catch {
-      return false
-    }
-  })
-  const setServerMode = useCallback((on: boolean): void => {
-    setServerDisabled(!on)
-    try {
-      localStorage.setItem('vrcyberdeck:serverDisabled', String(!on))
-    } catch {
-      /* ignore */
-    }
-  }, [])
-  // Server mode = a server is configured AND not manually turned off. With no
-  // server (or one toggled off) the app is a pure sideloader: no sidebar, no
-  // game list, just the drag-and-drop install deck over the cyberdeck background.
-  const isServerMode = hasServerConfig && !serverDisabled
-
-  const [shellDialogOpen, setShellDialogOpen] = useState(false)
-  const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const { prefs, setPrefs } = useTablePreferences()
-  const [globalFilter, setGlobalFilter] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = String(e.target.value)
-      setSearchInput(val)
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-      searchTimerRef.current = setTimeout(() => setGlobalFilter(val), 400)
-    },
-    []
-  )
-  const [sorting, setSorting] = useState<SortingState>(() =>
-    prefs.tableSortKey ? [{ id: prefs.tableSortKey, desc: prefs.tableSortDir === 'desc' }] : []
-  )
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all')
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [dialogGame, setDialogGame] = useGameDialog()
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
-  const [tableWidth, setTableWidth] = useState<number>(0)
-  const tableContainerRef = useRef<HTMLDivElement>(null)
-  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
-  const [isManualInstalling, setIsManualInstalling] = useState<boolean>(false)
-  const [installStatusMessage, setInstallStatusMessage] = useState<string>('')
-  const [showInstallDialog, setShowInstallDialog] = useState<boolean>(false)
-  const [installSuccess, setInstallSuccess] = useState<boolean | null>(null)
-  const [showObbConfirmDialog, setShowObbConfirmDialog] = useState<boolean>(false)
-  const [obbFolderToConfirm, setObbFolderToConfirm] = useState<string | null>(null)
-  const [showMirrorMgmt, setShowMirrorMgmt] = useState(false)
-  const [appVersion, setAppVersion] = useState('')
-  const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(null)
-  const [isDragOver, setIsDragOver] = useState(false)
-
-  const counts = useMemo(() => {
-    const total = games.length
-    const installed = games.filter((g) => g.isInstalled).length
-    const updates = games.filter((g) => g.hasUpdate).length
-    return { total, installed, updates }
-  }, [games])
-
-  const activeTransferCount = useMemo(
-    () =>
-      downloadQueue.filter(
-        (d) =>
-          d.status === 'Downloading' ||
-          d.status === 'Extracting' ||
-          d.status === 'Installing' ||
-          d.status === 'Queued'
-      ).length,
-    [downloadQueue]
-  )
-
-  // Apply density + colour CSS variables to the table scroll container so they
-  // cascade to all td/th and thumbnail cells without touching inline styles on
-  // every row.
-  useEffect(() => {
-    const el = tableContainerRef.current
-    if (!el) return
-    const padV  = 4  + (prefs.rowDensity / 100) * 12   // 4 → 16 px
-    const thumb = 48 + (prefs.rowDensity / 100) * 42   // 48 → 90 px
-    el.style.setProperty('--row-pad-v',       `${padV}px`)
-    el.style.setProperty('--row-thumb-size',  `${Math.round(thumb)}px`)
-    el.style.setProperty('--row-even-color',  prefs.evenRowColor)
-    el.style.setProperty('--row-odd-color',   prefs.oddRowColor)
-  }, [prefs])
-
-  useEffect(() => {
-    setColumnFilters((prev) => {
-      const otherFilters = prev.filter((f) => f.id !== 'isInstalled' && f.id !== 'hasUpdate')
-      switch (activeFilter) {
-        case 'installed':
-          return [...otherFilters, { id: 'isInstalled', value: true }]
-        case 'update':
-          return [
-            ...otherFilters,
-            { id: 'isInstalled', value: true },
-            { id: 'hasUpdate', value: true }
-          ]
-        case 'all':
-        default:
-          return otherFilters
-      }
-    })
-  }, [activeFilter])
-
-  useEffect(() => {
-    const unsubscribe = window.api.adb.onInstallationCompleted((deviceId) => {
-      console.log(`[GamesView] Received installation-completed event for device: ${deviceId}`)
-      if (selectedDevice && deviceId === selectedDevice) {
-        console.log(`[GamesView] Refreshing packages for current device ${selectedDevice}...`)
-        loadPackages()
-          .then(() => console.log('[GamesView] Package refresh triggered successfully.'))
-          .catch((err) => console.error('[GamesView] Error triggering package refresh:', err))
-      } else {
-        console.log(
-          `[GamesView] Installation completed event for non-selected device (${deviceId}), ignoring.`
-        )
-      }
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDevice, loadPackages])
-
-  const downloadStatusMap = useMemo(() => {
-    const map = new Map<string, { status: string; progress: number; speed?: string; eta?: string; error?: string; downloadPath?: string }>()
-    downloadQueue.forEach((item) => {
-      if (item.releaseName) {
-        const progress =
-          item.status === 'Extracting' ? (item.extractProgress ?? 0) : (item.progress ?? 0)
-        map.set(item.releaseName, {
-          status: item.status,
-          progress: progress,
-          speed: item.speed,
-          eta: item.eta,
-          error: item.error,
-          downloadPath: item.downloadPath
-        })
-      }
-    })
-    return map
-  }, [downloadQueue])
-
-  // Ref so column cell renderers always read the latest map without re-creating column defs
-  const downloadStatusMapRef = useRef(downloadStatusMap)
-  downloadStatusMapRef.current = downloadStatusMap
-
-  useEffect(() => {
-    if (!tableContainerRef.current) return
-
-    // Capture current value of ref to use in cleanup
-    const currentRef = tableContainerRef.current
-
-    const updateTableWidth = (): void => {
-      if (tableContainerRef.current) {
-        const newWidth = tableContainerRef.current.clientWidth
-        setTableWidth(newWidth)
-        // Reset all column sizing to force recalculation
-        setColumnSizing({})
-      }
-    }
-
-    // Initial width calculation
-    updateTableWidth()
-
-    // Set up resize observer
-    const resizeObserver = new ResizeObserver(() => {
-      // Use requestAnimationFrame to avoid too many updates
-      window.requestAnimationFrame(updateTableWidth)
-    })
-    resizeObserver.observe(currentRef)
-
-    return () => {
-      resizeObserver.unobserve(currentRef)
-    }
-  }, [])
-
-  const columns = useMemo<ColumnDef<GameInfo>[]>(() => {
-    // Calculate dynamic width for name column, with a minimum width
-    const nameColumnWidth = Math.max(
-      COLUMN_WIDTHS.MIN_NAME_PACKAGE,
-      tableWidth - FIXED_COLUMNS_WIDTH - 5 // 5px buffer
-    )
-
-    return [
-      {
-        id: 'downloadStatus',
-        header: '',
-        size: COLUMN_WIDTHS.STATUS,
-        enableResizing: false,
-        enableSorting: false,
-        cell: ({ row }) => {
-          const game = row.original
-          const downloadInfo = game.releaseName
-            ? downloadStatusMapRef.current.get(game.releaseName)
-            : undefined
-          const isDownloaded = downloadInfo?.status === 'Completed'
-          const isInstalled = game.isInstalled
-          const isUpdateAvailable = game.hasUpdate
-
-          return (
-            <div className={styles.statusIconCell}>
-              <div style={{ display: 'flex', gap: tokens.spacingHorizontalXXS }}>
-                {isDownloaded && (
-                  <DesktopRegular
-                    fontSize={16}
-                    color={tokens.colorNeutralForeground3}
-                    aria-label="Installed"
-                  />
-                )}
-                {isInstalled && (
-                  <CheckmarkCircleRegular
-                    fontSize={16}
-                    color={tokens.colorPaletteGreenForeground1}
-                    aria-label="Downloaded"
-                  />
-                )}
-                {isUpdateAvailable && (
-                  <ArrowClockwiseRegular
-                    fontSize={16}
-                    color={tokens.colorPaletteGreenForeground1}
-                    aria-label="Update Available"
-                  />
-                )}
-              </div>
-            </div>
-          )
-        }
-      },
-      {
-        accessorKey: 'thumbnailPath',
-        header: ' ',
-        size: COLUMN_WIDTHS.THUMBNAIL,
-        enableResizing: false,
-        cell: ({ getValue }) => {
-          const pathValue = getValue()
-          const imagePath = typeof pathValue === 'string' ? pathValue : ''
-          return (
-            <div className="game-thumbnail-cell">
-              <img
-                src={imagePath ? `file://${imagePath}` : placeholderImage}
-                alt="Thumbnail"
-                className="game-thumbnail-img"
-              />
-            </div>
-          )
-        },
-        enableSorting: false
-      },
-      {
-        accessorKey: 'name',
-        header: () => t('namePackage'),
-        size: nameColumnWidth > 0 ? nameColumnWidth : COLUMN_WIDTHS.MIN_NAME_PACKAGE,
-        sortingFn: (rowA, rowB) => {
-          const a = (rowA.original.name ?? '').toLowerCase()
-          const b = (rowB.original.name ?? '').toLowerCase()
-          for (let i = 0; i < Math.max(a.length, b.length); i++) {
-            if (i >= a.length) return -1
-            if (i >= b.length) return 1
-            const ca = a[i], cb = b[i]
-            if (ca === cb) continue
-            // priority: _ (0) → 0-9 (1) → everything else (2)
-            const p = (c: string) => c === '_' ? 0 : c >= '0' && c <= '9' ? 1 : 2
-            const pa = p(ca), pb = p(cb)
-            if (pa !== pb) return pa - pb
-            return ca < cb ? -1 : 1
-          }
-          return 0
-        },
-        cell: ({ row }) => {
-          const game = row.original
-          const downloadInfo = game.releaseName
-            ? downloadStatusMapRef.current.get(game.releaseName)
-            : undefined
-          const isDownloading = downloadInfo?.status === 'Downloading'
-          const isExtracting = downloadInfo?.status === 'Extracting'
-          const isQueued = downloadInfo?.status === 'Queued'
-          const isInstalling = downloadInfo?.status === 'Installing'
-          const isInstallError = downloadInfo?.status === 'InstallError'
-          const isSigMismatch = isInstallError && isSignatureMismatchError(downloadInfo?.error)
-
-          return (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                height: '100%',
-                position: 'relative',
-                paddingBottom: '8px'
-              }}
-            >
-              <div style={{ marginBottom: tokens.spacingVerticalXS }}>
-                {' '}
-                <div className="game-name-main">{game.name}</div>
-                <div className="game-package-sub">{game.releaseName}</div>
-                <div className="game-package-sub">{game.packageName}</div>
-              </div>
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}
-              >
-                {(() => {
-                  const badge = getGameBadge(game)
-                  if (badge === 'new') return (
-                    <Badge shape="rounded" color="success" appearance="filled" size="small"
-                      style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
-                      NEW
-                    </Badge>
-                  )
-                  if (badge === 'updated') return (
-                    <Badge shape="rounded" color="warning" appearance="filled" size="small"
-                      style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
-                      UPDATED
-                    </Badge>
-                  )
-                  return null
-                })()}
-                {isQueued && (
-                  <Badge shape="rounded" color="informative" appearance="outline">
-                    {t('queued')}
-                  </Badge>
-                )}
-                {(isDownloading || isExtracting || isInstalling) && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: tokens.spacingHorizontalXS
-                    }}
-                  >
-                    <Spinner size="tiny" aria-label="Installing" />
-                    <Badge shape="rounded" color="brand" appearance="outline">
-                      {downloadInfo?.status}{isDownloading && downloadInfo?.progress != null ? ` ${downloadInfo.progress}%` : ''}
-                    </Badge>
-                    {isDownloading && downloadInfo?.speed && (
-                      <span style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
-                        {downloadInfo.speed}
-                      </span>
-                    )}
-                  </div>
-                )}
-                {isInstallError && (
-                  <Badge shape="rounded" color="danger" appearance="outline">
-                    {isSigMismatch ? t('signatureMismatch') : t('installError')}
-                  </Badge>
-                )}
-              </div>
-              {(isDownloading || isExtracting || isInstalling) && downloadInfo && (
-                <ProgressBar
-                  value={downloadInfo.progress}
-                  max={100}
-                  shape="rounded"
-                  thickness="medium"
-                  className={styles.progressBarAcrossRow}
-                  aria-label={isDownloading ? 'Download progress' : 'Extraction progress'}
-                />
-              )}
-            </div>
-          )
-        },
-        enableResizing: true
-      },
-      {
-        accessorKey: 'version',
-        header: () => t('version'),
-        size: COLUMN_WIDTHS.VERSION,
-        cell: ({ row }) => {
-          const listVersion = row.original.version
-          const isInstalled = row.original.isInstalled
-          const deviceVersion = row.original.deviceVersionCode
-          const displayListVersion = listVersion ? `v${listVersion}` : '-'
-          return (
-            <div className="version-cell">
-              <div className="list-version-main">{displayListVersion}</div>
-              {isInstalled && (
-                <div className="installed-version-info">
-                  {deviceVersion !== undefined ? `Installed: v${deviceVersion}` : 'Installed'}
-                </div>
-              )}
-            </div>
-          )
-        },
-        enableResizing: true
-      },
-      {
-        accessorKey: 'downloads',
-        header: () => t('popularity'),
-        size: COLUMN_WIDTHS.POPULARITY,
-        cell: (info) => {
-          const count = info.getValue()
-          return typeof count === 'number' ? count.toLocaleString() : '-'
-        },
-        enableResizing: true
-      },
-      {
-        accessorKey: 'size',
-        header: () => t('size'),
-        size: COLUMN_WIDTHS.SIZE,
-        sortingFn: (a, b) => parseSizeBytes(a.original.size ?? '') - parseSizeBytes(b.original.size ?? ''),
-        cell: (info) => {
-          const sizeValue = info.getValue()
-          const sizeStr = String(sizeValue || '')
-          if (sizeStr === '0 MB' || !sizeStr.trim()) {
-            return null
-          }
-          return sizeStr
-        },
-        enableResizing: true
-      },
-      {
-        accessorKey: 'lastUpdated',
-        header: () => t('lastUpdated'),
-        size: COLUMN_WIDTHS.LAST_UPDATED,
-        sortingFn: (a, b) => {
-          const da = a.original.lastUpdated ? new Date(a.original.lastUpdated).getTime() : 0
-          const db = b.original.lastUpdated ? new Date(b.original.lastUpdated).getTime() : 0
-          return da - db
-        },
-        cell: (info) => info.getValue() || '-',
-        enableResizing: true
-      },
-      {
-        accessorKey: 'isInstalled',
-        header: 'Installed Status',
-        enableResizing: false
-      },
-      {
-        accessorKey: 'hasUpdate',
-        header: 'Update Status',
-        enableResizing: false
-      }
-    ]
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [styles, tableWidth, t])
-
-  const filteredGames = useMemo(() => {
-    let hideAdult = true
-    try { hideAdult = localStorage.getItem('vrcyberdeck:hideAdult') !== 'false' } catch { /* ignore */ }
-    return games.filter((game) => {
-      const size = String(game.size ?? '').trim()
-      if (size === '0 MB' || size === '') return false
-      if (hideAdult && String(game.name ?? '').includes('18+')) return false
-      return true
-    })
-  }, [games])
-
-  const table = useReactTable({
-    data: filteredGames,
-    columns,
-    columnResizeMode: 'onChange',
-    filterFns: {
-      gameNameAndPackageFilter: filterGameNameAndPackage
-    },
-    state: {
-      sorting,
-      globalFilter,
-      columnFilters,
-      columnVisibility: { isInstalled: false, hasUpdate: false },
-      columnSizing
-    },
-    onSortingChange: (updater) => {
-      setSorting((prev) => {
-        const next = typeof updater === 'function' ? updater(prev) : updater
-        const first = next[0]
-        setPrefs({
-          tableSortKey: first?.id ?? '',
-          tableSortDir: first?.desc ? 'desc' : 'asc'
-        })
-        return next
-      })
-    },
-    onGlobalFilterChange: setGlobalFilter,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnSizingChange: setColumnSizing,
-    globalFilterFn: 'gameNameAndPackageFilter',
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel()
-  })
-
-  const { rows } = table.getRowModel()
-  // Estimated row height scales with density: ~60 px compact → ~125 px comfortable
-  const estimatedRowHeight = Math.round(60 + (prefs.rowDensity / 100) * 65)
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => estimatedRowHeight,
-    overscan: 10
-  })
-
-  // Re-measure all virtualised rows when density changes so scroll height stays accurate
-  useEffect(() => {
-    rowVirtualizer.measure()
-  }, [prefs.rowDensity])
-
-  // Reset the table scroll to the top whenever the user changes the filter tab
-  // or the search term. The virtualized table derives its visible rows from the
-  // scroll container's scrollTop; switching to a much smaller result set (e.g.
-  // the Installed tab, or a search that matches only a few games) while scrolled
-  // down would otherwise leave the container scrolled past the new end of the
-  // list, rendering a blank table until a manual refresh remounts it.
-  useEffect(() => {
-    const el = tableContainerRef.current
-    if (el) el.scrollTop = 0
-  }, [activeFilter, globalFilter, prefs.viewMode])
-
-  // Safety net for the "search stops working while the app is busy" case: when a
-  // background library refresh (e.g. an install finishing and repopulating the
-  // installed flags) shrinks the current result set, our saved scroll position
-  // can end up past the end of the now-shorter list, again rendering blank. Pull
-  // it back into range without yanking the user to the top on every refresh.
-  useEffect(() => {
-    const el = tableContainerRef.current
-    if (!el || el.scrollTop === 0) return
-    const maxScroll = rowVirtualizer.getTotalSize() - el.clientHeight
-    if (el.scrollTop > maxScroll) {
-      el.scrollTop = Math.max(0, maxScroll)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows.length])
-
-  const formatDate = (date: Date | null): string => {
-    if (!date) return t('never')
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
-  }
-
-  const getProcessMessage = (): string => {
-    if (downloadProgress > 0 && downloadProgress < 100) {
-      return `${t('downloadingGameData')} ${downloadProgress}%`
-    } else if (extractProgress > 0 && extractProgress < 100) {
-      return `${t('extractingGameData')} ${extractProgress}%`
-    } else if (loadingGames) {
-      return t('preparingLibrary')
-    }
-    return ''
-  }
-
-  const getCurrentProgress = (): number => {
-    if (downloadProgress > 0 && downloadProgress < 100) {
-      return downloadProgress
-    } else if (extractProgress > 0 && extractProgress < 100) {
-      return extractProgress
-    }
-    return 0
-  }
-
-  const handleRowClick = (
-    _event: React.MouseEvent<HTMLTableRowElement>,
-    row: Row<GameInfo>
-  ): void => {
-    console.log('Row clicked for game:', row.original.name)
-    setDialogGame(row.original)
-    setIsDialogOpen(true)
-  }
-
-  useEffect(() => {
-    if (dialogGame) {
-      setIsDialogOpen(true)
-    }
-  }, [dialogGame])
-
-  const handleCloseDialog = useCallback((): void => {
-    setIsDialogOpen(false)
-    setTimeout(() => {
-      setDialogGame(null)
-    }, 300)
-  }, [setDialogGame])
-
-  const handleInstall = (game: GameInfo): void => {
-    if (!game) return
-    console.log('Install action triggered for:', game.packageName)
-    addDownloadToQueue(game)
-      .then((success) => {
-        if (success) {
-          console.log(`Successfully added ${game.releaseName} to download queue.`)
-        } else {
-          console.log(`Failed to add ${game.releaseName} to queue (might already exist).`)
-        }
-      })
-      .catch((err) => {
-        console.error('Error adding to queue:', err)
-      })
-  }
-
-  const performUninstall = async (game: GameInfo, deleteFiles = false): Promise<void> => {
-    if (!game || !game.packageName || !selectedDevice) {
-      console.error(
-        'Uninstall action aborted: Missing game data, package name, or selectedDevice.',
-        {
-          game,
-          selectedDevice
-        }
-      )
-      window.alert('Cannot start uninstall: Essential information is missing.')
-      return
-    }
-
-    console.log(`Uninstall: Starting for ${game.name} (${game.packageName}) on ${selectedDevice}.`)
-    setIsLoading(true)
-
-    try {
-      const success = await window.api.adb.uninstallPackage(selectedDevice, game.packageName)
-      if (success) {
-        console.log(`Uninstall: Successfully uninstalled ${game.packageName}.`)
-        if (deleteFiles && game.releaseName) {
-          const result = await window.api.adb.deleteGameFiles(game.releaseName)
-          if (result.deleted) {
-            console.log(`Uninstall: Deleted game files at ${result.path}`)
-          } else {
-            console.log(`Uninstall: Could not delete game files: ${result.error}`)
-          }
-        }
-      } else {
-        console.error(`Uninstall: Failed to uninstall ${game.packageName}.`)
-        window.alert('Failed to uninstall the game.')
-      }
-      await loadPackages()
-    } catch (error) {
-      console.error(`Uninstall: Error during process for ${game.name}:`, error)
-      window.alert(
-        `An error occurred during the uninstall process for ${game.name}. Please check logs.`
-      )
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleUninstall = async (game: GameInfo): Promise<void> => {
-    if (!game || !game.packageName || !selectedDevice) {
-      window.alert('Cannot start uninstall: Essential information is missing.')
-      return
-    }
-    if (getSkipUninstallWarning()) {
-      await performUninstall(game)
-      return
-    }
-    setPendingUninstall(game)
-  }
-
-  const handleReinstall = async (game: GameInfo): Promise<void> => {
-    if (!game || !game.packageName || !game.releaseName || !selectedDevice) {
-      console.error(
-        'Reinstall Error: Missing game data, package name, release name, or device ID.',
-        {
-          game,
-          selectedDevice
-        }
-      )
-      window.alert('Cannot start reinstall: Essential information is missing.')
-      return
-    }
-
-    console.log(`Reinstall: Starting for ${game.name} (${game.packageName}) on ${selectedDevice}.`)
-    setIsLoading(true)
-
-    try {
-      // Step 1: Uninstall the package
-      console.log(`Reinstall: Attempting to uninstall ${game.packageName}...`)
-      const uninstallSuccess = await window.api.adb.uninstallPackage(
-        selectedDevice,
-        game.packageName
-      )
-
-      if (uninstallSuccess) {
-        console.log(`Reinstall: Successfully uninstalled ${game.packageName}.`)
-        // The game is now uninstalled from the device.
-        // Downloaded files (if any) should still be present.
-
-        const downloadInfo = downloadStatusMap.get(game.releaseName)
-
-        if (downloadInfo?.status === 'Completed') {
-          console.log(
-            `Reinstall: Files for ${game.releaseName} are 'Completed'. Initiating install from completed.`
-          )
-          await window.api.downloads.installFromCompleted(game.releaseName, selectedDevice)
-          console.log(`Reinstall: 'installFromCompleted' called for ${game.releaseName}.`)
-        } else {
-          console.log(
-            `Reinstall: Files for ${game.releaseName} not 'Completed' (status: ${downloadInfo?.status}). Adding to download queue.`
-          )
-          const addToQueueSuccess = await addDownloadToQueue(game)
-          if (addToQueueSuccess) {
-            console.log(`Reinstall: Successfully added ${game.releaseName} to download queue.`)
-          } else {
-            console.warn(
-              `Reinstall: Failed to add ${game.releaseName} to queue. Current status: ${downloadInfo?.status}.`
-            )
-            window.alert(
-              `Reinstall for ${game.name} failed: Could not add to download queue. Please check logs.`
-            )
-          }
-        }
-      } else {
-        console.error(
-          `Reinstall: Failed to uninstall ${game.packageName}. Installation step will be skipped.`
-        )
-        window.alert(`Failed to uninstall ${game.name}. Reinstall aborted.`)
-      }
-    } catch (error) {
-      console.error(`Reinstall: Error during process for ${game.name}:`, error)
-      window.alert(
-        `An error occurred during the reinstall process for ${game.name}. Please check logs.`
-      )
-    } finally {
-      setIsLoading(false)
-      // Refresh packages to update UI. The 'installation-completed' event should also trigger this,
-      // but it's good to have a fallback or an immediate refresh after the uninstall part.
-      console.log(`Reinstall: Process finished for ${game.name}. Triggering package refresh.`)
-      loadPackages().catch((err) =>
-        console.error('Reinstall: Error refreshing packages post-operation:', err)
-      )
-    }
-  }
-
-  const handleUpdate = async (game: GameInfo): Promise<void> => {
-    if (!game || !game.releaseName || !selectedDevice) {
-      console.error('Update action aborted: Missing game data, releaseName, or selectedDevice.', {
-        game,
-        selectedDevice
-      })
-      window.alert('Cannot start update: Essential information is missing.')
-      handleCloseDialog()
-      return
-    }
-
-    console.log(
-      `Update action triggered for: ${game.name} (${game.packageName}) on ${selectedDevice}`
-    )
-
-    try {
-      const downloadInfo = downloadStatusMap.get(game.releaseName)
-
-      if (downloadInfo?.status === 'Completed') {
-        console.log(
-          `Update for ${game.releaseName}: Files are already 'Completed'. Initiating install from completed.`
-        )
-        await window.api.downloads.installFromCompleted(game.releaseName, selectedDevice)
-        console.log(`Update: 'installFromCompleted' called for ${game.releaseName}.`)
-        // Optionally, refresh packages or rely on 'installation-completed' event
-        // loadPackages().catch(err => console.error('Update: Error refreshing packages post-install:', err));
-      } else {
-        console.log(
-          `Update for ${game.releaseName}: Files not 'Completed' (status: ${downloadInfo?.status}). Adding to download queue.`
-        )
-        const addToQueueSuccess = await addDownloadToQueue(game)
-        if (addToQueueSuccess) {
-          console.log(`Update: Successfully added ${game.releaseName} to download queue.`)
-        } else {
-          console.warn(
-            `Update: Failed to add ${game.releaseName} to queue. Current status: ${downloadInfo?.status}.`
-          )
-          window.alert(
-            `Could not queue ${game.name} for update. It might already be in the queue or an error occurred. Please check logs.`
-          )
-        }
-      }
-    } catch (error) {
-      console.error(`Update: Error during process for ${game.name}:`, error)
-      window.alert(
-        `An error occurred during the update process for ${game.name}. Please check logs.`
-      )
-    }
-  }
-
-  const handleRetry = (game: GameInfo): void => {
-    if (!game || !game.releaseName) return
-    console.log('Retry action triggered for:', game.releaseName)
-    retryDownload(game.releaseName)
-  }
-
-  const handleCancelDownload = (game: GameInfo): void => {
-    if (!game || !game.releaseName) return
-    console.log('Cancel download/extraction action triggered for:', game.releaseName)
-    cancelDownload(game.releaseName)
-  }
-
-  const handleInstallFromCompleted = (game: GameInfo): void => {
-    if (!game || !game.releaseName || !selectedDevice) {
-      console.error('Missing game, releaseName, or deviceId for install from completed action')
-      window.alert('Cannot start installation: Missing required information.')
-      return
-    }
-    console.log(`Requesting install from completed for ${game.releaseName} on ${selectedDevice}`)
-    window.api.downloads.installFromCompleted(game.releaseName, selectedDevice).catch((err) => {
-      console.error('Error triggering install from completed:', err)
-      window.alert('Failed to start installation. Please check the main process logs.')
-    })
-  }
-
-  // User chose "Don't Update" after a signature-mismatch install error: dismiss
-  // the failed queue entry (keeping downloaded files) without touching the
-  // device. The game falls back to its normal "Update Available" state.
-  const handleDismissUpdateError = (game: GameInfo): void => {
-    if (!game || !game.releaseName) return
-    removeFromQueueOnly(game.releaseName)
-  }
-
-  // User chose "Uninstall & Update" after a signature-mismatch install error:
-  // uninstall the conflicting build (erasing its save data) and then install
-  // the downloaded update.
-  const handleUninstallAndUpdate = async (game: GameInfo): Promise<void> => {
-    if (!game || !game.packageName || !game.releaseName || !selectedDevice) {
-      window.alert('Cannot continue: Essential information is missing.')
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const uninstallSuccess = await window.api.adb.uninstallPackage(
-        selectedDevice,
-        game.packageName
-      )
-      if (!uninstallSuccess) {
-        window.alert(`Failed to uninstall ${game.name}. Update aborted.`)
-        return
-      }
-
-      const downloadInfo = downloadStatusMap.get(game.releaseName)
-      if (downloadInfo?.status === 'Completed') {
-        await window.api.downloads.installFromCompleted(game.releaseName, selectedDevice)
-      } else if (downloadInfo?.status === 'InstallError') {
-        retryDownload(game.releaseName)
-      } else {
-        await addDownloadToQueue(game)
-      }
-    } catch (error) {
-      console.error(`Uninstall & Update: Error during process for ${game.name}:`, error)
-      window.alert(
-        `An error occurred while uninstalling and updating ${game.name}. Please check logs.`
-      )
-    } finally {
-      setIsLoading(false)
-      loadPackages().catch((err) =>
-        console.error('Uninstall & Update: Error refreshing packages post-operation:', err)
-      )
-    }
-  }
-
-  const handleDeleteDownloaded = useCallback(
-    async (game: GameInfo | null): Promise<void> => {
-      if (!game || !game.releaseName) return
-      console.log('Delete downloaded files action triggered for:', game.releaseName)
-      try {
-        const success = await deleteFiles(game.releaseName)
-        if (success) {
-          console.log(`Successfully requested deletion of files for ${game.releaseName}.`)
-        } else {
-          console.error(`Failed to delete files for ${game.releaseName}.`)
-          window.alert('Failed to delete downloaded files. Check logs.')
-        }
-      } catch (error) {
-        console.error('Error calling deleteFiles:', error)
-        window.alert('An error occurred while trying to delete downloaded files.')
-      }
-      handleCloseDialog()
-    },
-    [deleteFiles, handleCloseDialog]
-  )
-
-  // Core manual-install routine shared by the picker buttons and drag-and-drop.
-  // Installs a single APK, a ZIP, or a game/parent folder (APK + OBB +
-  // install.txt payloads) onto the connected device.
-  const installFileManually = useCallback(
-    async (filePath: string, itemName = 'file') => {
-      if (!isConnected || !selectedDevice) {
-        window.alert('Please connect to a device first.')
-        return
-      }
-      try {
-        const fileName = filePath.split(/[/\\]/).pop() || filePath
-        console.log(`${itemName} install requested for: ${filePath}`)
-
-        // Show the installation dialog
-        setShowInstallDialog(true)
-        setIsManualInstalling(true)
-        setInstallStatusMessage(`Installing ${itemName}: ${fileName}...`)
-        setInstallSuccess(null)
-
-        const success = await window.api.downloads.installManualFile(filePath, selectedDevice)
-
-        setInstallSuccess(success)
-
-        if (success) {
-          console.log(`${itemName} installation successful for: ${filePath}`)
-          setInstallStatusMessage(`✅ "${fileName}" installed successfully!`)
-          // Refresh packages to update the UI
-          await loadPackages()
-        } else {
-          console.error(`${itemName} installation failed for: ${filePath}`)
-          setInstallStatusMessage(`❌ Failed to install "${fileName}"`)
-        }
-      } catch (error) {
-        console.error(`Error during installation:`, error)
-        setInstallStatusMessage('❌ Installation error occurred')
-        setInstallSuccess(false)
-      } finally {
-        setIsManualInstalling(false)
-      }
-    },
-    [isConnected, selectedDevice, loadPackages]
-  )
-
-  const handleManualInstall = useCallback(
-    async (type: 'apk' | 'folder') => {
-      if (!isConnected || !selectedDevice) {
-        window.alert('Please connect to a device first.')
-        return
-      }
-
-      const filePath =
-        type === 'apk'
-          ? await window.api.dialog.showApkFilePicker()
-          : await window.api.dialog.showFolderPicker()
-
-      if (!filePath) {
-        return // User cancelled the dialog
-      }
-
-      await installFileManually(filePath, type === 'apk' ? 'APK file' : 'folder')
-    },
-    [isConnected, selectedDevice, installFileManually]
-  )
-
-  // Core OBB-copy routine shared by the picker button and drag-and-drop. Checks
-  // whether a matching package is installed and, if not, prompts before copying.
-  const startObbCopy = useCallback(
-    async (folderPath: string) => {
-      if (!isConnected || !selectedDevice) {
-        window.alert('Please connect to a device first.')
-        return
-      }
-
-      const folderName = folderPath.split(/[/\\]/).pop() || folderPath
-      console.log(`OBB folder copy requested for: ${folderPath}`)
-
-      // Check if there's a corresponding package installed
-      try {
-        const installedPackages = await window.api.adb.getInstalledPackages(selectedDevice)
-        const matchingPackage = installedPackages.find((pkg) => pkg.packageName === folderName)
-        if (!matchingPackage) {
-          // No matching package found, show confirmation dialog
-          console.log(`No matching package found for folder: ${folderName}`)
-          setObbFolderToConfirm(folderPath)
-          setShowObbConfirmDialog(true)
-          return
-        }
-        console.log(`Found matching package for folder: ${folderName}`)
-      } catch (error) {
-        console.error('Error checking installed packages:', error)
-        const proceed = window.confirm(
-          `Could not verify installed packages. Do you want to proceed with copying "${folderName}" to the OBB directory?`
-        )
-        if (!proceed) {
-          return
-        }
-      }
-
-      // Proceed with copying
-      await performObbCopy(folderPath)
-    },
-    // performObbCopy is defined below; it is stable via useCallback.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isConnected, selectedDevice]
-  )
-
-  const handleCopyObbFolder = useCallback(async () => {
-    if (!isConnected || !selectedDevice) {
-      window.alert('Please connect to a device first.')
-      return
-    }
-
-    try {
-      const folderPath = await window.api.dialog.showFolderPicker()
-
-      if (!folderPath) {
-        return // User cancelled the dialog
-      }
-
-      const folderName = folderPath.split(/[/\\]/).pop() || folderPath
-      console.log(`OBB folder copy requested for: ${folderPath}`)
-
-      // Check if there's a corresponding package installed
-      try {
-        const installedPackages = await window.api.adb.getInstalledPackages(selectedDevice)
-        const matchingPackage = installedPackages.find((pkg) => pkg.packageName === folderName)
-        console.log('installedPackages', installedPackages)
-        console.log('matchingPackage', matchingPackage)
-        if (!matchingPackage) {
-          // No matching package found, show confirmation dialog
-          console.log(`No matching package found for folder: ${folderName}`)
-          setObbFolderToConfirm(folderPath)
-          setShowObbConfirmDialog(true)
-          return
-        }
-
-        console.log(`Found matching package for folder: ${folderName}`)
-      } catch (error) {
-        console.error('Error checking installed packages:', error)
-        // If we can't check packages, show a warning but let user proceed
-        const proceed = window.confirm(
-          `Could not verify installed packages. Do you want to proceed with copying "${folderName}" to the OBB directory?`
-        )
-        if (!proceed) {
-          return
-        }
-      }
-
-      // Proceed with copying
-      await performObbCopy(folderPath)
-    } catch (error) {
-      console.error(`Error during OBB folder copy:`, error)
-      setInstallStatusMessage('❌ OBB copy error occurred')
-      setInstallSuccess(false)
-      setShowInstallDialog(true)
-      setIsManualInstalling(false)
-    }
-  }, [isConnected, selectedDevice])
-
-  const performObbCopy = useCallback(
-    async (folderPath: string) => {
-      if (!selectedDevice) return
-
-      const folderName = folderPath.split(/[/\\]/).pop() || folderPath
-
-      // Show the installation dialog
-      setShowInstallDialog(true)
-      setIsManualInstalling(true)
-      setInstallStatusMessage(`Copying OBB folder: ${folderName}...`)
-      setInstallSuccess(null)
-
-      try {
-        const success = await window.api.downloads.copyObbFolder(folderPath, selectedDevice)
-
-        setInstallSuccess(success)
-
-        if (success) {
-          console.log(`OBB folder copy successful for: ${folderPath}`)
-          setInstallStatusMessage(`✅ "${folderName}" copied to OBB directory successfully!`)
-        } else {
-          console.error(`OBB folder copy failed for: ${folderPath}`)
-          setInstallStatusMessage(`❌ Failed to copy "${folderName}" to OBB directory`)
-        }
-      } catch (error) {
-        console.error(`Error during OBB folder copy:`, error)
-        setInstallStatusMessage('❌ OBB copy error occurred')
-        setInstallSuccess(false)
-      } finally {
-        setIsManualInstalling(false)
-      }
-    },
-    [selectedDevice]
-  )
-
-  const handleObbConfirmCopy = useCallback(async () => {
-    if (!obbFolderToConfirm) return
-
-    setShowObbConfirmDialog(false)
-    await performObbCopy(obbFolderToConfirm)
-    setObbFolderToConfirm(null)
-  }, [obbFolderToConfirm, performObbCopy])
-
-  const handleObbCancelCopy = useCallback(() => {
-    setShowObbConfirmDialog(false)
-    setObbFolderToConfirm(null)
-  }, [])
-
-  const closeInstallDialog = useCallback(() => {
-    setShowInstallDialog(false)
-    setInstallSuccess(null)
-    setInstallStatusMessage('')
-  }, [])
-
-  // Drag-and-drop sideload: resolve each dropped item's real path, classify it,
-  // and route APK/ZIP/game-folders to install and OBB folders to copy.
-  const handleSideloadDrop = useCallback(
-    async (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragOver(false)
-
-      if (!isConnected || !selectedDevice) {
-        window.alert('Please connect to a device first.')
-        return
-      }
-      if (isManualInstalling) return
-
-      const files = Array.from(e.dataTransfer.files)
-      if (files.length === 0) return
-
-      for (const file of files) {
-        let path = ''
-        try {
-          path = window.api.dialog.getPathForFile(file)
-        } catch (err) {
-          console.error('Failed to resolve dropped file path:', err)
-          continue
-        }
-        if (!path) continue
-
-        let kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown' = 'unknown'
-        let name = path.split(/[/\\]/).pop() || path
-        try {
-          const res = await window.api.dialog.classifyPath(path)
-          kind = res.kind
-          name = res.name
-        } catch (err) {
-          console.error('Failed to classify dropped path:', err)
-        }
-
-        if (kind === 'obbFolder') {
-          await startObbCopy(path)
-        } else if (kind === 'apk' || kind === 'zip' || kind === 'gameFolder') {
-          await installFileManually(path, name)
-        } else {
-          // Unknown — best effort: try a manual install.
-          await installFileManually(path, name)
-        }
-      }
-    },
-    [isConnected, selectedDevice, isManualInstalling, startObbCopy, installFileManually]
-  )
-
-  useEffect(() => {
-    let mounted = true
-    const p = window.api.app?.getVersion?.()
-    if (p) p.then((v) => { if (mounted) setAppVersion(v) }).catch(() => {})
-    return () => { mounted = false }
-  }, [])
-
-  const isBusy = adbLoading || loadingGames || isLoading || isManualInstalling
-
-  const storageFreeGB = parseStorageGB(selectedDeviceDetails?.storageFree)
-  const storageTotalGB = parseStorageGB(selectedDeviceDetails?.storageTotal)
-  const storageUsedPct =
-    storageTotalGB > 0 ? Math.min(100, Math.round(((storageTotalGB - storageFreeGB) / storageTotalGB) * 100)) : 0
-  const storageBarColor =
-    storageUsedPct > 85
-      ? tokens.colorPaletteRedForeground1
-      : storageUsedPct > 65
-        ? '#ffaa00'
-        : 'var(--vrcd-neon)'
-
-  const CB: React.CSSProperties = {
-    background: 'transparent',
-    border: '1px solid rgba(var(--vrcd-neon-raw),0.45)',
-    color: 'var(--vrcd-neon)',
-    width: '100%',
-    justifyContent: 'center',
-    fontFamily: 'var(--vrcd-font-mono)',
-    fontSize: '11px',
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    boxShadow: '0 0 6px rgba(var(--vrcd-neon-raw),0.12)'
-  }
-  const CBP: React.CSSProperties = {
-    ...CB,
-    border: '1px solid rgba(var(--vrcd-purple-raw),0.5)',
-    color: 'var(--vrcd-purple)',
-    boxShadow: '0 0 6px rgba(var(--vrcd-purple-raw),0.18)'
-  }
-
-  // Dialogs shared by both the sideloader deck and the server-backed library:
-  // the manual-install progress modal, the ADB shell, Manage Remotes, and the
-  // OBB-copy confirmation.
-  const installDialogs = (
-    <>
-      <Dialog open={showInstallDialog} onOpenChange={(_, data) => !data.open && closeInstallDialog()}>
-        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
-          <DialogBody>
-            <DialogTitle>{t('manualOperation')}</DialogTitle>
-            <DialogContent>
-              <div style={{ marginBottom: tokens.spacingVerticalM }}>
-                <Text>{installStatusMessage}</Text>
-              </div>
-              {isManualInstalling && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalM }}>
-                  <Spinner size="small" />
-                  <Text>{t('processing')}</Text>
-                </div>
-              )}
-              {installSuccess !== null && (
-                <div
-                  style={{
-                    marginTop: tokens.spacingVerticalM,
-                    padding: tokens.spacingVerticalS,
-                    borderRadius: tokens.borderRadiusMedium,
-                    backgroundColor: installSuccess ? tokens.colorPaletteGreenBackground1 : tokens.colorPaletteRedBackground1,
-                    color: installSuccess ? tokens.colorPaletteGreenForeground1 : tokens.colorPaletteRedForeground1
-                  }}
-                >
-                  <Text weight="semibold">
-                    {installSuccess ? t('operationSuccess') : t('operationFailed')}
-                  </Text>
-                  {!installSuccess && (
-                    <div style={{ marginTop: tokens.spacingVerticalXS }}>
-                      <Text size={200}>{t('checkLogs')}</Text>
-                    </div>
-                  )}
-                </div>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button appearance="primary" onClick={closeInstallDialog} disabled={isManualInstalling}>
-                {isManualInstalling ? t('processing') : t('close')}
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-
-      {selectedDevice && (
-        <AdbShellDialog
-          deviceId={selectedDevice}
-          isOpen={shellDialogOpen}
-          onDismiss={() => setShellDialogOpen(false)}
-        />
-      )}
-
-      <Dialog open={showMirrorMgmt} onOpenChange={(_, data) => setShowMirrorMgmt(data.open)}>
-        <DialogSurface style={{ width: '80vw', maxWidth: '1200px', height: '80vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}>
-          <DialogBody style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
-            <DialogTitle style={{ padding: '16px 24px', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>Server & Remotes</DialogTitle>
-            <DialogContent style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '16px 24px' }}>
-              <MirrorManagement
-                serverConfigured={hasServerConfig}
-                serverActive={isServerMode}
-                onToggleServer={setServerMode}
-              />
-            </DialogContent>
-            <DialogActions style={{ padding: '12px 24px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>
-              <Button appearance="secondary" onClick={() => setShowMirrorMgmt(false)}>Close</Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-
-      <Dialog open={showObbConfirmDialog} onOpenChange={(_, data) => !data.open && handleObbCancelCopy()}>
-        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
-          <DialogBody>
-            <DialogTitle>{t('confirmObbCopy')}</DialogTitle>
-            <DialogContent>
-              <div style={{ marginBottom: tokens.spacingVerticalM }}>
-                <Text>
-                  {t('obbNoPackageFound')} &quot;{obbFolderToConfirm?.split(/[/\\]/).pop()}&quot;.
-                </Text>
-                <div style={{ marginTop: tokens.spacingVerticalS }}>
-                  <Text>{t('obbCopyConfirm')}</Text>
-                </div>
-              </div>
-            </DialogContent>
-            <DialogActions>
-              <Button appearance="primary" onClick={handleObbConfirmCopy} disabled={isManualInstalling}>
-                {t('copyAnyway')}
-              </Button>
-              <Button appearance="secondary" onClick={handleObbCancelCopy} disabled={isManualInstalling}>
-                {t('cancel')}
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-    </>
-  )
-
-  // ════════════ SIDELOADER MODE ════════════
-  // No server configured → a pure drag-and-drop sideloading deck over the
-  // cyberdeck background. No sidebar, no game list.
-  if (!isServerMode) {
-    const cssVars = {
-      '--colorNeutralBackground1': '#050514',
-      '--colorNeutralForeground1': 'var(--vrcd-neon)',
-      '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.75)',
-      '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.2)',
-      '--colorBrandBackground': 'var(--vrcd-neon)',
-      '--colorNeutralForegroundOnBrand': '#050514'
-    } as React.CSSProperties
-
-    return (
-      <div className={styles.root} style={cssVars}>
-        <div className="sideloader-stage" style={{ backgroundImage: `url(${sideloaderBg})` }}>
-          <div className="sideloader-screen">
-            {/* Device chip */}
-            <div className="sideloader-devicechip">
-              {selectedDeviceDetails ? (
-                <>
-                  <span className="dot online" />
-                  <span className="name">
-                    {selectedDeviceDetails.friendlyModelName || 'Connected Device'}
-                  </span>
-                  {selectedDeviceDetails.batteryLevel !== null && (
-                    <span className="pill">
-                      <BatteryChargeRegular /> {selectedDeviceDetails.batteryLevel}%
-                    </span>
-                  )}
-                  {selectedDeviceDetails.storageFree && (
-                    <span className="pill">{selectedDeviceDetails.storageFree} free</span>
-                  )}
-                  {isConnected && (
-                    <button
-                      className="chip-x"
-                      title={t('disconnectFromDevice')}
-                      onClick={() => {
-                        requestUploadCheck()
-                        disconnectDevice()
-                      }}
-                    >
-                      <PlugDisconnectedRegular /> Disconnect
-                    </button>
-                  )}
-                </>
-              ) : (
-                <>
-                  <span className="dot offline" />
-                  <span className="name" style={{ color: '#ff6a6a' }}>
-                    No device connected
-                  </span>
-                  <button className="chip-x" onClick={onBackToDevices}>
-                    Connect a headset
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Drag & drop deck */}
-            <div
-              className={`sideloader-dropzone${isDragOver ? ' is-dragover' : ''}${!isConnected ? ' is-disabled' : ''}`}
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                if (isConnected) setIsDragOver(true)
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setIsDragOver(false)
-              }}
-              onDrop={handleSideloadDrop}
-            >
-              <div className="dz-frame" />
-              <svg className="dz-icon" width="60" height="60" viewBox="0 0 64 64" fill="none">
-                <path d="M32 8v30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                <path d="M20 28l12 12 12-12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M12 46v6a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4v-6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-              </svg>
-              <div className="dz-title">
-                {isManualInstalling ? t('manualInstalling') : 'DROP TO SIDELOAD'}
-              </div>
-              <div className="dz-sub">
-                Drag an <b>APK</b>, a <b>.zip</b>, a game <b>folder</b> (APK + OBB + install.txt),
-                <br />or an <b>OBB folder</b> named after its package — dropped here to deploy.
-              </div>
-              {!isConnected && <div className="dz-warn">{'// CONNECT A DEVICE TO SIDELOAD'}</div>}
-            </div>
-
-            {/* Primary install actions */}
-            <div className="sideloader-actions">
-              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={() => handleManualInstall('apk')}>
-                <DocumentRegular /><span>{t('installApkFile')}</span>
-              </button>
-              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={() => handleManualInstall('folder')}>
-                <FolderAddRegular /><span>{t('installFolder')}</span>
-              </button>
-              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={handleCopyObbFolder}>
-                <CopyRegular /><span>{t('copyObbFolder')}</span>
-              </button>
-            </div>
-
-            {/* Secondary deck controls */}
-            <div className="sideloader-actions secondary">
-              <button className="cyber-deck-btn purple" onClick={() => setShowMirrorMgmt(true)}>
-                <CloudIcon /><span>Manage Remotes</span>
-              </button>
-              <button className="cyber-deck-btn" disabled={!isConnected} onClick={() => setShellDialogOpen(true)}>
-                <WindowConsoleRegular /><span>ADB Shell</span>
-              </button>
-              <button className="cyber-deck-btn purple" onClick={onTransfers}>
-                <ArrowSyncRegular /><span>Installs</span>
-                {activeTransferCount > 0 && (
-                  <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: 4 }}>
-                    {activeTransferCount}
-                  </Badge>
-                )}
-              </button>
-              <button className="cyber-deck-btn" onClick={onSettings}>
-                <SettingsRegular /><span>Other Settings</span>
-              </button>
-            </div>
-
-            {/* Re-enter server mode — only when a server is configured but has
+	{ label: "None", value: "transparent" },
+	{ label: "Cyan", value: "rgba(0, 212, 255, 0.07)" },
+	{ label: "Purple", value: "rgba(176, 64, 255, 0.07)" },
+	{ label: "Pink", value: "rgba(255, 0, 180, 0.06)" },
+	{ label: "Green", value: "rgba(0, 255, 128, 0.07)" },
+	{ label: "Blue", value: "rgba(40, 120, 255, 0.08)" },
+	{ label: "Subtle", value: "rgba(255, 255, 255, 0.05)" },
+] as const;
+
+const GamesView: React.FC<GamesViewProps> = ({
+	onBackToDevices,
+	onTransfers,
+	onSettings,
+}) => {
+	const {
+		selectedDevice,
+		selectedDeviceDetails,
+		isConnected,
+		disconnectDevice,
+		isLoading: adbLoading,
+		loadPackages,
+	} = useAdb();
+	const {
+		games,
+		isLoading: loadingGames,
+		error: gamesError,
+		syncError,
+		dismissSyncError,
+		lastSyncTime,
+		downloadProgress,
+		extractProgress,
+		refreshGames,
+		getNote,
+		requestUploadCheck,
+	} = useGames();
+	const {
+		addToQueue: addDownloadToQueue,
+		queue: downloadQueue,
+		cancelDownload,
+		retryDownload,
+		deleteFiles,
+		removeFromQueueOnly,
+	} = useDownload();
+
+	const styles = useStyles();
+	const { t } = useLanguage();
+	const { serverConfig } = useSettings();
+	const { activeMirror } = useMirrors();
+	// A server (public server JSON or an rclone config) has been configured.
+	const hasServerConfig =
+		serverConfig.baseUri.trim().length > 0 || !!activeMirror;
+	// Manual override so a configured server can be turned "off" without wiping
+	// its credentials — lets you flip between the library and the sideloader deck
+	// for testing a server setup. Persisted so the choice survives restarts.
+	const [serverDisabled, setServerDisabled] = useState<boolean>(() => {
+		try {
+			return localStorage.getItem("vrcyberdeck:serverDisabled") === "true";
+		} catch {
+			return false;
+		}
+	});
+	const setServerMode = useCallback((on: boolean): void => {
+		setServerDisabled(!on);
+		try {
+			localStorage.setItem("vrcyberdeck:serverDisabled", String(!on));
+		} catch {
+			/* ignore */
+		}
+	}, []);
+	// Server mode = a server is configured AND not manually turned off. With no
+	// server (or one toggled off) the app is a pure sideloader: no sidebar, no
+	// game list, just the drag-and-drop install deck over the cyberdeck background.
+	const isServerMode = hasServerConfig && !serverDisabled;
+
+	const [shellDialogOpen, setShellDialogOpen] = useState(false);
+	const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
+	const [sidebarOpen, setSidebarOpen] = useState(true);
+	const { prefs, setPrefs } = useTablePreferences();
+	const [globalFilter, setGlobalFilter] = useState("");
+	const [searchInput, setSearchInput] = useState("");
+	const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const searchInputRef = useRef<HTMLInputElement>(null);
+
+	const handleSearchChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			const val = String(e.target.value);
+			setSearchInput(val);
+			if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+			searchTimerRef.current = setTimeout(() => setGlobalFilter(val), 400);
+		},
+		[],
+	);
+	const [sorting, setSorting] = useState<SortingState>(() =>
+		prefs.tableSortKey
+			? [{ id: prefs.tableSortKey, desc: prefs.tableSortDir === "desc" }]
+			: [],
+	);
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+	const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+	const [isLoading, setIsLoading] = useState<boolean>(false);
+	const [dialogGame, setDialogGame] = useGameDialog();
+	const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+	const [tableWidth, setTableWidth] = useState<number>(0);
+	const tableContainerRef = useRef<HTMLDivElement>(null);
+	const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() => ({
+		...prefs.columnWidths,
+	}));
+	const [columnVisibility, setColumnVisibility] = useState<
+		Record<string, boolean>
+	>(() => ({
+		// Defaults: status/thumbnail/name/version always on; rest on unless user hid them
+		downloadStatus: true,
+		thumbnailPath: true,
+		name: true,
+		version: prefs.visibleColumns.version !== false,
+		downloads: prefs.visibleColumns.downloads !== false,
+		size: prefs.visibleColumns.size !== false,
+		lastUpdated: prefs.visibleColumns.lastUpdated !== false,
+		isInstalled: false,
+		hasUpdate: false,
+	}));
+	const [isManualInstalling, setIsManualInstalling] = useState<boolean>(false);
+	const [installStatusMessage, setInstallStatusMessage] = useState<string>("");
+	const [showInstallDialog, setShowInstallDialog] = useState<boolean>(false);
+	const [installSuccess, setInstallSuccess] = useState<boolean | null>(null);
+	const [showObbConfirmDialog, setShowObbConfirmDialog] =
+		useState<boolean>(false);
+	const [obbFolderToConfirm, setObbFolderToConfirm] = useState<string | null>(
+		null,
+	);
+	const [showMirrorMgmt, setShowMirrorMgmt] = useState(false);
+	const [appVersion, setAppVersion] = useState("");
+	const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(
+		null,
+	);
+	const [isDragOver, setIsDragOver] = useState(false);
+	const [contextMenu, setContextMenu] = useState<{
+		game: GameInfo;
+		x: number;
+		y: number;
+	} | null>(null);
+
+	const counts = useMemo(() => {
+		const total = games.length;
+		const installed = games.filter((g) => g.isInstalled).length;
+		const updates = games.filter((g) => g.hasUpdate).length;
+		return { total, installed, updates };
+	}, [games]);
+
+	const activeTransferCount = useMemo(
+		() =>
+			downloadQueue.filter(
+				(d) =>
+					d.status === "Downloading" ||
+					d.status === "Extracting" ||
+					d.status === "Installing" ||
+					d.status === "Queued",
+			).length,
+		[downloadQueue],
+	);
+
+	// Apply density + colour CSS variables to the table scroll container so they
+	// cascade to all td/th and thumbnail cells without touching inline styles on
+	// every row.
+	useEffect(() => {
+		const el = tableContainerRef.current;
+		if (!el) return;
+		const padV = 4 + (prefs.rowDensity / 100) * 12; // 4 → 16 px
+		const thumb = 48 + (prefs.rowDensity / 100) * 42; // 48 → 90 px
+		el.style.setProperty("--row-pad-v", `${padV}px`);
+		el.style.setProperty("--row-thumb-size", `${Math.round(thumb)}px`);
+		el.style.setProperty("--row-even-color", prefs.evenRowColor);
+		el.style.setProperty("--row-odd-color", prefs.oddRowColor);
+	}, [prefs]);
+
+	useEffect(() => {
+		setColumnFilters((prev) => {
+			const otherFilters = prev.filter(
+				(f) => f.id !== "isInstalled" && f.id !== "hasUpdate",
+			);
+			switch (activeFilter) {
+				case "installed":
+					return [...otherFilters, { id: "isInstalled", value: true }];
+				case "update":
+					return [
+						...otherFilters,
+						{ id: "isInstalled", value: true },
+						{ id: "hasUpdate", value: true },
+					];
+				case "all":
+				default:
+					return otherFilters;
+			}
+		});
+	}, [activeFilter]);
+
+	useEffect(() => {
+		const unsubscribe = window.api.adb.onInstallationCompleted((deviceId) => {
+			console.log(
+				`[GamesView] Received installation-completed event for device: ${deviceId}`,
+			);
+			if (selectedDevice && deviceId === selectedDevice) {
+				console.log(
+					`[GamesView] Refreshing packages for current device ${selectedDevice}...`,
+				);
+				loadPackages()
+					.then(() =>
+						console.log("[GamesView] Package refresh triggered successfully."),
+					)
+					.catch((err) =>
+						console.error("[GamesView] Error triggering package refresh:", err),
+					);
+			} else {
+				console.log(
+					`[GamesView] Installation completed event for non-selected device (${deviceId}), ignoring.`,
+				);
+			}
+		});
+
+		return () => {
+			unsubscribe();
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [selectedDevice, loadPackages]);
+
+	const downloadStatusMap = useMemo(() => {
+		const map = new Map<
+			string,
+			{
+				status: string;
+				progress: number;
+				speed?: string;
+				eta?: string;
+				error?: string;
+				downloadPath?: string;
+			}
+		>();
+		downloadQueue.forEach((item) => {
+			if (item.releaseName) {
+				const progress =
+					item.status === "Extracting"
+						? (item.extractProgress ?? 0)
+						: (item.progress ?? 0);
+				map.set(item.releaseName, {
+					status: item.status,
+					progress: progress,
+					speed: item.speed,
+					eta: item.eta,
+					error: item.error,
+					downloadPath: item.downloadPath,
+				});
+			}
+		});
+		return map;
+	}, [downloadQueue]);
+
+	// Ref so column cell renderers always read the latest map without re-creating column defs
+	const downloadStatusMapRef = useRef(downloadStatusMap);
+	downloadStatusMapRef.current = downloadStatusMap;
+
+	useEffect(() => {
+		if (!tableContainerRef.current) return;
+
+		// Capture current value of ref to use in cleanup
+		const currentRef = tableContainerRef.current;
+
+		const updateTableWidth = (): void => {
+			if (tableContainerRef.current) {
+				const newWidth = tableContainerRef.current.clientWidth;
+				setTableWidth(newWidth);
+				// Reset all column sizing to force recalculation
+				setColumnSizing({});
+			}
+		};
+
+		// Initial width calculation
+		updateTableWidth();
+
+		// Set up resize observer
+		const resizeObserver = new ResizeObserver(() => {
+			// Use requestAnimationFrame to avoid too many updates
+			window.requestAnimationFrame(updateTableWidth);
+		});
+		resizeObserver.observe(currentRef);
+
+		return () => {
+			resizeObserver.unobserve(currentRef);
+		};
+	}, []);
+
+	const columns = useMemo<ColumnDef<GameInfo>[]>(() => {
+		// Calculate dynamic width for name column, with a minimum width
+		const nameColumnWidth = Math.max(
+			COLUMN_WIDTHS.MIN_NAME_PACKAGE,
+			tableWidth - FIXED_COLUMNS_WIDTH - 5, // 5px buffer
+		);
+
+		return [
+			{
+				id: "downloadStatus",
+				header: "",
+				size: COLUMN_WIDTHS.STATUS,
+				enableResizing: false,
+				enableSorting: false,
+				cell: ({ row }) => {
+					const game = row.original;
+					const downloadInfo = game.releaseName
+						? downloadStatusMapRef.current.get(game.releaseName)
+						: undefined;
+					const isDownloaded = downloadInfo?.status === "Completed";
+					const isInstalled = game.isInstalled;
+					const isUpdateAvailable = game.hasUpdate;
+
+					return (
+						<div className={styles.statusIconCell}>
+							<div
+								style={{ display: "flex", gap: tokens.spacingHorizontalXXS }}
+							>
+								{isDownloaded && (
+									<DesktopRegular
+										fontSize={16}
+										color={tokens.colorNeutralForeground3}
+										aria-label="Installed"
+									/>
+								)}
+								{isInstalled && (
+									<CheckmarkCircleRegular
+										fontSize={16}
+										color={tokens.colorPaletteGreenForeground1}
+										aria-label="Downloaded"
+									/>
+								)}
+								{isUpdateAvailable && (
+									<ArrowClockwiseRegular
+										fontSize={16}
+										color={tokens.colorPaletteGreenForeground1}
+										aria-label="Update Available"
+									/>
+								)}
+							</div>
+						</div>
+					);
+				},
+			},
+			{
+				accessorKey: "thumbnailPath",
+				header: " ",
+				size: COLUMN_WIDTHS.THUMBNAIL,
+				enableResizing: false,
+				cell: ({ getValue }) => {
+					const pathValue = getValue();
+					const imagePath = typeof pathValue === "string" ? pathValue : "";
+					return (
+						<div className="game-thumbnail-cell">
+							<img
+								src={imagePath ? `file://${imagePath}` : placeholderImage}
+								alt="Thumbnail"
+								className="game-thumbnail-img"
+							/>
+						</div>
+					);
+				},
+				enableSorting: false,
+			},
+			{
+				accessorKey: "name",
+				header: () => t("namePackage"),
+				size:
+					nameColumnWidth > 0
+						? nameColumnWidth
+						: COLUMN_WIDTHS.MIN_NAME_PACKAGE,
+				sortingFn: (rowA, rowB) => {
+					const a = (rowA.original.name ?? "").toLowerCase();
+					const b = (rowB.original.name ?? "").toLowerCase();
+					for (let i = 0; i < Math.max(a.length, b.length); i++) {
+						if (i >= a.length) return -1;
+						if (i >= b.length) return 1;
+						const ca = a[i],
+							cb = b[i];
+						if (ca === cb) continue;
+						// priority: _ (0) → 0-9 (1) → everything else (2)
+						const p = (c: string): number =>
+							c === "_" ? 0 : c >= "0" && c <= "9" ? 1 : 2;
+						const pa = p(ca),
+							pb = p(cb);
+						if (pa !== pb) return pa - pb;
+						return ca < cb ? -1 : 1;
+					}
+					return 0;
+				},
+				cell: ({ row }) => {
+					const game = row.original;
+					const downloadInfo = game.releaseName
+						? downloadStatusMapRef.current.get(game.releaseName)
+						: undefined;
+					const isDownloading = downloadInfo?.status === "Downloading";
+					const isExtracting = downloadInfo?.status === "Extracting";
+					const isQueued = downloadInfo?.status === "Queued";
+					const isInstalling = downloadInfo?.status === "Installing";
+					const isInstallError = downloadInfo?.status === "InstallError";
+					const isSigMismatch =
+						isInstallError && isSignatureMismatchError(downloadInfo?.error);
+
+					return (
+						<div
+							style={{
+								display: "flex",
+								flexDirection: "column",
+								justifyContent: "center",
+								height: "100%",
+								position: "relative",
+								paddingBottom: "8px",
+							}}
+						>
+							<div style={{ marginBottom: tokens.spacingVerticalXS }}>
+								{" "}
+								<div className="game-name-main">{game.name}</div>
+								<div className="game-package-sub">{game.releaseName}</div>
+								<div className="game-package-sub">{game.packageName}</div>
+							</div>
+							<div
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: tokens.spacingHorizontalXS,
+								}}
+							>
+								{(() => {
+									const badge = getGameBadge(game);
+									if (badge === "new")
+										return (
+											<Badge
+												shape="rounded"
+												color="success"
+												appearance="filled"
+												size="small"
+												style={{
+													fontSize: "10px",
+													fontWeight: 700,
+													letterSpacing: "0.04em",
+												}}
+											>
+												NEW
+											</Badge>
+										);
+									if (badge === "updated")
+										return (
+											<Badge
+												shape="rounded"
+												color="warning"
+												appearance="filled"
+												size="small"
+												style={{
+													fontSize: "10px",
+													fontWeight: 700,
+													letterSpacing: "0.04em",
+												}}
+											>
+												UPDATED
+											</Badge>
+										);
+									return null;
+								})()}
+								{isQueued && (
+									<Badge
+										shape="rounded"
+										color="informative"
+										appearance="outline"
+									>
+										{t("queued")}
+									</Badge>
+								)}
+								{(isDownloading || isExtracting || isInstalling) && (
+									<div
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: tokens.spacingHorizontalXS,
+										}}
+									>
+										<Spinner size="tiny" aria-label="Installing" />
+										<Badge shape="rounded" color="brand" appearance="outline">
+											{downloadInfo?.status}
+											{isDownloading && downloadInfo?.progress != null
+												? ` ${downloadInfo.progress}%`
+												: ""}
+										</Badge>
+										{isDownloading && downloadInfo?.speed && (
+											<span
+												style={{
+													fontSize: tokens.fontSizeBase200,
+													color: tokens.colorNeutralForeground3,
+												}}
+											>
+												{downloadInfo.speed}
+											</span>
+										)}
+									</div>
+								)}
+								{isInstallError && (
+									<Badge shape="rounded" color="danger" appearance="outline">
+										{isSigMismatch ? t("signatureMismatch") : t("installError")}
+									</Badge>
+								)}
+							</div>
+							{(isDownloading || isExtracting || isInstalling) &&
+								downloadInfo && (
+									<ProgressBar
+										value={downloadInfo.progress}
+										max={100}
+										shape="rounded"
+										thickness="medium"
+										className={styles.progressBarAcrossRow}
+										aria-label={
+											isDownloading
+												? "Download progress"
+												: "Extraction progress"
+										}
+									/>
+								)}
+						</div>
+					);
+				},
+				enableResizing: true,
+			},
+			{
+				accessorKey: "version",
+				header: () => t("version"),
+				size: COLUMN_WIDTHS.VERSION,
+				cell: ({ row }) => {
+					const listVersion = row.original.version;
+					const isInstalled = row.original.isInstalled;
+					const deviceVersion = row.original.deviceVersionCode;
+					const displayListVersion = listVersion ? `v${listVersion}` : "-";
+					return (
+						<div className="version-cell">
+							<div className="list-version-main">{displayListVersion}</div>
+							{isInstalled && (
+								<div className="installed-version-info">
+									{deviceVersion !== undefined
+										? `Installed: v${deviceVersion}`
+										: "Installed"}
+								</div>
+							)}
+						</div>
+					);
+				},
+				enableResizing: true,
+			},
+			{
+				accessorKey: "downloads",
+				header: () => t("popularity"),
+				size: COLUMN_WIDTHS.POPULARITY,
+				cell: (info) => {
+					const count = info.getValue();
+					return typeof count === "number" ? count.toLocaleString() : "-";
+				},
+				enableResizing: true,
+			},
+			{
+				accessorKey: "size",
+				header: () => t("size"),
+				size: COLUMN_WIDTHS.SIZE,
+				sortingFn: (a, b) =>
+					parseSizeBytes(a.original.size ?? "") -
+					parseSizeBytes(b.original.size ?? ""),
+				cell: (info) => {
+					const sizeValue = info.getValue();
+					const sizeStr = String(sizeValue || "");
+					if (sizeStr === "0 MB" || !sizeStr.trim()) {
+						return null;
+					}
+					return sizeStr;
+				},
+				enableResizing: true,
+			},
+			{
+				accessorKey: "lastUpdated",
+				header: () => t("lastUpdated"),
+				size: COLUMN_WIDTHS.LAST_UPDATED,
+				sortingFn: (a, b) => {
+					const da = a.original.lastUpdated
+						? new Date(a.original.lastUpdated).getTime()
+						: 0;
+					const db = b.original.lastUpdated
+						? new Date(b.original.lastUpdated).getTime()
+						: 0;
+					return da - db;
+				},
+				cell: (info) => info.getValue() || "-",
+				enableResizing: true,
+			},
+			{
+				accessorKey: "isInstalled",
+				header: "Installed Status",
+				enableResizing: false,
+			},
+			{
+				accessorKey: "hasUpdate",
+				header: "Update Status",
+				enableResizing: false,
+			},
+		];
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [styles, tableWidth, t]);
+
+	const filteredGames = useMemo(() => {
+		let hideAdult = true;
+		try {
+			hideAdult = localStorage.getItem("vrcyberdeck:hideAdult") !== "false";
+		} catch {
+			/* ignore */
+		}
+		return games.filter((game) => {
+			const size = String(game.size ?? "").trim();
+			if (size === "0 MB" || size === "") return false;
+			if (hideAdult && String(game.name ?? "").includes("18+")) return false;
+			return true;
+		});
+	}, [games]);
+
+	const table = useReactTable({
+		data: filteredGames,
+		columns,
+		columnResizeMode: "onChange",
+		filterFns: {
+			gameNameAndPackageFilter: filterGameNameAndPackage,
+		},
+		state: {
+			sorting,
+			globalFilter,
+			columnFilters,
+			columnVisibility,
+			columnSizing,
+		},
+		onSortingChange: (updater) => {
+			setSorting((prev) => {
+				const next = typeof updater === "function" ? updater(prev) : updater;
+				const first = next[0];
+				setPrefs({
+					tableSortKey: first?.id ?? "",
+					tableSortDir: first?.desc ? "desc" : "asc",
+				});
+				return next;
+			});
+		},
+		onGlobalFilterChange: setGlobalFilter,
+		onColumnFiltersChange: setColumnFilters,
+		onColumnSizingChange: (updater) => {
+			setColumnSizing((prev) => {
+				const next = typeof updater === "function" ? updater(prev) : updater;
+				// Persist widths (debounced via prefs write)
+				setPrefs({ columnWidths: next });
+				return next;
+			});
+		},
+		onColumnVisibilityChange: (updater) => {
+			setColumnVisibility((prev) => {
+				const next = typeof updater === "function" ? updater(prev) : updater;
+				// Only persist toggles for user-facing columns (skip internal isInstalled/hasUpdate)
+				const visible: Record<string, boolean> = {};
+				for (const key of ["version", "downloads", "size", "lastUpdated"]) {
+					visible[key] = next[key] !== false;
+				}
+				setPrefs({ visibleColumns: visible });
+				return next;
+			});
+		},
+		globalFilterFn: "gameNameAndPackageFilter",
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	});
+
+	const { rows } = table.getRowModel();
+	// Estimated row height scales with density: ~60 px compact → ~125 px comfortable
+	const estimatedRowHeight = Math.round(60 + (prefs.rowDensity / 100) * 65);
+	const rowVirtualizer = useVirtualizer({
+		count: rows.length,
+		getScrollElement: () => tableContainerRef.current,
+		estimateSize: () => estimatedRowHeight,
+		overscan: 10,
+	});
+
+	// Re-measure all virtualised rows when density changes so scroll height stays accurate
+	useEffect(() => {
+		rowVirtualizer.measure();
+	}, [prefs.rowDensity]);
+
+	// Reset the table scroll to the top whenever the user changes the filter tab
+	// or the search term. The virtualized table derives its visible rows from the
+	// scroll container's scrollTop; switching to a much smaller result set (e.g.
+	// the Installed tab, or a search that matches only a few games) while scrolled
+	// down would otherwise leave the container scrolled past the new end of the
+	// list, rendering a blank table until a manual refresh remounts it.
+	useEffect(() => {
+		const el = tableContainerRef.current;
+		if (el) el.scrollTop = 0;
+	}, [activeFilter, globalFilter, prefs.viewMode]);
+
+	// Safety net for the "search stops working while the app is busy" case: when a
+	// background library refresh (e.g. an install finishing and repopulating the
+	// installed flags) shrinks the current result set, our saved scroll position
+	// can end up past the end of the now-shorter list, again rendering blank. Pull
+	// it back into range without yanking the user to the top on every refresh.
+	useEffect(() => {
+		const el = tableContainerRef.current;
+		if (!el || el.scrollTop === 0) return;
+		const maxScroll = rowVirtualizer.getTotalSize() - el.clientHeight;
+		if (el.scrollTop > maxScroll) {
+			el.scrollTop = Math.max(0, maxScroll);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [rows.length]);
+
+	const formatDate = (date: Date | null): string => {
+		if (!date) return t("never");
+		return new Intl.DateTimeFormat("en-US", {
+			year: "numeric",
+			month: "short",
+			day: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+		}).format(date);
+	};
+
+	const getProcessMessage = (): string => {
+		if (downloadProgress > 0 && downloadProgress < 100) {
+			return `${t("downloadingGameData")} ${downloadProgress}%`;
+		} else if (extractProgress > 0 && extractProgress < 100) {
+			return `${t("extractingGameData")} ${extractProgress}%`;
+		} else if (loadingGames) {
+			return t("preparingLibrary");
+		}
+		return "";
+	};
+
+	const getCurrentProgress = (): number => {
+		if (downloadProgress > 0 && downloadProgress < 100) {
+			return downloadProgress;
+		} else if (extractProgress > 0 && extractProgress < 100) {
+			return extractProgress;
+		}
+		return 0;
+	};
+
+	const handleRowClick = (
+		_event: React.MouseEvent<HTMLTableRowElement>,
+		row: Row<GameInfo>,
+	): void => {
+		console.log("Row clicked for game:", row.original.name);
+		setDialogGame(row.original);
+		setIsDialogOpen(true);
+	};
+
+	useEffect(() => {
+		if (dialogGame) {
+			setIsDialogOpen(true);
+		}
+	}, [dialogGame]);
+
+	const handleCloseDialog = useCallback((): void => {
+		setIsDialogOpen(false);
+		setTimeout(() => {
+			setDialogGame(null);
+		}, 300);
+	}, [setDialogGame]);
+
+	const handleInstall = (game: GameInfo): void => {
+		if (!game) return;
+		console.log("Install action triggered for:", game.packageName);
+		addDownloadToQueue(game)
+			.then((success) => {
+				if (success) {
+					console.log(
+						`Successfully added ${game.releaseName} to download queue.`,
+					);
+				} else {
+					console.log(
+						`Failed to add ${game.releaseName} to queue (might already exist).`,
+					);
+				}
+			})
+			.catch((err) => {
+				console.error("Error adding to queue:", err);
+			});
+	};
+
+	const performUninstall = async (
+		game: GameInfo,
+		deleteFiles = false,
+	): Promise<void> => {
+		if (!game || !game.packageName || !selectedDevice) {
+			console.error(
+				"Uninstall action aborted: Missing game data, package name, or selectedDevice.",
+				{
+					game,
+					selectedDevice,
+				},
+			);
+			window.alert("Cannot start uninstall: Essential information is missing.");
+			return;
+		}
+
+		console.log(
+			`Uninstall: Starting for ${game.name} (${game.packageName}) on ${selectedDevice}.`,
+		);
+		setIsLoading(true);
+
+		try {
+			const success = await window.api.adb.uninstallPackage(
+				selectedDevice,
+				game.packageName,
+			);
+			if (success) {
+				console.log(`Uninstall: Successfully uninstalled ${game.packageName}.`);
+				if (deleteFiles && game.releaseName) {
+					const result = await window.api.adb.deleteGameFiles(game.releaseName);
+					if (result.deleted) {
+						console.log(`Uninstall: Deleted game files at ${result.path}`);
+					} else {
+						console.log(
+							`Uninstall: Could not delete game files: ${result.error}`,
+						);
+					}
+				}
+			} else {
+				console.error(`Uninstall: Failed to uninstall ${game.packageName}.`);
+				window.alert("Failed to uninstall the game.");
+			}
+			await loadPackages();
+		} catch (error) {
+			console.error(`Uninstall: Error during process for ${game.name}:`, error);
+			window.alert(
+				`An error occurred during the uninstall process for ${game.name}. Please check logs.`,
+			);
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleUninstall = async (game: GameInfo): Promise<void> => {
+		if (!game || !game.packageName || !selectedDevice) {
+			window.alert("Cannot start uninstall: Essential information is missing.");
+			return;
+		}
+		if (getSkipUninstallWarning()) {
+			await performUninstall(game);
+			return;
+		}
+		setPendingUninstall(game);
+	};
+
+	const handleReinstall = async (game: GameInfo): Promise<void> => {
+		if (!game || !game.packageName || !game.releaseName || !selectedDevice) {
+			console.error(
+				"Reinstall Error: Missing game data, package name, release name, or device ID.",
+				{
+					game,
+					selectedDevice,
+				},
+			);
+			window.alert("Cannot start reinstall: Essential information is missing.");
+			return;
+		}
+
+		console.log(
+			`Reinstall: Starting for ${game.name} (${game.packageName}) on ${selectedDevice}.`,
+		);
+		setIsLoading(true);
+
+		try {
+			// Step 1: Uninstall the package
+			console.log(`Reinstall: Attempting to uninstall ${game.packageName}...`);
+			const uninstallSuccess = await window.api.adb.uninstallPackage(
+				selectedDevice,
+				game.packageName,
+			);
+
+			if (uninstallSuccess) {
+				console.log(`Reinstall: Successfully uninstalled ${game.packageName}.`);
+				// The game is now uninstalled from the device.
+				// Downloaded files (if any) should still be present.
+
+				const downloadInfo = downloadStatusMap.get(game.releaseName);
+
+				if (downloadInfo?.status === "Completed") {
+					console.log(
+						`Reinstall: Files for ${game.releaseName} are 'Completed'. Initiating install from completed.`,
+					);
+					await window.api.downloads.installFromCompleted(
+						game.releaseName,
+						selectedDevice,
+					);
+					console.log(
+						`Reinstall: 'installFromCompleted' called for ${game.releaseName}.`,
+					);
+				} else {
+					console.log(
+						`Reinstall: Files for ${game.releaseName} not 'Completed' (status: ${downloadInfo?.status}). Adding to download queue.`,
+					);
+					const addToQueueSuccess = await addDownloadToQueue(game);
+					if (addToQueueSuccess) {
+						console.log(
+							`Reinstall: Successfully added ${game.releaseName} to download queue.`,
+						);
+					} else {
+						console.warn(
+							`Reinstall: Failed to add ${game.releaseName} to queue. Current status: ${downloadInfo?.status}.`,
+						);
+						window.alert(
+							`Reinstall for ${game.name} failed: Could not add to download queue. Please check logs.`,
+						);
+					}
+				}
+			} else {
+				console.error(
+					`Reinstall: Failed to uninstall ${game.packageName}. Installation step will be skipped.`,
+				);
+				window.alert(`Failed to uninstall ${game.name}. Reinstall aborted.`);
+			}
+		} catch (error) {
+			console.error(`Reinstall: Error during process for ${game.name}:`, error);
+			window.alert(
+				`An error occurred during the reinstall process for ${game.name}. Please check logs.`,
+			);
+		} finally {
+			setIsLoading(false);
+			// Refresh packages to update UI. The 'installation-completed' event should also trigger this,
+			// but it's good to have a fallback or an immediate refresh after the uninstall part.
+			console.log(
+				`Reinstall: Process finished for ${game.name}. Triggering package refresh.`,
+			);
+			loadPackages().catch((err) =>
+				console.error(
+					"Reinstall: Error refreshing packages post-operation:",
+					err,
+				),
+			);
+		}
+	};
+
+	const handleUpdate = async (game: GameInfo): Promise<void> => {
+		if (!game || !game.releaseName || !selectedDevice) {
+			console.error(
+				"Update action aborted: Missing game data, releaseName, or selectedDevice.",
+				{
+					game,
+					selectedDevice,
+				},
+			);
+			window.alert("Cannot start update: Essential information is missing.");
+			handleCloseDialog();
+			return;
+		}
+
+		console.log(
+			`Update action triggered for: ${game.name} (${game.packageName}) on ${selectedDevice}`,
+		);
+
+		try {
+			const downloadInfo = downloadStatusMap.get(game.releaseName);
+
+			if (downloadInfo?.status === "Completed") {
+				console.log(
+					`Update for ${game.releaseName}: Files are already 'Completed'. Initiating install from completed.`,
+				);
+				await window.api.downloads.installFromCompleted(
+					game.releaseName,
+					selectedDevice,
+				);
+				console.log(
+					`Update: 'installFromCompleted' called for ${game.releaseName}.`,
+				);
+				// Optionally, refresh packages or rely on 'installation-completed' event
+				// loadPackages().catch(err => console.error('Update: Error refreshing packages post-install:', err));
+			} else {
+				console.log(
+					`Update for ${game.releaseName}: Files not 'Completed' (status: ${downloadInfo?.status}). Adding to download queue.`,
+				);
+				const addToQueueSuccess = await addDownloadToQueue(game);
+				if (addToQueueSuccess) {
+					console.log(
+						`Update: Successfully added ${game.releaseName} to download queue.`,
+					);
+				} else {
+					console.warn(
+						`Update: Failed to add ${game.releaseName} to queue. Current status: ${downloadInfo?.status}.`,
+					);
+					window.alert(
+						`Could not queue ${game.name} for update. It might already be in the queue or an error occurred. Please check logs.`,
+					);
+				}
+			}
+		} catch (error) {
+			console.error(`Update: Error during process for ${game.name}:`, error);
+			window.alert(
+				`An error occurred during the update process for ${game.name}. Please check logs.`,
+			);
+		}
+	};
+
+	const handleRetry = (game: GameInfo): void => {
+		if (!game || !game.releaseName) return;
+		console.log("Retry action triggered for:", game.releaseName);
+		retryDownload(game.releaseName);
+	};
+
+	const handleCancelDownload = (game: GameInfo): void => {
+		if (!game || !game.releaseName) return;
+		console.log(
+			"Cancel download/extraction action triggered for:",
+			game.releaseName,
+		);
+		cancelDownload(game.releaseName);
+	};
+
+	const handleInstallFromCompleted = (game: GameInfo): void => {
+		if (!game || !game.releaseName || !selectedDevice) {
+			console.error(
+				"Missing game, releaseName, or deviceId for install from completed action",
+			);
+			window.alert("Cannot start installation: Missing required information.");
+			return;
+		}
+		console.log(
+			`Requesting install from completed for ${game.releaseName} on ${selectedDevice}`,
+		);
+		window.api.downloads
+			.installFromCompleted(game.releaseName, selectedDevice)
+			.catch((err) => {
+				console.error("Error triggering install from completed:", err);
+				window.alert(
+					"Failed to start installation. Please check the main process logs.",
+				);
+			});
+	};
+
+	// User chose "Don't Update" after a signature-mismatch install error: dismiss
+	// the failed queue entry (keeping downloaded files) without touching the
+	// device. The game falls back to its normal "Update Available" state.
+	const handleDismissUpdateError = (game: GameInfo): void => {
+		if (!game || !game.releaseName) return;
+		removeFromQueueOnly(game.releaseName);
+	};
+
+	// User chose "Uninstall & Update" after a signature-mismatch install error:
+	// uninstall the conflicting build (erasing its save data) and then install
+	// the downloaded update.
+	const handleUninstallAndUpdate = async (game: GameInfo): Promise<void> => {
+		if (!game || !game.packageName || !game.releaseName || !selectedDevice) {
+			window.alert("Cannot continue: Essential information is missing.");
+			return;
+		}
+
+		setIsLoading(true);
+		try {
+			const uninstallSuccess = await window.api.adb.uninstallPackage(
+				selectedDevice,
+				game.packageName,
+			);
+			if (!uninstallSuccess) {
+				window.alert(`Failed to uninstall ${game.name}. Update aborted.`);
+				return;
+			}
+
+			const downloadInfo = downloadStatusMap.get(game.releaseName);
+			if (downloadInfo?.status === "Completed") {
+				await window.api.downloads.installFromCompleted(
+					game.releaseName,
+					selectedDevice,
+				);
+			} else if (downloadInfo?.status === "InstallError") {
+				retryDownload(game.releaseName);
+			} else {
+				await addDownloadToQueue(game);
+			}
+		} catch (error) {
+			console.error(
+				`Uninstall & Update: Error during process for ${game.name}:`,
+				error,
+			);
+			window.alert(
+				`An error occurred while uninstalling and updating ${game.name}. Please check logs.`,
+			);
+		} finally {
+			setIsLoading(false);
+			loadPackages().catch((err) =>
+				console.error(
+					"Uninstall & Update: Error refreshing packages post-operation:",
+					err,
+				),
+			);
+		}
+	};
+
+	const handleDeleteDownloaded = useCallback(
+		async (game: GameInfo | null): Promise<void> => {
+			if (!game || !game.releaseName) return;
+			console.log(
+				"Delete downloaded files action triggered for:",
+				game.releaseName,
+			);
+			try {
+				const success = await deleteFiles(game.releaseName);
+				if (success) {
+					console.log(
+						`Successfully requested deletion of files for ${game.releaseName}.`,
+					);
+				} else {
+					console.error(`Failed to delete files for ${game.releaseName}.`);
+					window.alert("Failed to delete downloaded files. Check logs.");
+				}
+			} catch (error) {
+				console.error("Error calling deleteFiles:", error);
+				window.alert(
+					"An error occurred while trying to delete downloaded files.",
+				);
+			}
+			handleCloseDialog();
+		},
+		[deleteFiles, handleCloseDialog],
+	);
+
+	// Core manual-install routine shared by the picker buttons and drag-and-drop.
+	// Installs a single APK, a ZIP, or a game/parent folder (APK + OBB +
+	// install.txt payloads) onto the connected device.
+	const installFileManually = useCallback(
+		async (filePath: string, itemName = "file") => {
+			if (!isConnected || !selectedDevice) {
+				window.alert("Please connect to a device first.");
+				return;
+			}
+			try {
+				const fileName = filePath.split(/[/\\]/).pop() || filePath;
+				console.log(`${itemName} install requested for: ${filePath}`);
+
+				// Show the installation dialog
+				setShowInstallDialog(true);
+				setIsManualInstalling(true);
+				setInstallStatusMessage(`Installing ${itemName}: ${fileName}...`);
+				setInstallSuccess(null);
+
+				const success = await window.api.downloads.installManualFile(
+					filePath,
+					selectedDevice,
+				);
+
+				setInstallSuccess(success);
+
+				if (success) {
+					console.log(`${itemName} installation successful for: ${filePath}`);
+					setInstallStatusMessage(`✅ "${fileName}" installed successfully!`);
+					// Refresh packages to update the UI
+					await loadPackages();
+				} else {
+					console.error(`${itemName} installation failed for: ${filePath}`);
+					setInstallStatusMessage(`❌ Failed to install "${fileName}"`);
+				}
+			} catch (error) {
+				console.error(`Error during installation:`, error);
+				setInstallStatusMessage("❌ Installation error occurred");
+				setInstallSuccess(false);
+			} finally {
+				setIsManualInstalling(false);
+			}
+		},
+		[isConnected, selectedDevice, loadPackages],
+	);
+
+	const handleManualInstall = useCallback(
+		async (type: "apk" | "folder") => {
+			if (!isConnected || !selectedDevice) {
+				window.alert("Please connect to a device first.");
+				return;
+			}
+
+			const filePath =
+				type === "apk"
+					? await window.api.dialog.showApkFilePicker()
+					: await window.api.dialog.showFolderPicker();
+
+			if (!filePath) {
+				return; // User cancelled the dialog
+			}
+
+			await installFileManually(
+				filePath,
+				type === "apk" ? "APK file" : "folder",
+			);
+		},
+		[isConnected, selectedDevice, installFileManually],
+	);
+
+	// Core OBB-copy routine shared by the picker button and drag-and-drop. Checks
+	// whether a matching package is installed and, if not, prompts before copying.
+	const startObbCopy = useCallback(
+		async (folderPath: string) => {
+			if (!isConnected || !selectedDevice) {
+				window.alert("Please connect to a device first.");
+				return;
+			}
+
+			const folderName = folderPath.split(/[/\\]/).pop() || folderPath;
+			console.log(`OBB folder copy requested for: ${folderPath}`);
+
+			// Check if there's a corresponding package installed
+			try {
+				const installedPackages =
+					await window.api.adb.getInstalledPackages(selectedDevice);
+				const matchingPackage = installedPackages.find(
+					(pkg) => pkg.packageName === folderName,
+				);
+				if (!matchingPackage) {
+					// No matching package found, show confirmation dialog
+					console.log(`No matching package found for folder: ${folderName}`);
+					setObbFolderToConfirm(folderPath);
+					setShowObbConfirmDialog(true);
+					return;
+				}
+				console.log(`Found matching package for folder: ${folderName}`);
+			} catch (error) {
+				console.error("Error checking installed packages:", error);
+				const proceed = window.confirm(
+					`Could not verify installed packages. Do you want to proceed with copying "${folderName}" to the OBB directory?`,
+				);
+				if (!proceed) {
+					return;
+				}
+			}
+
+			// Proceed with copying
+			await performObbCopy(folderPath);
+		},
+		// performObbCopy is defined below; it is stable via useCallback.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[isConnected, selectedDevice],
+	);
+
+	const handleCopyObbFolder = useCallback(async () => {
+		if (!isConnected || !selectedDevice) {
+			window.alert("Please connect to a device first.");
+			return;
+		}
+
+		try {
+			const folderPath = await window.api.dialog.showFolderPicker();
+
+			if (!folderPath) {
+				return; // User cancelled the dialog
+			}
+
+			const folderName = folderPath.split(/[/\\]/).pop() || folderPath;
+			console.log(`OBB folder copy requested for: ${folderPath}`);
+
+			// Check if there's a corresponding package installed
+			try {
+				const installedPackages =
+					await window.api.adb.getInstalledPackages(selectedDevice);
+				const matchingPackage = installedPackages.find(
+					(pkg) => pkg.packageName === folderName,
+				);
+				console.log("installedPackages", installedPackages);
+				console.log("matchingPackage", matchingPackage);
+				if (!matchingPackage) {
+					// No matching package found, show confirmation dialog
+					console.log(`No matching package found for folder: ${folderName}`);
+					setObbFolderToConfirm(folderPath);
+					setShowObbConfirmDialog(true);
+					return;
+				}
+
+				console.log(`Found matching package for folder: ${folderName}`);
+			} catch (error) {
+				console.error("Error checking installed packages:", error);
+				// If we can't check packages, show a warning but let user proceed
+				const proceed = window.confirm(
+					`Could not verify installed packages. Do you want to proceed with copying "${folderName}" to the OBB directory?`,
+				);
+				if (!proceed) {
+					return;
+				}
+			}
+
+			// Proceed with copying
+			await performObbCopy(folderPath);
+		} catch (error) {
+			console.error(`Error during OBB folder copy:`, error);
+			setInstallStatusMessage("❌ OBB copy error occurred");
+			setInstallSuccess(false);
+			setShowInstallDialog(true);
+			setIsManualInstalling(false);
+		}
+	}, [isConnected, selectedDevice]);
+
+	const performObbCopy = useCallback(
+		async (folderPath: string) => {
+			if (!selectedDevice) return;
+
+			const folderName = folderPath.split(/[/\\]/).pop() || folderPath;
+
+			// Show the installation dialog
+			setShowInstallDialog(true);
+			setIsManualInstalling(true);
+			setInstallStatusMessage(`Copying OBB folder: ${folderName}...`);
+			setInstallSuccess(null);
+
+			try {
+				const success = await window.api.downloads.copyObbFolder(
+					folderPath,
+					selectedDevice,
+				);
+
+				setInstallSuccess(success);
+
+				if (success) {
+					console.log(`OBB folder copy successful for: ${folderPath}`);
+					setInstallStatusMessage(
+						`✅ "${folderName}" copied to OBB directory successfully!`,
+					);
+				} else {
+					console.error(`OBB folder copy failed for: ${folderPath}`);
+					setInstallStatusMessage(
+						`❌ Failed to copy "${folderName}" to OBB directory`,
+					);
+				}
+			} catch (error) {
+				console.error(`Error during OBB folder copy:`, error);
+				setInstallStatusMessage("❌ OBB copy error occurred");
+				setInstallSuccess(false);
+			} finally {
+				setIsManualInstalling(false);
+			}
+		},
+		[selectedDevice],
+	);
+
+	const handleObbConfirmCopy = useCallback(async () => {
+		if (!obbFolderToConfirm) return;
+
+		setShowObbConfirmDialog(false);
+		await performObbCopy(obbFolderToConfirm);
+		setObbFolderToConfirm(null);
+	}, [obbFolderToConfirm, performObbCopy]);
+
+	const handleObbCancelCopy = useCallback(() => {
+		setShowObbConfirmDialog(false);
+		setObbFolderToConfirm(null);
+	}, []);
+
+	const closeInstallDialog = useCallback(() => {
+		setShowInstallDialog(false);
+		setInstallSuccess(null);
+		setInstallStatusMessage("");
+	}, []);
+
+	// Drag-and-drop sideload: resolve each dropped item's real path, classify it,
+	// and route APK/ZIP/game-folders to install and OBB folders to copy.
+	const handleSideloadDrop = useCallback(
+		async (e: React.DragEvent<HTMLDivElement>) => {
+			e.preventDefault();
+			e.stopPropagation();
+			setIsDragOver(false);
+
+			if (!isConnected || !selectedDevice) {
+				window.alert("Please connect to a device first.");
+				return;
+			}
+			if (isManualInstalling) return;
+
+			const files = Array.from(e.dataTransfer.files);
+			if (files.length === 0) return;
+
+			for (const file of files) {
+				let path = "";
+				try {
+					path = window.api.dialog.getPathForFile(file);
+				} catch (err) {
+					console.error("Failed to resolve dropped file path:", err);
+					continue;
+				}
+				if (!path) continue;
+
+				let kind: "apk" | "zip" | "gameFolder" | "obbFolder" | "unknown" =
+					"unknown";
+				let name = path.split(/[/\\]/).pop() || path;
+				try {
+					const res = await window.api.dialog.classifyPath(path);
+					kind = res.kind;
+					name = res.name;
+				} catch (err) {
+					console.error("Failed to classify dropped path:", err);
+				}
+
+				if (kind === "obbFolder") {
+					await startObbCopy(path);
+				} else if (kind === "apk" || kind === "zip" || kind === "gameFolder") {
+					await installFileManually(path, name);
+				} else {
+					// Unknown — best effort: try a manual install.
+					await installFileManually(path, name);
+				}
+			}
+		},
+		[
+			isConnected,
+			selectedDevice,
+			isManualInstalling,
+			startObbCopy,
+			installFileManually,
+		],
+	);
+
+	useEffect(() => {
+		let mounted = true;
+		const p = window.api.app?.getVersion?.();
+		if (p)
+			p.then((v) => {
+				if (mounted) setAppVersion(v);
+			}).catch(() => {});
+		return () => {
+			mounted = false;
+		};
+	}, []);
+
+	const isBusy = adbLoading || loadingGames || isLoading || isManualInstalling;
+
+	// Keyboard shortcuts
+	useEffect(() => {
+		const handler = (e: KeyboardEvent): void => {
+			const tag = (e.target as HTMLElement)?.tagName;
+			const isInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+			// Ctrl/Cmd+F → focus search (works from anywhere)
+			if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+				e.preventDefault();
+				searchInputRef.current?.focus();
+				return;
+			}
+
+			// Escape → clear search or close dialog
+			if (e.key === "Escape") {
+				if (searchInput) {
+					setSearchInput("");
+					setGlobalFilter("");
+					searchInputRef.current?.blur();
+					e.preventDefault();
+					return;
+				}
+				if (isDialogOpen && dialogGame) {
+					handleCloseDialog();
+					e.preventDefault();
+					return;
+				}
+				return;
+			}
+
+			// Skip remaining shortcuts when typing in inputs
+			if (isInput) return;
+
+			switch (e.key) {
+				case "r":
+				case "R":
+					if (!isBusy && isServerMode) {
+						refreshGames();
+						e.preventDefault();
+					}
+					break;
+				case "1":
+					setActiveFilter("all");
+					e.preventDefault();
+					break;
+				case "2":
+					setActiveFilter("installed");
+					e.preventDefault();
+					break;
+				case "3":
+					if (counts.updates > 0) {
+						setActiveFilter("update");
+						e.preventDefault();
+					}
+					break;
+			}
+		};
+		document.addEventListener("keydown", handler);
+		return () => document.removeEventListener("keydown", handler);
+	}, [
+		searchInput,
+		isDialogOpen,
+		dialogGame,
+		handleCloseDialog,
+		isBusy,
+		isServerMode,
+		refreshGames,
+		setActiveFilter,
+		counts.updates,
+	]);
+
+	const storageFreeGB = parseStorageGB(selectedDeviceDetails?.storageFree);
+	const storageTotalGB = parseStorageGB(selectedDeviceDetails?.storageTotal);
+	const storageUsedPct =
+		storageTotalGB > 0
+			? Math.min(
+					100,
+					Math.round(((storageTotalGB - storageFreeGB) / storageTotalGB) * 100),
+				)
+			: 0;
+	const storageBarColor =
+		storageUsedPct > 85
+			? tokens.colorPaletteRedForeground1
+			: storageUsedPct > 65
+				? "#ffaa00"
+				: "var(--vrcd-neon)";
+
+	const CB: React.CSSProperties = {
+		background: "transparent",
+		border: "1px solid rgba(var(--vrcd-neon-raw),0.45)",
+		color: "var(--vrcd-neon)",
+		width: "100%",
+		justifyContent: "center",
+		fontFamily: "var(--vrcd-font-mono)",
+		fontSize: "11px",
+		letterSpacing: "0.12em",
+		textTransform: "uppercase",
+		boxShadow: "0 0 6px rgba(var(--vrcd-neon-raw),0.12)",
+	};
+	const CBP: React.CSSProperties = {
+		...CB,
+		border: "1px solid rgba(var(--vrcd-purple-raw),0.5)",
+		color: "var(--vrcd-purple)",
+		boxShadow: "0 0 6px rgba(var(--vrcd-purple-raw),0.18)",
+	};
+
+	// Dialogs shared by both the sideloader deck and the server-backed library:
+	// the manual-install progress modal, the ADB shell, Manage Remotes, and the
+	// OBB-copy confirmation.
+	const installDialogs = (
+		<>
+			<Dialog
+				open={showInstallDialog}
+				onOpenChange={(_, data) => !data.open && closeInstallDialog()}
+			>
+				<DialogSurface
+					style={{
+						background: "#050514",
+						border: "1px solid rgba(var(--vrcd-neon-raw),0.35)",
+						["--colorNeutralForeground1" as string]: "var(--vrcd-neon)",
+						["--colorNeutralForeground2" as string]:
+							"rgba(var(--vrcd-neon-raw),0.75)",
+						["--colorNeutralBackground1" as string]: "#050514",
+					}}
+				>
+					<DialogBody>
+						<DialogTitle>{t("manualOperation")}</DialogTitle>
+						<DialogContent>
+							<div style={{ marginBottom: tokens.spacingVerticalM }}>
+								<Text>{installStatusMessage}</Text>
+							</div>
+							{isManualInstalling && (
+								<div
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: tokens.spacingHorizontalS,
+										marginBottom: tokens.spacingVerticalM,
+									}}
+								>
+									<Spinner size="small" />
+									<Text>{t("processing")}</Text>
+								</div>
+							)}
+							{installSuccess !== null && (
+								<div
+									style={{
+										marginTop: tokens.spacingVerticalM,
+										padding: tokens.spacingVerticalS,
+										borderRadius: tokens.borderRadiusMedium,
+										backgroundColor: installSuccess
+											? tokens.colorPaletteGreenBackground1
+											: tokens.colorPaletteRedBackground1,
+										color: installSuccess
+											? tokens.colorPaletteGreenForeground1
+											: tokens.colorPaletteRedForeground1,
+									}}
+								>
+									<Text weight="semibold">
+										{installSuccess
+											? t("operationSuccess")
+											: t("operationFailed")}
+									</Text>
+									{!installSuccess && (
+										<div style={{ marginTop: tokens.spacingVerticalXS }}>
+											<Text size={200}>{t("checkLogs")}</Text>
+										</div>
+									)}
+								</div>
+							)}
+						</DialogContent>
+						<DialogActions>
+							<Button
+								appearance="primary"
+								onClick={closeInstallDialog}
+								disabled={isManualInstalling}
+							>
+								{isManualInstalling ? t("processing") : t("close")}
+							</Button>
+						</DialogActions>
+					</DialogBody>
+				</DialogSurface>
+			</Dialog>
+
+			{selectedDevice && (
+				<AdbShellDialog
+					deviceId={selectedDevice}
+					isOpen={shellDialogOpen}
+					onDismiss={() => setShellDialogOpen(false)}
+				/>
+			)}
+
+			<Dialog
+				open={showMirrorMgmt}
+				onOpenChange={(_, data) => setShowMirrorMgmt(data.open)}
+			>
+				<DialogSurface
+					style={{
+						width: "80vw",
+						maxWidth: "1200px",
+						height: "80vh",
+						display: "flex",
+						flexDirection: "column",
+						padding: 0,
+						overflow: "hidden",
+						background: "#050514",
+						border: "1px solid rgba(var(--vrcd-neon-raw),0.35)",
+						["--colorNeutralForeground1" as string]: "var(--vrcd-neon)",
+						["--colorNeutralForeground2" as string]:
+							"rgba(var(--vrcd-neon-raw),0.75)",
+						["--colorNeutralBackground1" as string]: "#050514",
+						["--colorNeutralStroke1" as string]:
+							"rgba(var(--vrcd-neon-raw),0.25)",
+						["--colorBrandBackground" as string]: "var(--vrcd-neon)",
+						["--colorNeutralForegroundOnBrand" as string]: "#050514",
+					}}
+				>
+					<DialogBody
+						style={{
+							flex: 1,
+							overflow: "hidden",
+							display: "flex",
+							flexDirection: "column",
+							padding: 0,
+						}}
+					>
+						<DialogTitle
+							style={{
+								padding: "16px 24px",
+								borderBottom: "1px solid rgba(var(--vrcd-neon-raw),0.15)",
+							}}
+						>
+							Server & Remotes
+						</DialogTitle>
+						<DialogContent
+							style={{
+								flex: 1,
+								overflow: "hidden",
+								display: "flex",
+								flexDirection: "column",
+								padding: "16px 24px",
+							}}
+						>
+							<MirrorManagement
+								serverConfigured={hasServerConfig}
+								serverActive={isServerMode}
+								onToggleServer={setServerMode}
+							/>
+						</DialogContent>
+						<DialogActions
+							style={{
+								padding: "12px 24px",
+								borderTop: "1px solid rgba(var(--vrcd-neon-raw),0.15)",
+							}}
+						>
+							<Button
+								appearance="secondary"
+								onClick={() => setShowMirrorMgmt(false)}
+							>
+								Close
+							</Button>
+						</DialogActions>
+					</DialogBody>
+				</DialogSurface>
+			</Dialog>
+
+			<Dialog
+				open={showObbConfirmDialog}
+				onOpenChange={(_, data) => !data.open && handleObbCancelCopy()}
+			>
+				<DialogSurface
+					style={{
+						background: "#050514",
+						border: "1px solid rgba(var(--vrcd-neon-raw),0.35)",
+						["--colorNeutralForeground1" as string]: "var(--vrcd-neon)",
+						["--colorNeutralForeground2" as string]:
+							"rgba(var(--vrcd-neon-raw),0.75)",
+						["--colorNeutralBackground1" as string]: "#050514",
+					}}
+				>
+					<DialogBody>
+						<DialogTitle>{t("confirmObbCopy")}</DialogTitle>
+						<DialogContent>
+							<div style={{ marginBottom: tokens.spacingVerticalM }}>
+								<Text>
+									{t("obbNoPackageFound")} &quot;
+									{obbFolderToConfirm?.split(/[/\\]/).pop()}&quot;.
+								</Text>
+								<div style={{ marginTop: tokens.spacingVerticalS }}>
+									<Text>{t("obbCopyConfirm")}</Text>
+								</div>
+							</div>
+						</DialogContent>
+						<DialogActions>
+							<Button
+								appearance="primary"
+								onClick={handleObbConfirmCopy}
+								disabled={isManualInstalling}
+							>
+								{t("copyAnyway")}
+							</Button>
+							<Button
+								appearance="secondary"
+								onClick={handleObbCancelCopy}
+								disabled={isManualInstalling}
+							>
+								{t("cancel")}
+							</Button>
+						</DialogActions>
+					</DialogBody>
+				</DialogSurface>
+			</Dialog>
+		</>
+	);
+
+	// ════════════ SIDELOADER MODE ════════════
+	// No server configured → a pure drag-and-drop sideloading deck over the
+	// cyberdeck background. No sidebar, no game list.
+	if (!isServerMode) {
+		const cssVars = {
+			"--colorNeutralBackground1": "#050514",
+			"--colorNeutralForeground1": "var(--vrcd-neon)",
+			"--colorNeutralForeground2": "rgba(var(--vrcd-neon-raw),0.75)",
+			"--colorNeutralStroke1": "rgba(var(--vrcd-neon-raw),0.2)",
+			"--colorBrandBackground": "var(--vrcd-neon)",
+			"--colorNeutralForegroundOnBrand": "#050514",
+		} as React.CSSProperties;
+
+		return (
+			<div className={styles.root} style={cssVars}>
+				<div
+					className="sideloader-stage"
+					style={{ backgroundImage: `url(${sideloaderBg})` }}
+				>
+					<div className="sideloader-screen">
+						{/* Device chip */}
+						<div className="sideloader-devicechip">
+							{selectedDeviceDetails ? (
+								<>
+									<span className="dot online" />
+									<span className="name">
+										{selectedDeviceDetails.friendlyModelName ||
+											"Connected Device"}
+									</span>
+									{selectedDeviceDetails.batteryLevel !== null && (
+										<span className="pill">
+											<BatteryChargeRegular />{" "}
+											{selectedDeviceDetails.batteryLevel}%
+										</span>
+									)}
+									{selectedDeviceDetails.storageFree && (
+										<span className="pill">
+											{selectedDeviceDetails.storageFree} free
+										</span>
+									)}
+									{isConnected && (
+										<button
+											className="chip-x"
+											title={t("disconnectFromDevice")}
+											onClick={() => {
+												requestUploadCheck();
+												disconnectDevice();
+											}}
+										>
+											<PlugDisconnectedRegular /> Disconnect
+										</button>
+									)}
+								</>
+							) : (
+								<>
+									<span className="dot offline" />
+									<span className="name" style={{ color: "#ff6a6a" }}>
+										No device connected
+									</span>
+									<button className="chip-x" onClick={onBackToDevices}>
+										Connect a headset
+									</button>
+								</>
+							)}
+						</div>
+
+						{/* Drag & drop deck */}
+						<div
+							className={`sideloader-dropzone${isDragOver ? " is-dragover" : ""}${!isConnected ? " is-disabled" : ""}`}
+							onDragOver={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								if (isConnected) setIsDragOver(true);
+							}}
+							onDragLeave={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								setIsDragOver(false);
+							}}
+							onDrop={handleSideloadDrop}
+						>
+							<div className="dz-frame" />
+							<svg
+								className="dz-icon"
+								width="60"
+								height="60"
+								viewBox="0 0 64 64"
+								fill="none"
+							>
+								<path
+									d="M32 8v30"
+									stroke="currentColor"
+									strokeWidth="3"
+									strokeLinecap="round"
+								/>
+								<path
+									d="M20 28l12 12 12-12"
+									stroke="currentColor"
+									strokeWidth="3"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+								<path
+									d="M12 46v6a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4v-6"
+									stroke="currentColor"
+									strokeWidth="3"
+									strokeLinecap="round"
+								/>
+							</svg>
+							<div className="dz-title">
+								{isManualInstalling
+									? t("manualInstalling")
+									: "DROP TO SIDELOAD"}
+							</div>
+							<div className="dz-sub">
+								Drag an <b>APK</b>, a <b>.zip</b>, a game <b>folder</b> (APK +
+								OBB + install.txt),
+								<br />
+								or an <b>OBB folder</b> named after its package — dropped here
+								to deploy.
+							</div>
+							{!isConnected && (
+								<div className="dz-warn">
+									{"// CONNECT A DEVICE TO SIDELOAD"}
+								</div>
+							)}
+						</div>
+
+						{/* Primary install actions */}
+						<div className="sideloader-actions">
+							<button
+								className="cyber-deck-btn"
+								disabled={!isConnected || isManualInstalling}
+								onClick={() => handleManualInstall("apk")}
+							>
+								<DocumentRegular />
+								<span>{t("installApkFile")}</span>
+							</button>
+							<button
+								className="cyber-deck-btn"
+								disabled={!isConnected || isManualInstalling}
+								onClick={() => handleManualInstall("folder")}
+							>
+								<FolderAddRegular />
+								<span>{t("installFolder")}</span>
+							</button>
+							<button
+								className="cyber-deck-btn"
+								disabled={!isConnected || isManualInstalling}
+								onClick={handleCopyObbFolder}
+							>
+								<CopyRegular />
+								<span>{t("copyObbFolder")}</span>
+							</button>
+						</div>
+
+						{/* Secondary deck controls */}
+						<div className="sideloader-actions secondary">
+							<button
+								className="cyber-deck-btn purple"
+								onClick={() => setShowMirrorMgmt(true)}
+							>
+								<CloudIcon />
+								<span>Manage Remotes</span>
+							</button>
+							<button
+								className="cyber-deck-btn"
+								disabled={!isConnected}
+								onClick={() => setShellDialogOpen(true)}
+							>
+								<WindowConsoleRegular />
+								<span>ADB Shell</span>
+							</button>
+							<button className="cyber-deck-btn purple" onClick={onTransfers}>
+								<ArrowSyncRegular />
+								<span>Installs</span>
+								{activeTransferCount > 0 && (
+									<Badge
+										appearance="filled"
+										color="brand"
+										size="small"
+										style={{ marginLeft: 4 }}
+									>
+										{activeTransferCount}
+									</Badge>
+								)}
+							</button>
+							<button className="cyber-deck-btn" onClick={onSettings}>
+								<SettingsRegular />
+								<span>Other Settings</span>
+							</button>
+						</div>
+
+						{/* Re-enter server mode — only when a server is configured but has
                 been toggled off (kept for testing a server setup). */}
-            {hasServerConfig && (
-              <div style={{ width: '100%' }}>
-                <button
-                  className="cyber-deck-btn purple"
-                  style={{ width: '100%' }}
-                  onClick={() => setServerMode(true)}
-                >
-                  <ServerIcon /><span>Enter Server Mode</span>
-                </button>
-              </div>
-            )}
+						{hasServerConfig && (
+							<div style={{ width: "100%" }}>
+								<button
+									className="cyber-deck-btn purple"
+									style={{ width: "100%" }}
+									onClick={() => setServerMode(true)}
+								>
+									<ServerIcon />
+									<span>Enter Server Mode</span>
+								</button>
+							</div>
+						)}
 
-            {/* Footer: version + github */}
-            <div className="sideloader-footer">
-              {appVersion && <span className="ver">v{appVersion}</span>}
-              <a href="https://github.com/DeliciousMeatPop/VRCD" target="_blank" rel="noopener noreferrer">
-                GITHUB
-              </a>
-            </div>
-          </div>
-        </div>
+						{/* Footer: version + github */}
+						<div className="sideloader-footer">
+							{appVersion && <span className="ver">v{appVersion}</span>}
+							<a
+								href="https://github.com/DeliciousMeatPop/VRCD"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								GITHUB
+							</a>
+						</div>
+					</div>
+				</div>
 
-        {installDialogs}
-      </div>
-    )
-  }
+				{installDialogs}
+			</div>
+		);
+	}
 
-  return (
-    <div className={styles.root} style={{ '--colorNeutralBackground1': '#050514', '--colorNeutralBackground2': '#060615', '--colorNeutralBackground3': '#060615', '--colorNeutralForeground1': 'var(--vrcd-neon)', '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.75)', '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.2)', '--colorNeutralStrokeAccessible': 'rgba(var(--vrcd-neon-raw),0.3)', '--colorBrandBackground': 'var(--vrcd-neon)', '--colorNeutralForegroundOnBrand': '#050514' } as React.CSSProperties}>
-      <div className={styles.layout}>
+	return (
+		<div
+			className={styles.root}
+			style={
+				{
+					"--colorNeutralBackground1": "#050514",
+					"--colorNeutralBackground2": "#060615",
+					"--colorNeutralBackground3": "#060615",
+					"--colorNeutralForeground1": "var(--vrcd-neon)",
+					"--colorNeutralForeground2": "rgba(var(--vrcd-neon-raw),0.75)",
+					"--colorNeutralStroke1": "rgba(var(--vrcd-neon-raw),0.2)",
+					"--colorNeutralStrokeAccessible": "rgba(var(--vrcd-neon-raw),0.3)",
+					"--colorBrandBackground": "var(--vrcd-neon)",
+					"--colorNeutralForegroundOnBrand": "#050514",
+				} as React.CSSProperties
+			}
+		>
+			<div className={styles.layout}>
+				{/* ════════════ SIDEBAR ════════════ */}
+				{/* Floating open button shown only when sidebar is collapsed */}
+				{!sidebarOpen && (
+					<button
+						className={styles.sidebarToggleFloating}
+						onClick={() => setSidebarOpen(true)}
+						title="Expand sidebar"
+					>
+						»
+					</button>
+				)}
 
-        {/* ════════════ SIDEBAR ════════════ */}
-        {/* Floating open button shown only when sidebar is collapsed */}
-        {!sidebarOpen && (
-          <button
-            className={styles.sidebarToggleFloating}
-            onClick={() => setSidebarOpen(true)}
-            title="Expand sidebar"
-          >
-            »
-          </button>
-        )}
+				<div
+					className={mergeClasses(
+						styles.sidebar,
+						!sidebarOpen && styles.sidebarCollapsed,
+					)}
+				>
+					{/* Collapse toggle — sits on the right edge of the sidebar */}
+					<button
+						className={styles.sidebarToggleBtn}
+						onClick={() => setSidebarOpen(false)}
+						title="Collapse sidebar"
+					>
+						«
+					</button>
 
-        <div className={mergeClasses(styles.sidebar, !sidebarOpen && styles.sidebarCollapsed)}>
-          {/* Collapse toggle — sits on the right edge of the sidebar */}
-          <button
-            className={styles.sidebarToggleBtn}
-            onClick={() => setSidebarOpen(false)}
-            title="Collapse sidebar"
-          >
-            «
-          </button>
+					<div className={styles.sidebarScroll}>
+						{/* ── DEVICE ── */}
+						<section className={styles.sidebarSection}>
+							<div className={styles.sidebarLabel}>Device</div>
+							{selectedDeviceDetails ? (
+								<div
+									style={{
+										border: "1px solid rgba(var(--vrcd-neon-raw),0.4)",
+										borderRadius: "6px",
+										padding: "10px",
+										display: "flex",
+										flexDirection: "column",
+										gap: "8px",
+										backgroundColor: "rgba(var(--vrcd-neon-raw),0.03)",
+									}}
+								>
+									{/* Device name with green dot */}
+									<div
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: "6px",
+											justifyContent: "center",
+										}}
+									>
+										<div
+											style={{
+												width: 8,
+												height: 8,
+												borderRadius: "50%",
+												backgroundColor: "var(--vrcd-neon)",
+												boxShadow: "0 0 6px var(--vrcd-neon)",
+												flexShrink: 0,
+											}}
+										/>
+										<Text
+											weight="semibold"
+											style={{
+												fontSize: "13px",
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+											}}
+										>
+											{(
+												selectedDeviceDetails.friendlyModelName ||
+												"Connected Device"
+											)
+												.split(" ")
+												.map((word, i) => (
+													<span
+														key={i}
+														style={{
+															color:
+																i % 2 === 0
+																	? "var(--vrcd-neon)"
+																	: "var(--vrcd-purple)",
+														}}
+													>
+														{i > 0 ? " " : ""}
+														{word}
+													</span>
+												))}
+										</Text>
+									</div>
 
-          <div className={styles.sidebarScroll}>
+									{/* Disconnect centered below name */}
+									{isConnected && (
+										<Button
+											appearance="subtle"
+											size="small"
+											icon={<PlugDisconnectedRegular />}
+											onClick={() => {
+												requestUploadCheck();
+												disconnectDevice();
+											}}
+											title={t("disconnectFromDevice")}
+											style={CB}
+										>
+											Disconnect
+										</Button>
+									)}
 
-            {/* ── DEVICE ── */}
-            <section className={styles.sidebarSection}>
-              <div className={styles.sidebarLabel}>Device</div>
-              {selectedDeviceDetails ? (
-                <div style={{ border: '1px solid rgba(var(--vrcd-neon-raw),0.4)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: 'rgba(var(--vrcd-neon-raw),0.03)' }}>
-                  {/* Device name with green dot */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--vrcd-neon)', boxShadow: '0 0 6px var(--vrcd-neon)', flexShrink: 0 }} />
-                    <Text weight="semibold" style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(selectedDeviceDetails.friendlyModelName || 'Connected Device')
-                        .split(' ')
-                        .map((word, i) => (
-                          <span key={i} style={{ color: i % 2 === 0 ? 'var(--vrcd-neon)' : 'var(--vrcd-purple)' }}>{i > 0 ? ' ' : ''}{word}</span>
-                        ))}
-                    </Text>
-                  </div>
+									{/* Battery badge centered */}
+									{selectedDeviceDetails.batteryLevel !== null && (
+										<div style={{ display: "flex", justifyContent: "center" }}>
+											<span
+												style={{
+													display: "inline-flex",
+													alignItems: "center",
+													gap: "6px",
+													padding: "3px 10px",
+													borderRadius: "999px",
+													fontFamily: "monospace",
+													fontSize: "12px",
+													letterSpacing: "0.04em",
+													border: `1px solid ${selectedDeviceDetails.batteryLevel > 20 ? "rgba(var(--vrcd-neon-raw),0.55)" : "rgba(255,68,68,0.6)"}`,
+													color:
+														selectedDeviceDetails.batteryLevel > 20
+															? "var(--vrcd-neon)"
+															: "#ff4444",
+													background:
+														selectedDeviceDetails.batteryLevel > 20
+															? "rgba(var(--vrcd-neon-raw),0.06)"
+															: "rgba(255,68,68,0.08)",
+												}}
+											>
+												<BatteryChargeRegular />
+												{selectedDeviceDetails.batteryLevel}%
+											</span>
+										</div>
+									)}
 
-                  {/* Disconnect centered below name */}
-                  {isConnected && (
-                    <Button appearance="subtle" size="small" icon={<PlugDisconnectedRegular />}
-                      onClick={() => { requestUploadCheck(); disconnectDevice() }}
-                      title={t('disconnectFromDevice')} style={CB}>
-                      Disconnect
-                    </Button>
-                  )}
+									{/* Storage bar + centered text */}
+									{selectedDeviceDetails.storageFree &&
+										selectedDeviceDetails.storageTotal && (
+											<>
+												<Text
+													size={100}
+													style={{
+														color: tokens.colorNeutralForeground3,
+														textAlign: "center",
+														fontFamily: "monospace",
+													}}
+												>
+													{selectedDeviceDetails.storageFree} Free (
+													{100 - storageUsedPct}%) /{" "}
+													{selectedDeviceDetails.storageTotal}
+												</Text>
+												<div className={styles.storageBarTrack}>
+													<div
+														className={styles.storageBarFill}
+														style={{
+															width: `${storageUsedPct}%`,
+															backgroundColor: storageBarColor,
+														}}
+													/>
+												</div>
+											</>
+										)}
 
-                  {/* Battery badge centered */}
-                  {selectedDeviceDetails.batteryLevel !== null && (
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '3px 10px',
-                          borderRadius: '999px',
-                          fontFamily: 'monospace',
-                          fontSize: '12px',
-                          letterSpacing: '0.04em',
-                          border: `1px solid ${selectedDeviceDetails.batteryLevel > 20 ? 'rgba(var(--vrcd-neon-raw),0.55)' : 'rgba(255,68,68,0.6)'}`,
-                          color: selectedDeviceDetails.batteryLevel > 20 ? 'var(--vrcd-neon)' : '#ff4444',
-                          background: selectedDeviceDetails.batteryLevel > 20 ? 'rgba(var(--vrcd-neon-raw),0.06)' : 'rgba(255,68,68,0.08)'
-                        }}
-                      >
-                        <BatteryChargeRegular />
-                        {selectedDeviceDetails.batteryLevel}%
-                      </span>
-                    </div>
-                  )}
+									{/* Refresh Quest */}
+									{isConnected && (
+										<Button
+											appearance="subtle"
+											size="small"
+											icon={<ArrowClockwiseRegular />}
+											onClick={() => loadPackages()}
+											disabled={isBusy}
+											style={CB}
+										>
+											{isBusy ? t("working") : t("refreshQuest")}
+										</Button>
+									)}
+								</div>
+							) : (
+								<div
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: tokens.spacingHorizontalXS,
+									}}
+								>
+									<div
+										style={{
+											width: 8,
+											height: 8,
+											borderRadius: "50%",
+											backgroundColor: "#ff4444",
+											boxShadow: "0 0 6px #ff4444",
+											flexShrink: 0,
+										}}
+									/>
+									<div>
+										<Text
+											size={200}
+											style={{ color: "#ff6666", display: "block" }}
+										>
+											No device connected
+										</Text>
+										<Text
+											size={100}
+											style={{ color: tokens.colorNeutralForeground3 }}
+										>
+											<button
+												onClick={onBackToDevices}
+												style={{
+													background: "none",
+													border: "none",
+													color: "rgba(var(--vrcd-neon-raw),0.7)",
+													cursor: "pointer",
+													fontSize: "11px",
+													padding: 0,
+													textDecoration: "underline",
+												}}
+											>
+												Click to connect a headset
+											</button>
+										</Text>
+									</div>
+								</div>
+							)}
+						</section>
 
-                  {/* Storage bar + centered text */}
-                  {selectedDeviceDetails.storageFree && selectedDeviceDetails.storageTotal && (
-                    <>
-                      <Text size={100} style={{ color: tokens.colorNeutralForeground3, textAlign: 'center', fontFamily: 'monospace' }}>
-                        {selectedDeviceDetails.storageFree} Free ({100 - storageUsedPct}%) / {selectedDeviceDetails.storageTotal}
-                      </Text>
-                      <div className={styles.storageBarTrack}>
-                        <div className={styles.storageBarFill} style={{ width: `${storageUsedPct}%`, backgroundColor: storageBarColor }} />
-                      </div>
-                    </>
-                  )}
-
-                  {/* Refresh Quest */}
-                  {isConnected && (
-                    <Button appearance="subtle" size="small" icon={<ArrowClockwiseRegular />} onClick={() => loadPackages()} disabled={isBusy}
-                      style={CB}>
-                      {isBusy ? t('working') : t('refreshQuest')}
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ff4444', boxShadow: '0 0 6px #ff4444', flexShrink: 0 }} />
-                  <div>
-                    <Text size={200} style={{ color: '#ff6666', display: 'block' }}>No device connected</Text>
-                    <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
-                      <button onClick={onBackToDevices} style={{ background: 'none', border: 'none', color: 'rgba(var(--vrcd-neon-raw),0.7)', cursor: 'pointer', fontSize: '11px', padding: 0, textDecoration: 'underline' }}>
-                        Click to connect a headset
-                      </button>
-                    </Text>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* ── ACTIONS ── */}
-            <section className={styles.sidebarSection}>
-              <div className={styles.sidebarLabel}>Actions</div>
-              <Button appearance="subtle" size="small" onClick={() => setShowMirrorMgmt(true)} style={CB}>
-                Manage Remotes
-              </Button>
-              <Button appearance="subtle" size="small" icon={<ArrowClockwiseRegular />} onClick={refreshGames} disabled={isBusy}
-                style={CB}>
-                {isBusy ? t('working') : t('refreshGames')}
-              </Button>
-              <Button appearance="subtle" size="small" icon={<WindowConsoleRegular />} onClick={() => setShellDialogOpen(true)}
-                disabled={!isConnected} style={isConnected ? CB : { ...CB, opacity: 0.4 }}>
-                ADB Shell
-              </Button>
-              <Button appearance="subtle" size="small" icon={<SettingsRegular />} onClick={onSettings} style={CB}>
-                Other Settings
-              </Button>
-              {/* Turn the configured server off (kept, not wiped) and drop back
+						{/* ── ACTIONS ── */}
+						<section className={styles.sidebarSection}>
+							<div className={styles.sidebarLabel}>Actions</div>
+							<Button
+								appearance="subtle"
+								size="small"
+								onClick={() => setShowMirrorMgmt(true)}
+								style={CB}
+							>
+								Manage Remotes
+							</Button>
+							<Button
+								appearance="subtle"
+								size="small"
+								icon={<ArrowClockwiseRegular />}
+								onClick={refreshGames}
+								disabled={isBusy}
+								style={CB}
+							>
+								{isBusy ? t("working") : t("refreshGames")}
+							</Button>
+							<Button
+								appearance="subtle"
+								size="small"
+								icon={<WindowConsoleRegular />}
+								onClick={() => setShellDialogOpen(true)}
+								disabled={!isConnected}
+								style={isConnected ? CB : { ...CB, opacity: 0.4 }}
+							>
+								ADB Shell
+							</Button>
+							<Button
+								appearance="subtle"
+								size="small"
+								icon={<SettingsRegular />}
+								onClick={onSettings}
+								style={CB}
+							>
+								Other Settings
+							</Button>
+							{/* Turn the configured server off (kept, not wiped) and drop back
                   to the sideloader deck — handy for testing a server setup. */}
-              <Button appearance="subtle" size="small" icon={<ServerIcon />} onClick={() => setServerMode(false)} style={CBP}>
-                Back to Sideloader
-              </Button>
-            </section>
+							<Button
+								appearance="subtle"
+								size="small"
+								icon={<ServerIcon />}
+								onClick={() => setServerMode(false)}
+								style={CBP}
+							>
+								Back to Sideloader
+							</Button>
+						</section>
 
-            {/* ── TRANSFERS ── */}
-            <section className={styles.sidebarSection}>
-              <div className={styles.sidebarLabel}>Transfers</div>
-              <Button appearance="subtle" size="small" icon={<ArrowSyncRegular />} onClick={onTransfers} style={CBP}>
-                Transfers
-                {activeTransferCount > 0 && (
-                  <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: 'auto' }}>{activeTransferCount}</Badge>
-                )}
-              </Button>
-              <Menu>
-                <MenuTrigger disableButtonEnhancement>
-                  <Button appearance="subtle" size="small" icon={<FolderAddRegular />} disabled={isBusy || !isConnected}
-                    style={CB}>
-                    {isManualInstalling ? t('manualInstalling') : 'Manual Install'}
-                  </Button>
-                </MenuTrigger>
-                <MenuPopover style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.2)' } as React.CSSProperties}>
-                  <MenuList>
-                    <MenuItem icon={<DocumentRegular />} onClick={() => handleManualInstall('apk')} disabled={isManualInstalling}>{t('installApkFile')}</MenuItem>
-                    <MenuItem icon={<FolderAddRegular />} onClick={() => handleManualInstall('folder')} disabled={isManualInstalling}>{t('installFolder')}</MenuItem>
-                    <MenuItem icon={<CopyRegular />} onClick={handleCopyObbFolder} disabled={isManualInstalling}>{t('copyObbFolder')}</MenuItem>
-                  </MenuList>
-                </MenuPopover>
-              </Menu>
-            </section>
+						{/* ── TRANSFERS ── */}
+						<section className={styles.sidebarSection}>
+							<div className={styles.sidebarLabel}>Transfers</div>
+							<Button
+								appearance="subtle"
+								size="small"
+								icon={<ArrowSyncRegular />}
+								onClick={onTransfers}
+								style={CBP}
+							>
+								Transfers
+								{activeTransferCount > 0 && (
+									<Badge
+										appearance="filled"
+										color="brand"
+										size="small"
+										style={{ marginLeft: "auto" }}
+									>
+										{activeTransferCount}
+									</Badge>
+								)}
+							</Button>
+							<Menu>
+								<MenuTrigger disableButtonEnhancement>
+									<Button
+										appearance="subtle"
+										size="small"
+										icon={<FolderAddRegular />}
+										disabled={isBusy || !isConnected}
+										style={CB}
+									>
+										{isManualInstalling
+											? t("manualInstalling")
+											: "Manual Install"}
+									</Button>
+								</MenuTrigger>
+								<MenuPopover
+									style={
+										{
+											background: "#050514",
+											border: "1px solid rgba(var(--vrcd-neon-raw),0.35)",
+											["--colorNeutralBackground1" as string]: "#050514",
+											["--colorNeutralForeground1" as string]:
+												"var(--vrcd-neon)",
+											["--colorNeutralForeground2" as string]:
+												"rgba(var(--vrcd-neon-raw),0.75)",
+											["--colorNeutralStroke1" as string]:
+												"rgba(var(--vrcd-neon-raw),0.2)",
+										} as React.CSSProperties
+									}
+								>
+									<MenuList>
+										<MenuItem
+											icon={<DocumentRegular />}
+											onClick={() => handleManualInstall("apk")}
+											disabled={isManualInstalling}
+										>
+											{t("installApkFile")}
+										</MenuItem>
+										<MenuItem
+											icon={<FolderAddRegular />}
+											onClick={() => handleManualInstall("folder")}
+											disabled={isManualInstalling}
+										>
+											{t("installFolder")}
+										</MenuItem>
+										<MenuItem
+											icon={<CopyRegular />}
+											onClick={handleCopyObbFolder}
+											disabled={isManualInstalling}
+										>
+											{t("copyObbFolder")}
+										</MenuItem>
+									</MenuList>
+								</MenuPopover>
+							</Menu>
+						</section>
+					</div>
 
-          </div>
+					{/* ── SIDEBAR FOOTER — outside scroll so always visible ── */}
+					<div
+						style={{
+							flexShrink: 0,
+							borderTop: "1px solid rgba(var(--vrcd-neon-raw),0.10)",
+							padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM} 10px`,
+							display: "flex",
+							flexDirection: "column",
+							gap: "4px",
+							alignItems: "center",
+						}}
+					>
+						{appVersion && (
+							<Text
+								size={100}
+								style={{
+									color: "rgba(var(--vrcd-neon-raw),0.5)",
+									fontFamily: "monospace",
+									letterSpacing: "0.12em",
+								}}
+							>
+								v{appVersion}
+							</Text>
+						)}
+						<div
+							style={{
+								display: "flex",
+								gap: "8px",
+								justifyContent: "center",
+								flexWrap: "wrap",
+							}}
+						>
+							<a
+								href="https://github.com/DeliciousMeatPop/VRCD"
+								target="_blank"
+								rel="noopener noreferrer"
+								style={{
+									color: "rgba(var(--vrcd-neon-raw),0.55)",
+									fontSize: "9px",
+									letterSpacing: "0.1em",
+									textDecoration: "none",
+									fontFamily: "monospace",
+								}}
+							>
+								G|THU|3
+							</a>
+						</div>
+						<Text
+							size={100}
+							style={{
+								color: "rgba(var(--vrcd-neon-raw),0.3)",
+								textAlign: "center",
+								fontFamily: "monospace",
+								fontSize: "8px",
+							}}
+						>
+							{t("lastSynced")} {formatDate(lastSyncTime)}
+						</Text>
+					</div>
+				</div>
 
-          {/* ── SIDEBAR FOOTER — outside scroll so always visible ── */}
-          <div style={{ flexShrink: 0, borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.10)', padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM} 10px`, display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-            {appVersion && (
-              <Text size={100} style={{ color: 'rgba(var(--vrcd-neon-raw),0.5)', fontFamily: 'monospace', letterSpacing: '0.12em' }}>
-                v{appVersion}
-              </Text>
-            )}
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="https://github.com/DeliciousMeatPop/VRCD" target="_blank" rel="noopener noreferrer"
-                style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '9px', letterSpacing: '0.1em', textDecoration: 'none', fontFamily: 'monospace' }}>G|THU|3</a>
-            </div>
-            <Text size={100} style={{ color: 'rgba(var(--vrcd-neon-raw),0.3)', textAlign: 'center', fontFamily: 'monospace', fontSize: '8px' }}>
-              {t('lastSynced')} {formatDate(lastSyncTime)}
-            </Text>
-          </div>
-        </div>
+				{/* ════════════ MAIN ════════════ */}
+				<div className={styles.sidebarMain}>
+					{/* Control Row */}
+					<div className={styles.controlRow}>
+						<div className="search-wrap" style={{ flex: 1, minWidth: "140px" }}>
+							<Input
+								ref={searchInputRef}
+								value={searchInput}
+								onChange={handleSearchChange}
+								placeholder={t("searchPlaceholder")}
+								type="search"
+								style={{ width: "100%" }}
+							/>
+						</div>
+						<div className="filter-buttons" style={{ margin: 0 }}>
+							<button
+								onClick={() => setActiveFilter("all")}
+								className={activeFilter === "all" ? "active" : ""}
+							>
+								{t("filterAll")} ({counts.total})
+							</button>
+							<button
+								onClick={() => setActiveFilter("installed")}
+								className={activeFilter === "installed" ? "active" : ""}
+							>
+								{t("filterInstalled")} ({counts.installed})
+							</button>
+							<button
+								onClick={() => setActiveFilter("update")}
+								className={activeFilter === "update" ? "active" : ""}
+								disabled={counts.updates === 0}
+							>
+								{t("filterUpdates")} ({counts.updates})
+							</button>
+						</div>
+						<span className="game-count">
+							{table.getFilteredRowModel().rows.length} {t("displayed")}
+						</span>
+						<Button
+							appearance="subtle"
+							size="small"
+							icon={
+								prefs.viewMode === "table" ? <GridRegular /> : <TableRegular />
+							}
+							onClick={() => {
+								const next = prefs.viewMode === "table" ? "cards" : "table";
+								setPrefs({ viewMode: next });
+								if (next === "cards" && prefs.cardSortKey) {
+									setSorting([
+										{
+											id: prefs.cardSortKey,
+											desc: prefs.cardSortDir === "desc",
+										},
+									]);
+								} else if (next === "table") {
+									setSorting([]);
+								}
+							}}
+							title={
+								prefs.viewMode === "table"
+									? "Switch to card view"
+									: "Switch to table view"
+							}
+							style={{
+								color: "rgba(var(--vrcd-neon-raw),0.7)",
+								border: "1px solid rgba(var(--vrcd-neon-raw),0.3)",
+								borderRadius: "6px",
+							}}
+						/>
+						<Popover
+							open={viewOptionsOpen}
+							onOpenChange={(_, d) => setViewOptionsOpen(d.open)}
+							positioning="below-end"
+						>
+							<PopoverTrigger>
+								<Button
+									appearance="subtle"
+									icon={<OptionsRegular />}
+									title={
+										prefs.viewMode === "cards"
+											? "Card view options"
+											: "Display options"
+									}
+									size="small"
+									style={{
+										color: "rgba(var(--vrcd-neon-raw),0.7)",
+										border: "1px solid rgba(var(--vrcd-neon-raw),0.3)",
+										borderRadius: "6px",
+									}}
+								/>
+							</PopoverTrigger>
+							<PopoverSurface
+								style={{
+									minWidth: "260px",
+									background: "#050514",
+									border: "1px solid rgba(var(--vrcd-neon-raw),0.3)",
+									["--colorNeutralForeground1" as string]: "var(--vrcd-neon)",
+									["--colorNeutralForeground2" as string]:
+										"rgba(var(--vrcd-neon-raw),0.75)",
+									["--colorNeutralBackground1" as string]: "#050514",
+									["--colorNeutralStroke1" as string]:
+										"rgba(var(--vrcd-neon-raw),0.25)",
+									["--colorBrandBackground" as string]: "var(--vrcd-neon)",
+									["--colorNeutralForegroundOnBrand" as string]: "#050514",
+								}}
+							>
+								<div
+									style={{
+										display: "flex",
+										flexDirection: "column",
+										gap: tokens.spacingVerticalM,
+									}}
+								>
+									{prefs.viewMode === "cards" ? (
+										<>
+											<Text weight="semibold">Card View Options</Text>
+											<div>
+												<Text size={200}>Card Size</Text>
+												<Slider
+													min={0}
+													max={100}
+													value={prefs.cardSize}
+													onChange={(_, d) => setPrefs({ cardSize: d.value })}
+												/>
+											</div>
+											<div>
+												<Text size={200}>Sort By</Text>
+												<div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+													<select
+														value={prefs.cardSortKey}
+														onChange={(e) => {
+															const key = e.target.value;
+															setPrefs({ cardSortKey: key });
+															setSorting(
+																key
+																	? [
+																			{
+																				id: key,
+																				desc: prefs.cardSortDir === "desc",
+																			},
+																		]
+																	: [],
+															);
+														}}
+														style={{
+															flex: 1,
+															background: "#050514",
+															color: "var(--vrcd-neon)",
+															border:
+																"1px solid rgba(var(--vrcd-neon-raw),0.35)",
+															borderRadius: 4,
+															padding: "3px 6px",
+															fontFamily: "monospace",
+															fontSize: 12,
+															cursor: "pointer",
+														}}
+													>
+														<option value="name">Name</option>
+														<option value="size">Size</option>
+														<option value="downloads">Popularity</option>
+														<option value="lastUpdated">Last Updated</option>
+														<option value="version">Version</option>
+													</select>
+													<button
+														onClick={() => {
+															const dir =
+																prefs.cardSortDir === "asc" ? "desc" : "asc";
+															setPrefs({ cardSortDir: dir });
+															if (prefs.cardSortKey)
+																setSorting([
+																	{
+																		id: prefs.cardSortKey,
+																		desc: dir === "desc",
+																	},
+																]);
+														}}
+														style={{
+															background: "transparent",
+															border:
+																"1px solid rgba(var(--vrcd-neon-raw),0.35)",
+															borderRadius: 4,
+															color: "var(--vrcd-neon)",
+															cursor: "pointer",
+															padding: "3px 8px",
+															fontFamily: "monospace",
+														}}
+													>
+														{prefs.cardSortDir === "asc" ? "▲ ASC" : "▼ DESC"}
+													</button>
+												</div>
+											</div>
+										</>
+									) : (
+										<>
+											<Text weight="semibold">Display Options</Text>
+											<div>
+												<Text size={200}>Columns</Text>
+												<div
+													style={{
+														display: "flex",
+														flexDirection: "column",
+														gap: 4,
+														marginTop: 6,
+													}}
+												>
+													{(
+														[
+															{ label: "Version", key: "version" },
+															{ label: "Popularity", key: "downloads" },
+															{ label: "Size", key: "size" },
+															{ label: "Last Updated", key: "lastUpdated" },
+														] as { label: string; key: string }[]
+													).map(({ label, key }) => (
+														<label
+															key={key}
+															style={{
+																display: "flex",
+																alignItems: "center",
+																gap: 8,
+																fontSize: 12,
+																color: "rgba(var(--vrcd-neon-raw),0.75)",
+																cursor: "pointer",
+															}}
+														>
+															<input
+																type="checkbox"
+																checked={columnVisibility[key] !== false}
+																onChange={(e) =>
+																	table.setColumnVisibility((prev) => ({
+																		...prev,
+																		[key]: e.target.checked,
+																	}))
+																}
+																style={{ accentColor: "var(--vrcd-neon)" }}
+															/>
+															{label}
+														</label>
+													))}
+												</div>
+											</div>
+											<div>
+												<Text size={200}>Row Density</Text>
+												<Slider
+													min={50}
+													max={100}
+													value={Math.max(50, prefs.rowDensity)}
+													onChange={(_, d) => setPrefs({ rowDensity: d.value })}
+												/>
+											</div>
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "space-between",
+												}}
+											>
+												<Text size={200}>Alternating rows</Text>
+												<Switch
+													checked={prefs.alternatingRows}
+													onChange={(_, d) =>
+														setPrefs({ alternatingRows: d.checked })
+													}
+												/>
+											</div>
+											{prefs.alternatingRows && (
+												<div
+													style={{
+														display: "flex",
+														flexDirection: "column",
+														gap: tokens.spacingVerticalS,
+													}}
+												>
+													{(
+														[
+															{
+																label: "Even row colour",
+																key: "evenRowColor" as const,
+															},
+															{
+																label: "Odd row colour",
+																key: "oddRowColor" as const,
+															},
+														] as {
+															label: string;
+															key: "evenRowColor" | "oddRowColor";
+														}[]
+													).map(({ label, key }) => (
+														<div key={key}>
+															<Text size={200}>{label}</Text>
+															<div
+																style={{
+																	display: "flex",
+																	gap: "6px",
+																	flexWrap: "wrap",
+																	marginTop: "4px",
+																}}
+															>
+																{COLOR_SWATCHES.map((sw) => (
+																	<button
+																		key={sw.label}
+																		title={sw.label}
+																		style={{
+																			width: "22px",
+																			height: "22px",
+																			borderRadius: "4px",
+																			padding: 0,
+																			cursor: "pointer",
+																			background: sw.value,
+																			border:
+																				prefs[key] === sw.value
+																					? "2px solid #00d4ff"
+																					: "1px solid rgba(128,128,128,0.3)",
+																		}}
+																		onClick={() =>
+																			setPrefs({ [key]: sw.value })
+																		}
+																	/>
+																))}
+																<input
+																	type="color"
+																	value={
+																		prefs[key] === "transparent"
+																			? "#000000"
+																			: prefs[key]
+																	}
+																	title="Custom colour"
+																	style={{
+																		width: "22px",
+																		height: "22px",
+																		borderRadius: "4px",
+																		border: "1px solid rgba(128,128,128,0.3)",
+																		padding: 0,
+																		cursor: "pointer",
+																		background: "none",
+																	}}
+																	onChange={(e) =>
+																		setPrefs({ [key]: e.target.value })
+																	}
+																/>
+															</div>
+														</div>
+													))}
+												</div>
+											)}
+										</>
+									)}
+								</div>
+							</PopoverSurface>
+						</Popover>
+					</div>
 
-        {/* ════════════ MAIN ════════════ */}
-        <div className={styles.sidebarMain}>
+					{/* Status messages */}
+					{isBusy && !loadingGames && !downloadProgress && !extractProgress && (
+						<div className="loading-indicator">{t("processing")}</div>
+					)}
+					{installStatusMessage && (
+						<div className="loading-indicator">{installStatusMessage}</div>
+					)}
+					{loadingGames && (downloadProgress > 0 || extractProgress > 0) && (
+						<div className="download-progress">
+							<div className="progress-bar">
+								<div
+									className="progress-bar-fill"
+									style={{ width: `${getCurrentProgress()}%` }}
+								/>
+							</div>
+							<div className="progress-text">{getProcessMessage()}</div>
+						</div>
+					)}
 
-          {/* Control Row */}
-          <div className={styles.controlRow}>
-            <div className="search-wrap" style={{ flex: 1, minWidth: '140px' }}>
-              <Input
-                value={searchInput}
-                onChange={handleSearchChange}
-                placeholder={t('searchPlaceholder')}
-                type="search"
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div className="filter-buttons" style={{ margin: 0 }}>
-              <button onClick={() => setActiveFilter('all')} className={activeFilter === 'all' ? 'active' : ''}>
-                {t('filterAll')} ({counts.total})
-              </button>
-              <button onClick={() => setActiveFilter('installed')} className={activeFilter === 'installed' ? 'active' : ''}>
-                {t('filterInstalled')} ({counts.installed})
-              </button>
-              <button onClick={() => setActiveFilter('update')} className={activeFilter === 'update' ? 'active' : ''} disabled={counts.updates === 0}>
-                {t('filterUpdates')} ({counts.updates})
-              </button>
-            </div>
-            <span className="game-count">{table.getFilteredRowModel().rows.length} {t('displayed')}</span>
-            <Button
-              appearance="subtle"
-              size="small"
-              icon={prefs.viewMode === 'table' ? <GridRegular /> : <TableRegular />}
-              onClick={() => {
-                const next = prefs.viewMode === 'table' ? 'cards' : 'table'
-                setPrefs({ viewMode: next })
-                if (next === 'cards' && prefs.cardSortKey) {
-                  setSorting([{ id: prefs.cardSortKey, desc: prefs.cardSortDir === 'desc' }])
-                } else if (next === 'table') {
-                  setSorting([])
-                }
-              }}
-              title={prefs.viewMode === 'table' ? 'Switch to card view' : 'Switch to table view'}
-              style={{ color: 'rgba(var(--vrcd-neon-raw),0.7)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', borderRadius: '6px' }}
-            />
-            <Popover open={viewOptionsOpen} onOpenChange={(_, d) => setViewOptionsOpen(d.open)} positioning="below-end">
-              <PopoverTrigger>
-                <Button appearance="subtle" icon={<OptionsRegular />}
-                  title={prefs.viewMode === 'cards' ? 'Card view options' : 'Display options'}
-                  size="small"
-                  style={{ color: 'rgba(var(--vrcd-neon-raw),0.7)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', borderRadius: '6px' }} />
-              </PopoverTrigger>
-              <PopoverSurface style={{ minWidth: '260px', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM }}>
-                  {prefs.viewMode === 'cards' ? (
-                    <>
-                      <Text weight="semibold">Card View Options</Text>
-                      <div>
-                        <Text size={200}>Card Size</Text>
-                        <Slider min={0} max={100} value={prefs.cardSize} onChange={(_, d) => setPrefs({ cardSize: d.value })} />
-                      </div>
-                      <div>
-                        <Text size={200}>Sort By</Text>
-                        <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                          <select
-                            value={prefs.cardSortKey}
-                            onChange={(e) => {
-                              const key = e.target.value
-                              setPrefs({ cardSortKey: key })
-                              setSorting(key ? [{ id: key, desc: prefs.cardSortDir === 'desc' }] : [])
-                            }}
-                            style={{ flex: 1, background: '#050514', color: 'var(--vrcd-neon)', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', borderRadius: 4, padding: '3px 6px', fontFamily: 'monospace', fontSize: 12, cursor: 'pointer' }}
-                          >
-                            <option value="name">Name</option>
-                            <option value="size">Size</option>
-                            <option value="downloads">Popularity</option>
-                            <option value="lastUpdated">Last Updated</option>
-                            <option value="version">Version</option>
-                          </select>
-                          <button
-                            onClick={() => {
-                              const dir = prefs.cardSortDir === 'asc' ? 'desc' : 'asc'
-                              setPrefs({ cardSortDir: dir })
-                              if (prefs.cardSortKey) setSorting([{ id: prefs.cardSortKey, desc: dir === 'desc' }])
-                            }}
-                            style={{ background: 'transparent', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', borderRadius: 4, color: 'var(--vrcd-neon)', cursor: 'pointer', padding: '3px 8px', fontFamily: 'monospace' }}
-                          >
-                            {prefs.cardSortDir === 'asc' ? '▲ ASC' : '▼ DESC'}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <Text weight="semibold">Display Options</Text>
-                      <div>
-                        <Text size={200}>Row Density</Text>
-                        <Slider min={50} max={100} value={Math.max(50, prefs.rowDensity)} onChange={(_, d) => setPrefs({ rowDensity: d.value })} />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text size={200}>Alternating rows</Text>
-                        <Switch checked={prefs.alternatingRows} onChange={(_, d) => setPrefs({ alternatingRows: d.checked })} />
-                      </div>
-                      {prefs.alternatingRows && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS }}>
-                          {(
-                            [
-                              { label: 'Even row colour', key: 'evenRowColor' as const },
-                              { label: 'Odd row colour', key: 'oddRowColor' as const }
-                            ] as { label: string; key: 'evenRowColor' | 'oddRowColor' }[]
-                          ).map(({ label, key }) => (
-                            <div key={key}>
-                              <Text size={200}>{label}</Text>
-                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
-                                {COLOR_SWATCHES.map((sw) => (
-                                  <button key={sw.label} title={sw.label}
-                                    style={{ width: '22px', height: '22px', borderRadius: '4px', padding: 0, cursor: 'pointer', background: sw.value, border: prefs[key] === sw.value ? '2px solid #00d4ff' : '1px solid rgba(128,128,128,0.3)' }}
-                                    onClick={() => setPrefs({ [key]: sw.value })} />
-                                ))}
-                                <input type="color"
-                                  value={prefs[key] === 'transparent' ? '#000000' : prefs[key]}
-                                  title="Custom colour"
-                                  style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid rgba(128,128,128,0.3)', padding: 0, cursor: 'pointer', background: 'none' }}
-                                  onChange={(e) => setPrefs({ [key]: e.target.value })} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </PopoverSurface>
-            </Popover>
-          </div>
+					{syncError &&
+						(() => {
+							const isTls = /tls:|handshake|first record/i.test(syncError);
+							return (
+								<div
+									style={{
+										margin: "8px 12px 0",
+										padding: "10px 14px",
+										background: "rgba(255,50,50,0.08)",
+										border: "1px solid rgba(255,80,80,0.4)",
+										borderRadius: 6,
+										display: "flex",
+										alignItems: "flex-start",
+										gap: 10,
+									}}
+								>
+									<div
+										style={{
+											flex: 1,
+											fontFamily: "monospace",
+											fontSize: 12,
+											color: "rgba(var(--vrcd-neon-raw),0.85)",
+											lineHeight: 1.5,
+										}}
+									>
+										{isTls ? (
+											<>
+												<strong style={{ color: "#ff7070" }}>
+													Game list sync failed — TLS error.
+												</strong>{" "}
+												Your ISP or router is blocking the connection. Try a VPN{" "}
+												(ProtonVPN or Cloudflare WARP, both free), then click
+												Refresh Games.
+											</>
+										) : (
+											<>
+												<strong style={{ color: "#ff7070" }}>
+													Game list sync failed.
+												</strong>{" "}
+												{syncError}
+											</>
+										)}
+									</div>
+									<Button
+										appearance="subtle"
+										size="small"
+										icon={<DismissRegular />}
+										onClick={dismissSyncError}
+										style={{
+											minWidth: 0,
+											padding: "2px 4px",
+											color: "rgba(var(--vrcd-neon-raw),0.5)",
+										}}
+									/>
+								</div>
+							);
+						})()}
 
-          {/* Status messages */}
-          {isBusy && !loadingGames && !downloadProgress && !extractProgress && (
-            <div className="loading-indicator">{t('processing')}</div>
-          )}
-          {installStatusMessage && <div className="loading-indicator">{installStatusMessage}</div>}
-          {loadingGames && (downloadProgress > 0 || extractProgress > 0) && (
-            <div className="download-progress">
-              <div className="progress-bar">
-                <div className="progress-bar-fill" style={{ width: `${getCurrentProgress()}%` }} />
-              </div>
-              <div className="progress-text">{getProcessMessage()}</div>
-            </div>
-          )}
+					{/* Content area */}
+					<div className={styles.contentArea}>
+						{loadingGames ? (
+							<div className="loading-indicator">
+								{t("loadingGamesLibrary")}
+							</div>
+						) : gamesError ? (
+							<div className="error-message">{gamesError}</div>
+						) : games.length === 0 && !loadingGames ? (
+							<div
+								style={{
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									justifyContent: "center",
+									gap: "16px",
+									flex: 1,
+									padding: "40px 20px",
+								}}
+							>
+								<svg
+									width="72"
+									height="72"
+									viewBox="0 0 64 64"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<rect
+										x="8"
+										y="20"
+										width="48"
+										height="28"
+										rx="14"
+										stroke="rgba(var(--vrcd-neon-raw),0.45)"
+										strokeWidth="2"
+										fill="rgba(var(--vrcd-neon-raw),0.04)"
+									/>
+									<path
+										d="M20 32h-6M17 29v6"
+										stroke="rgba(var(--vrcd-neon-raw),0.7)"
+										strokeWidth="2.5"
+										strokeLinecap="round"
+									/>
+									<circle cx="44" cy="29" r="2.5" fill="rgba(176,64,255,0.7)" />
+									<circle
+										cx="50"
+										cy="32"
+										r="2.5"
+										fill="rgba(var(--vrcd-neon-raw),0.7)"
+									/>
+									<circle
+										cx="44"
+										cy="35"
+										r="2.5"
+										fill="rgba(var(--vrcd-neon-raw),0.5)"
+									/>
+									<circle cx="38" cy="32" r="2.5" fill="rgba(255,100,0,0.6)" />
+									<path
+										d="M14 44 Q10 54 15 58"
+										stroke="rgba(var(--vrcd-neon-raw),0.3)"
+										strokeWidth="2"
+										strokeLinecap="round"
+										fill="none"
+									/>
+									<path
+										d="M50 44 Q54 54 49 58"
+										stroke="rgba(var(--vrcd-neon-raw),0.3)"
+										strokeWidth="2"
+										strokeLinecap="round"
+										fill="none"
+									/>
+								</svg>
+								<div style={{ textAlign: "center" }}>
+									<Text
+										size={500}
+										weight="semibold"
+										style={{ display: "block", marginBottom: "8px" }}
+									>
+										No games found
+									</Text>
+									<Text
+										size={300}
+										style={{ color: tokens.colorNeutralForeground3 }}
+									>
+										Click Refresh Games to sync the game library
+									</Text>
+								</div>
+								<Button
+									appearance="subtle"
+									size="medium"
+									icon={<ArrowClockwiseRegular />}
+									onClick={refreshGames}
+									disabled={isBusy}
+									style={{
+										background: "transparent",
+										border: "1px solid rgba(var(--vrcd-neon-raw),0.45)",
+										color: "var(--vrcd-neon)",
+										letterSpacing: "0.1em",
+										boxShadow: "0 0 6px rgba(var(--vrcd-neon-raw),0.12)",
+									}}
+								>
+									{isBusy ? t("working") : t("refreshGames")}
+								</Button>
+							</div>
+						) : (
+							<>
+								{prefs.viewMode === "cards" ? (
+									<div
+										className="games-card-grid"
+										style={
+											{
+												"--card-min-w": `${140 + Math.round(prefs.cardSize * 1.4)}px`,
+											} as React.CSSProperties
+										}
+									>
+										{rows.map((row) => {
+											const game = row.original;
+											const ds = game.releaseName
+												? downloadStatusMap.get(game.releaseName)
+												: undefined;
+											return (
+												<div
+													key={row.id}
+													className="game-card"
+													onClick={() => {
+														setDialogGame(game);
+														setIsDialogOpen(true);
+													}}
+													onContextMenu={(e) => {
+														e.preventDefault();
+														setContextMenu({
+															game,
+															x: e.clientX,
+															y: e.clientY,
+														});
+													}}
+												>
+													<div className="game-card-thumbnail-wrap">
+														<img
+															src={
+																game.thumbnailPath
+																	? `file://${game.thumbnailPath}`
+																	: placeholderImage
+															}
+															alt={game.name}
+														/>
+														{game.isInstalled ? (
+															<span
+																className={`game-card-badge ${game.hasUpdate ? "update" : "installed"}`}
+															>
+																{game.hasUpdate ? "Update" : "Installed"}
+															</span>
+														) : (
+															(() => {
+																const badge = getGameBadge(game);
+																if (badge === "new")
+																	return (
+																		<span className="game-card-badge new-game">
+																			NEW
+																		</span>
+																	);
+																if (badge === "updated")
+																	return (
+																		<span className="game-card-badge updated-game">
+																			UPDATED
+																		</span>
+																	);
+																return null;
+															})()
+														)}
+													</div>
+													<div className="game-card-body">
+														<div className="game-card-title">{game.name}</div>
+														<div className="game-card-meta">
+															v{game.version}
+															{game.size ? ` · ${game.size}` : ""}
+														</div>
+														{ds && ds.status !== "Completed" && (
+															<div className="game-card-status-text">
+																{ds.status}
+																{ds.progress ? ` ${ds.progress}%` : ""}
+															</div>
+														)}
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								) : (
+									<div
+										className={`table-wrapper${prefs.alternatingRows ? " alternating-rows" : ""}`}
+										ref={tableContainerRef}
+									>
+										{(() => {
+											const totalSize = table.getTotalSize();
+											const colPct = (size: number): string =>
+												`${((size / totalSize) * 100).toFixed(4)}%`;
+											return (
+												<table
+													className="games-table"
+													style={{
+														width: "100%",
+														minWidth: totalSize,
+														display: "block",
+													}}
+												>
+													<thead
+														style={{
+															display: "block",
+															position: "sticky",
+															top: 0,
+															zIndex: 1,
+														}}
+													>
+														{table.getHeaderGroups().map((headerGroup) => (
+															<tr
+																key={headerGroup.id}
+																style={{ display: "flex", width: "100%" }}
+															>
+																{headerGroup.headers.map((header) => (
+																	<th
+																		key={header.id}
+																		colSpan={header.colSpan}
+																		style={{
+																			flex: `${header.getSize()} 0 0`,
+																			minWidth: header.getSize(),
+																			position: "relative",
+																			display: "flex",
+																			alignItems: "center",
+																		}}
+																	>
+																		{header.isPlaceholder ? null : (
+																			<div
+																				{...{
+																					className: header.column.getCanSort()
+																						? "cursor-pointer select-none"
+																						: "",
+																					onClick:
+																						header.column.getToggleSortingHandler(),
+																				}}
+																				style={{ flex: 1, minWidth: 0 }}
+																			>
+																				{flexRender(
+																					header.column.columnDef.header,
+																					header.getContext(),
+																				)}
+																				{header.column.getIsSorted() ===
+																					"asc" && (
+																					<span
+																						style={{
+																							color: "var(--vrcd-neon)",
+																							marginLeft: "4px",
+																							fontSize: "10px",
+																						}}
+																					>
+																						▲
+																					</span>
+																				)}
+																				{header.column.getIsSorted() ===
+																					"desc" && (
+																					<span
+																						style={{
+																							color: "var(--vrcd-purple)",
+																							marginLeft: "4px",
+																							fontSize: "10px",
+																						}}
+																					>
+																						▼
+																					</span>
+																				)}
+																				{!header.column.getIsSorted() &&
+																					header.column.getCanSort() && (
+																						<span
+																							style={{
+																								color:
+																									"rgba(var(--vrcd-neon-raw),0.2)",
+																								marginLeft: "4px",
+																								fontSize: "10px",
+																							}}
+																						>
+																							⇅
+																						</span>
+																					)}
+																			</div>
+																		)}
+																		{header.column.getCanResize() && (
+																			<div
+																				onMouseDown={header.getResizeHandler()}
+																				onTouchStart={header.getResizeHandler()}
+																				className={`${styles.resizer} ${header.column.getIsResizing() ? styles.isResizing : ""}`}
+																			/>
+																		)}
+																	</th>
+																))}
+															</tr>
+														))}
+													</thead>
+													<tbody
+														style={{
+															display: "block",
+															height: `${rowVirtualizer.getTotalSize()}px`,
+															position: "relative",
+														}}
+													>
+														{rowVirtualizer
+															.getVirtualItems()
+															.map((virtualRow) => {
+																const row = rows[virtualRow.index];
+																if (!row) return null;
+																const rowClasses = [
+																	row.original.isInstalled
+																		? "row-installed"
+																		: "row-not-installed",
+																	row.original.hasUpdate
+																		? "row-update-available"
+																		: "",
+																	virtualRow.index % 2 === 0
+																		? "row-even"
+																		: "row-odd",
+																]
+																	.filter(Boolean)
+																	.join(" ");
+																return (
+																	<tr
+																		key={row.id}
+																		className={rowClasses}
+																		style={{
+																			display: "flex",
+																			position: "absolute",
+																			top: 0,
+																			left: 0,
+																			width: "100%",
+																			height: `${virtualRow.size}px`,
+																			transform: `translateY(${virtualRow.start}px)`,
+																		}}
+																		onClick={(e) => handleRowClick(e, row)}
+																		onContextMenu={(e) => {
+																			e.preventDefault();
+																			setContextMenu({
+																				game: row.original,
+																				x: e.clientX,
+																				y: e.clientY,
+																			});
+																		}}
+																	>
+																		{row.getVisibleCells().map((cell) => (
+																			<td
+																				key={cell.id}
+																				style={{
+																					flex: `${cell.column.getSize()} 0 0`,
+																					minWidth: cell.column.getSize(),
+																					width: colPct(cell.column.getSize()),
+																					display: "flex",
+																					alignItems: "center",
+																					overflow: "hidden",
+																				}}
+																			>
+																				<div
+																					style={{
+																						flex: 1,
+																						minWidth: 0,
+																						overflow: "hidden",
+																						textOverflow: "ellipsis",
+																					}}
+																				>
+																					{flexRender(
+																						cell.column.columnDef.cell,
+																						cell.getContext(),
+																					)}
+																				</div>
+																			</td>
+																		))}
+																	</tr>
+																);
+															})}
+													</tbody>
+												</table>
+											);
+										})()}
+									</div>
+								)}
+							</>
+						)}
+					</div>
+				</div>
+			</div>
 
-          {syncError && (() => {
-            const isTls = /tls:|handshake|first record/i.test(syncError)
-            return (
-              <div style={{
-                margin: '8px 12px 0',
-                padding: '10px 14px',
-                background: 'rgba(255,50,50,0.08)',
-                border: '1px solid rgba(255,80,80,0.4)',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 10
-              }}>
-                <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 12, color: 'rgba(var(--vrcd-neon-raw),0.85)', lineHeight: 1.5 }}>
-                  {isTls ? (
-                    <>
-                      <strong style={{ color: '#ff7070' }}>Game list sync failed — TLS error.</strong>
-                      {' '}Your ISP or router is blocking the connection. Try a VPN
-                      {' '}(ProtonVPN or Cloudflare WARP, both free), then click Refresh Games.
-                    </>
-                  ) : (
-                    <>
-                      <strong style={{ color: '#ff7070' }}>Game list sync failed.</strong>
-                      {' '}{syncError}
-                    </>
-                  )}
-                </div>
-                <Button
-                  appearance="subtle"
-                  size="small"
-                  icon={<DismissRegular />}
-                  onClick={dismissSyncError}
-                  style={{ minWidth: 0, padding: '2px 4px', color: 'rgba(var(--vrcd-neon-raw),0.5)' }}
-                />
-              </div>
-            )
-          })()}
+			{/* ════════════ DIALOGS (outside layout) ════════════ */}
+			{dialogGame && (
+				<GameDetailsDialog
+					game={dialogGame}
+					open={isDialogOpen}
+					onClose={handleCloseDialog}
+					downloadStatusMap={downloadStatusMap}
+					onInstall={handleInstall}
+					onUninstall={handleUninstall}
+					onReinstall={handleReinstall}
+					onUpdate={handleUpdate}
+					onRetry={handleRetry}
+					onCancelDownload={handleCancelDownload}
+					onDeleteDownloaded={handleDeleteDownloaded}
+					onInstallFromCompleted={handleInstallFromCompleted}
+					onUninstallAndUpdate={handleUninstallAndUpdate}
+					onDismissUpdateError={handleDismissUpdateError}
+					getNote={getNote}
+					isConnected={isConnected}
+					isBusy={isBusy}
+				/>
+			)}
 
-          {/* Content area */}
-          <div className={styles.contentArea}>
-            {loadingGames ? (
-              <div className="loading-indicator">{t('loadingGamesLibrary')}</div>
-            ) : gamesError ? (
-              <div className="error-message">{gamesError}</div>
-            ) : games.length === 0 && !loadingGames ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', flex: 1, padding: '40px 20px' }}>
-                <svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="8" y="20" width="48" height="28" rx="14" stroke="rgba(var(--vrcd-neon-raw),0.45)" strokeWidth="2" fill="rgba(var(--vrcd-neon-raw),0.04)"/>
-                  <path d="M20 32h-6M17 29v6" stroke="rgba(var(--vrcd-neon-raw),0.7)" strokeWidth="2.5" strokeLinecap="round"/>
-                  <circle cx="44" cy="29" r="2.5" fill="rgba(176,64,255,0.7)"/>
-                  <circle cx="50" cy="32" r="2.5" fill="rgba(var(--vrcd-neon-raw),0.7)"/>
-                  <circle cx="44" cy="35" r="2.5" fill="rgba(var(--vrcd-neon-raw),0.5)"/>
-                  <circle cx="38" cy="32" r="2.5" fill="rgba(255,100,0,0.6)"/>
-                  <path d="M14 44 Q10 54 15 58" stroke="rgba(var(--vrcd-neon-raw),0.3)" strokeWidth="2" strokeLinecap="round" fill="none"/>
-                  <path d="M50 44 Q54 54 49 58" stroke="rgba(var(--vrcd-neon-raw),0.3)" strokeWidth="2" strokeLinecap="round" fill="none"/>
-                </svg>
-                <div style={{ textAlign: 'center' }}>
-                  <Text size={500} weight="semibold" style={{ display: 'block', marginBottom: '8px' }}>No games found</Text>
-                  <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>Click Refresh Games to sync the game library</Text>
-                </div>
-                <Button appearance="subtle" size="medium" icon={<ArrowClockwiseRegular />} onClick={refreshGames} disabled={isBusy}
-                  style={{ background: 'transparent', border: '1px solid rgba(var(--vrcd-neon-raw),0.45)', color: 'var(--vrcd-neon)', letterSpacing: '0.1em', boxShadow: '0 0 6px rgba(var(--vrcd-neon-raw),0.12)' }}>
-                  {isBusy ? t('working') : t('refreshGames')}
-                </Button>
-              </div>
-            ) : (
-              <>
-                {prefs.viewMode === 'cards' ? (
-                  <div
-                    className="games-card-grid"
-                    style={{ '--card-min-w': `${140 + Math.round(prefs.cardSize * 1.4)}px` } as React.CSSProperties}
-                  >
-                    {rows.map((row) => {
-                      const game = row.original
-                      const ds = game.releaseName ? downloadStatusMap.get(game.releaseName) : undefined
-                      return (
-                        <div
-                          key={row.id}
-                          className="game-card"
-                          onClick={() => { setDialogGame(game); setIsDialogOpen(true) }}
-                        >
-                          <div className="game-card-thumbnail-wrap">
-                            <img src={game.thumbnailPath ? `file://${game.thumbnailPath}` : placeholderImage} alt={game.name} />
-                            {game.isInstalled ? (
-                              <span className={`game-card-badge ${game.hasUpdate ? 'update' : 'installed'}`}>
-                                {game.hasUpdate ? 'Update' : 'Installed'}
-                              </span>
-                            ) : (() => {
-                              const badge = getGameBadge(game)
-                              if (badge === 'new') return <span className="game-card-badge new-game">NEW</span>
-                              if (badge === 'updated') return <span className="game-card-badge updated-game">UPDATED</span>
-                              return null
-                            })()}
-                          </div>
-                          <div className="game-card-body">
-                            <div className="game-card-title">{game.name}</div>
-                            <div className="game-card-meta">v{game.version}{game.size ? ` · ${game.size}` : ''}</div>
-                            {ds && ds.status !== 'Completed' && (
-                              <div className="game-card-status-text">{ds.status}{ds.progress ? ` ${ds.progress}%` : ''}</div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div
-                    className={`table-wrapper${prefs.alternatingRows ? ' alternating-rows' : ''}`}
-                    ref={tableContainerRef}
-                  >
-                    {(() => {
-                      const totalSize = table.getTotalSize()
-                      const colPct = (size: number): string =>
-                        `${((size / totalSize) * 100).toFixed(4)}%`
-                      return (
-                    <table className="games-table" style={{ width: '100%', minWidth: totalSize, display: 'block' }}>
-                      <thead style={{ display: 'block', position: 'sticky', top: 0, zIndex: 1 }}>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                          <tr key={headerGroup.id} style={{ display: 'flex', width: '100%' }}>
-                            {headerGroup.headers.map((header) => (
-                              <th
-                                key={header.id}
-                                colSpan={header.colSpan}
-                                style={{
-                                  flex: `${header.getSize()} 0 0`,
-                                  minWidth: header.getSize(),
-                                  position: 'relative',
-                                  display: 'flex',
-                                  alignItems: 'center'
-                                }}
-                              >
-                                {header.isPlaceholder ? null : (
-                                  <div
-                                    {...{
-                                      className: header.column.getCanSort() ? 'cursor-pointer select-none' : '',
-                                      onClick: header.column.getToggleSortingHandler()
-                                    }}
-                                    style={{ flex: 1, minWidth: 0 }}
-                                  >
-                                    {flexRender(header.column.columnDef.header, header.getContext())}
-                                    {header.column.getIsSorted() === 'asc' && <span style={{ color: 'var(--vrcd-neon)', marginLeft: '4px', fontSize: '10px' }}>▲</span>}
-                                    {header.column.getIsSorted() === 'desc' && <span style={{ color: 'var(--vrcd-purple)', marginLeft: '4px', fontSize: '10px' }}>▼</span>}
-                                    {!header.column.getIsSorted() && header.column.getCanSort() && <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.2)', marginLeft: '4px', fontSize: '10px' }}>⇅</span>}
-                                  </div>
-                                )}
-                                {header.column.getCanResize() && (
-                                  <div
-                                    onMouseDown={header.getResizeHandler()}
-                                    onTouchStart={header.getResizeHandler()}
-                                    className={`${styles.resizer} ${header.column.getIsResizing() ? styles.isResizing : ''}`}
-                                  />
-                                )}
-                              </th>
-                            ))}
-                          </tr>
-                        ))}
-                      </thead>
-                      <tbody style={{ display: 'block', height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                          const row = rows[virtualRow.index]
-                          if (!row) return null
-                          const rowClasses = [
-                            row.original.isInstalled ? 'row-installed' : 'row-not-installed',
-                            row.original.hasUpdate ? 'row-update-available' : '',
-                            virtualRow.index % 2 === 0 ? 'row-even' : 'row-odd'
-                          ].filter(Boolean).join(' ')
-                          return (
-                            <tr
-                              key={row.id}
-                              className={rowClasses}
-                              style={{
-                                display: 'flex',
-                                position: 'absolute', top: 0, left: 0, width: '100%',
-                                height: `${virtualRow.size}px`,
-                                transform: `translateY(${virtualRow.start}px)`
-                              }}
-                              onClick={(e) => handleRowClick(e, row)}
-                            >
-                              {row.getVisibleCells().map((cell) => (
-                                <td
-                                  key={cell.id}
-                                  style={{
-                                    flex: `${cell.column.getSize()} 0 0`,
-                                    minWidth: cell.column.getSize(),
-                                    width: colPct(cell.column.getSize()),
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    overflow: 'hidden'
-                                  }}
-                                >
-                                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                  </div>
-                                </td>
-                              ))}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                      )
-                    })()}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+			{pendingUninstall && (
+				<UninstallWarningDialog
+					appName={pendingUninstall.name || pendingUninstall.releaseName}
+					onConfirm={(dontShowAgain, deleteFiles) => {
+						if (dontShowAgain) setSkipUninstallWarning(true);
+						const game = pendingUninstall;
+						setPendingUninstall(null);
+						void performUninstall(game, deleteFiles);
+					}}
+					onCancel={() => setPendingUninstall(null)}
+				/>
+			)}
 
-      {/* ════════════ DIALOGS (outside layout) ════════════ */}
-      {dialogGame && (
-        <GameDetailsDialog
-          game={dialogGame}
-          open={isDialogOpen}
-          onClose={handleCloseDialog}
-          downloadStatusMap={downloadStatusMap}
-          onInstall={handleInstall}
-          onUninstall={handleUninstall}
-          onReinstall={handleReinstall}
-          onUpdate={handleUpdate}
-          onRetry={handleRetry}
-          onCancelDownload={handleCancelDownload}
-          onDeleteDownloaded={handleDeleteDownloaded}
-          onInstallFromCompleted={handleInstallFromCompleted}
-          onUninstallAndUpdate={handleUninstallAndUpdate}
-          onDismissUpdateError={handleDismissUpdateError}
-          getNote={getNote}
-          isConnected={isConnected}
-          isBusy={isBusy}
-        />
-      )}
+			{/* Right-click context menu */}
+			{contextMenu && (
+				<div
+					style={{
+						position: "fixed",
+						inset: 0,
+						zIndex: 1400,
+						pointerEvents: "auto",
+					}}
+					onClick={() => setContextMenu(null)}
+					onContextMenu={(e) => {
+						e.preventDefault();
+						setContextMenu(null);
+					}}
+				>
+					<div
+						onClick={(e) => e.stopPropagation()}
+						onContextMenu={(e) => e.stopPropagation()}
+						style={{
+							position: "fixed",
+							left: Math.min(contextMenu.x, window.innerWidth - 260),
+							top: Math.min(contextMenu.y, window.innerHeight - 340),
+							minWidth: "240px",
+							background: "#07070f",
+							border: "1px solid rgba(var(--vrcd-neon-raw),0.4)",
+							borderRadius: "6px",
+							boxShadow:
+								"0 4px 24px rgba(0,0,0,0.6), 0 0 24px rgba(var(--vrcd-neon-raw),0.08)",
+							padding: "6px",
+							fontFamily: "var(--vrcd-font-mono)",
+							zIndex: 1401,
+						}}
+					>
+						<div
+							style={{
+								padding: "6px 10px 8px",
+								borderBottom: "1px solid rgba(var(--vrcd-neon-raw),0.15)",
+								marginBottom: "4px",
+							}}
+						>
+							<div
+								style={{
+									color: "var(--vrcd-neon)",
+									fontSize: "12px",
+									fontWeight: 700,
+									letterSpacing: "0.06em",
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+									whiteSpace: "nowrap",
+								}}
+							>
+								{contextMenu.game.name}
+							</div>
+							<div
+								style={{
+									color: "rgba(var(--vrcd-neon-raw),0.4)",
+									fontSize: "9px",
+									letterSpacing: "0.08em",
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+									whiteSpace: "nowrap",
+								}}
+							>
+								{contextMenu.game.releaseName}
+							</div>
+						</div>
+						<ContextMenuItem
+							onClick={() => {
+								setDialogGame(contextMenu.game);
+								setIsDialogOpen(true);
+								setContextMenu(null);
+							}}
+						>
+							▶ Details
+						</ContextMenuItem>
+						{!getSideloadingDisabled() && (
+							<>
+								{contextMenu.game.hasUpdate ? (
+									<ContextMenuItem
+										onClick={() => {
+											void handleUpdate(contextMenu.game);
+											setContextMenu(null);
+										}}
+									>
+										⟳ Update Game
+									</ContextMenuItem>
+								) : contextMenu.game.isInstalled ? (
+									<>
+										<ContextMenuItem
+											onClick={() => {
+												void handleReinstall(contextMenu.game);
+												setContextMenu(null);
+											}}
+										>
+											⟳ Reinstall
+										</ContextMenuItem>
+										<ContextMenuItem
+											danger
+											onClick={() => {
+												void handleUninstall(contextMenu.game);
+												setContextMenu(null);
+											}}
+										>
+											✕ Uninstall
+										</ContextMenuItem>
+									</>
+								) : (
+									<ContextMenuItem
+										onClick={() => {
+											handleInstall(contextMenu.game);
+											setContextMenu(null);
+										}}
+									>
+										↓ Download & Install
+									</ContextMenuItem>
+								)}
+							</>
+						)}
+						<ContextMenuItem
+							onClick={() => {
+								try {
+									void navigator.clipboard.writeText(
+										contextMenu.game.packageName,
+									);
+								} catch {
+									/* ignore */
+								}
+								setContextMenu(null);
+							}}
+						>
+							⧉ Copy Package Name
+						</ContextMenuItem>
+					</div>
+				</div>
+			)}
 
-      {pendingUninstall && (
-        <UninstallWarningDialog
-          appName={pendingUninstall.name || pendingUninstall.releaseName}
-          onConfirm={(dontShowAgain, deleteFiles) => {
-            if (dontShowAgain) setSkipUninstallWarning(true)
-            const game = pendingUninstall
-            setPendingUninstall(null)
-            void performUninstall(game, deleteFiles)
-          }}
-          onCancel={() => setPendingUninstall(null)}
-        />
-      )}
+			{installDialogs}
+		</div>
+	);
+};
 
-      {installDialogs}
-    </div>
-  )
-}
+const ContextMenuItem: React.FC<{
+	children: React.ReactNode;
+	onClick: () => void;
+	danger?: boolean;
+}> = ({ children, onClick, danger }) => {
+	const [hovered, setHovered] = useState(false);
+	const color = danger
+		? "#ff5555"
+		: hovered
+			? "var(--vrcd-neon)"
+			: "rgba(var(--vrcd-neon-raw),0.75)";
+	return (
+		<div
+			onClick={onClick}
+			onMouseEnter={() => setHovered(true)}
+			onMouseLeave={() => setHovered(false)}
+			style={{
+				padding: "8px 10px",
+				borderRadius: "4px",
+				cursor: "pointer",
+				fontSize: "12px",
+				letterSpacing: "0.05em",
+				color,
+				background: hovered ? "rgba(var(--vrcd-neon-raw),0.08)" : "transparent",
+				transition: "background 0.1s, color 0.1s",
+			}}
+		>
+			{children}
+		</div>
+	);
+};
 
-export default GamesView
+export default GamesView;
