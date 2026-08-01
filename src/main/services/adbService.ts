@@ -233,7 +233,27 @@ class AdbService extends EventEmitter implements AdbAPI {
 
     this.isTracking = true
 
-    const tracker = await this.client.trackDevices()
+    let tracker: Tracker
+    try {
+      tracker = await this.client.trackDevices()
+    } catch (error) {
+      // adb start-server can fail (port 5037 taken by another adb, or a
+      // firewall/AV blocking the loopback socket). Don't let that surface as an
+      // unhandled rejection, and don't leave isTracking=true — that would wedge
+      // every future retry. Reset, notify the UI via the existing tracker-error
+      // channel, and return so the app stays usable as a sideloader.
+      this.isTracking = false
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(
+        '[ADB Service] Failed to start device tracking (adb server unavailable):',
+        message
+      )
+      this.emit('tracker-error', message)
+      if (mainWindow) {
+        typedWebContentsSend.send(mainWindow, 'adb:device-tracker-error', message)
+      }
+      return
+    }
     this.deviceTracker = tracker
 
     tracker.on('add', async (device: DeviceInfo) => {
