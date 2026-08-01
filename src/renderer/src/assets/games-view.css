@@ -447,13 +447,43 @@
 .game-card-badge {
   position: absolute;
   top: 6px;
-  right: 6px;
+  left: 6px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
   padding: 2px 7px;
   border-radius: 10px;
   pointer-events: none;
+}
+
+.game-card-star {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: rgba(var(--vrcd-neon-raw), 0.75);
+  background: rgba(5, 5, 20, 0.82);
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.35);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.55);
+}
+
+.game-card-star:hover,
+.game-card-star:focus-visible,
+.game-card-star.is-starred {
+  color: var(--vrcd-neon);
+  background: rgba(5, 5, 20, 0.95);
+  border-color: rgba(var(--vrcd-neon-raw), 0.75);
+  box-shadow: 0 0 9px rgba(var(--vrcd-neon-raw), 0.3);
+}
+
+.game-card-star:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .game-card-badge.installed {
