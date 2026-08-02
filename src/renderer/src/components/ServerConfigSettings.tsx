@@ -57,37 +57,66 @@ const ServerConfigSettings: React.FC = () => {
     setPassword(serverConfig.password)
   }, [serverConfig.baseUri, serverConfig.password])
 
+  // Parse a JSON blob and, if it carries string baseUri + password, copy the
+  // values into the two fields. Returns true when it applied something.
+  const tryApplyJson = (text: string): boolean => {
+    const trimmed = text.trim()
+    if (!trimmed) return false
+    try {
+      const parsed = JSON.parse(trimmed) as { baseUri?: unknown; password?: unknown }
+      if (typeof parsed.baseUri === 'string' && typeof parsed.password === 'string') {
+        setBaseUri(parsed.baseUri)
+        setPassword(parsed.password)
+        return true
+      }
+    } catch {
+      // Not valid JSON (yet) — ignore while the user is still typing/pasting.
+    }
+    return false
+  }
+
+  const handleJsonChange = (value: string): void => {
+    setPastedJson(value)
+    // Auto-fill the fields the instant the pasted text is valid JSON, so a
+    // paste "just works" without a second button click.
+    if (tryApplyJson(value)) setLocalError(null)
+  }
+
   const handleParseJson = (): void => {
     setLocalError(null)
-    const trimmed = pastedJson.trim()
-    if (!trimmed) {
+    if (!pastedJson.trim()) {
       setLocalError('Paste a JSON snippet first')
       return
     }
-    try {
-      const parsed = JSON.parse(trimmed) as { baseUri?: unknown; password?: unknown }
-      if (typeof parsed.baseUri !== 'string' || typeof parsed.password !== 'string') {
-        setLocalError('JSON must contain string "baseUri" and "password" fields')
-        return
-      }
-      setBaseUri(parsed.baseUri)
-      setPassword(parsed.password)
-      setPastedJson('')
-    } catch (err) {
-      console.error('Failed to parse pasted JSON:', err)
-      setLocalError('Pasted text is not valid JSON')
+    if (!tryApplyJson(pastedJson)) {
+      setLocalError('JSON must contain string "baseUri" and "password" fields')
     }
   }
 
   const handleSave = async (): Promise<void> => {
     setLocalError(null)
     setSaveSuccess(false)
-    if (!baseUri.trim() || !password.trim()) {
+    // Save straight from a pasted JSON blob even if the fields weren't filled
+    // in (e.g. the user pasted JSON and clicked Save directly).
+    let uri = baseUri
+    let pass = password
+    if ((!uri.trim() || !pass.trim()) && pastedJson.trim()) {
+      try {
+        const parsed = JSON.parse(pastedJson.trim()) as { baseUri?: unknown; password?: unknown }
+        if (typeof parsed.baseUri === 'string') uri = parsed.baseUri
+        if (typeof parsed.password === 'string') pass = parsed.password
+        setBaseUri(uri)
+        setPassword(pass)
+      } catch {
+        // Fall through to the validation below.
+      }
+    }
+    if (!uri.trim() || !pass.trim()) {
       setLocalError('Both baseUri and password are required')
       return
     }
     try {
-      await setServerConfig({ baseUri: baseUri.trim(), password: password.trim() })
+      await setServerConfig({ baseUri: uri.trim(), password: pass.trim() })
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
@@ -111,7 +140,8 @@ const ServerConfigSettings: React.FC = () => {
             style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM }}
           >
             <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
-              Paste the full JSON or fill in the fields. Credentials are stored locally.
+              Paste the full JSON — the fields below fill in automatically — then click Save. Or
+              fill in the fields yourself. Credentials are stored locally.
             </Text>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS }}>
@@ -120,13 +150,13 @@ const ServerConfigSettings: React.FC = () => {
               </Text>
               <Textarea
                 value={pastedJson}
-                onChange={(_, data) => setPastedJson(data.value)}
+                onChange={(_, data) => handleJsonChange(data.value)}
                 placeholder='{"baseUri":"https://...","password":"..."}'
                 rows={2}
                 resize="vertical"
               />
               <Button size="small" onClick={handleParseJson} appearance="subtle">
-                Apply JSON to fields
+                Fill fields from JSON
               </Button>
             </div>
 
