@@ -20,6 +20,7 @@ import {
   DismissCircleRegular
 } from '@fluentui/react-icons'
 import { useSettings } from '../hooks/useSettings'
+import { sanitizeBaseUri, isValidBaseUri } from '@shared/serverConfig'
 
 const useStyles = makeStyles({
   row: {
@@ -82,12 +83,21 @@ const ServerConfigSettings: React.FC = () => {
   const handleSave = async (): Promise<void> => {
     setLocalError(null)
     setSaveSuccess(false)
-    if (!baseUri.trim() || !password.trim()) {
+    const cleanUri = sanitizeBaseUri(baseUri)
+    const cleanPassword = password.trim()
+    if (!cleanUri || !cleanPassword) {
       setLocalError('Both baseUri and password are required')
       return
     }
+    if (!isValidBaseUri(cleanUri)) {
+      setLocalError('Base URI must be a valid URL, e.g. https://example.com/ (no quotes)')
+      return
+    }
     try {
-      await setServerConfig({ baseUri: baseUri.trim(), password: password.trim() })
+      // Reflect the sanitized value back into the field so the user sees what
+      // was actually saved (e.g. wrapping quotes stripped).
+      setBaseUri(cleanUri)
+      await setServerConfig({ baseUri: cleanUri, password: cleanPassword })
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {

@@ -6,6 +6,7 @@ import {
   ExistingDownloadAction,
   WindowBounds
 } from '@shared/types'
+import { sanitizeBaseUri } from '@shared/serverConfig'
 import { app, nativeTheme } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
@@ -84,14 +85,16 @@ class SettingsService extends EventEmitter implements SettingsAPI {
     // No bundled/hardcoded server. When nothing has been configured the app
     // runs as a pure sideloader; a server (public vrSrc JSON or an rclone
     // config) only comes into play once the user adds one via Manage Remotes.
-    const uri = this.settings.serverConfig?.baseUri ?? ''
+    // Sanitize on read so a previously-saved bad value (e.g. a URL with
+    // wrapping quotes) is healed before it ever reaches rclone.
+    const uri = sanitizeBaseUri(this.settings.serverConfig?.baseUri ?? '')
     const pwd = this.settings.serverConfig?.password ?? ''
     return { baseUri: uri, password: pwd }
   }
 
   setServerConfig(config: ServerConfigInfo): void {
     this.settings.serverConfig = {
-      baseUri: config.baseUri ?? '',
+      baseUri: sanitizeBaseUri(config.baseUri ?? ''),
       password: config.password ?? ''
     }
     this.saveSettings()
