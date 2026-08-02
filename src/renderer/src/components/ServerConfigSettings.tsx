@@ -97,7 +97,6 @@ const ServerConfigSettings: React.FC = () => {
   const handleSave = async (): Promise<void> => {
     setLocalError(null)
     setSaveSuccess(false)
-
     // Resolve the values to save: prefer the fields, but fall back to the
     // pasted JSON blob if the user pasted and hit Save without the fields
     // populating.
