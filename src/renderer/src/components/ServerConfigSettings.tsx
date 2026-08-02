@@ -20,6 +20,7 @@ import {
   DismissCircleRegular
 } from '@fluentui/react-icons'
 import { useSettings } from '../hooks/useSettings'
+import { sanitizeBaseUri, isValidBaseUri } from '@shared/serverConfig'
 
 const useStyles = makeStyles({
   row: {
@@ -96,27 +97,37 @@ const ServerConfigSettings: React.FC = () => {
   const handleSave = async (): Promise<void> => {
     setLocalError(null)
     setSaveSuccess(false)
-    // Save straight from a pasted JSON blob even if the fields weren't filled
-    // in (e.g. the user pasted JSON and clicked Save directly).
-    let uri = baseUri
-    let pass = password
-    if ((!uri.trim() || !pass.trim()) && pastedJson.trim()) {
+    // Resolve the values to save: prefer the fields, but fall back to the
+    // pasted JSON blob if the user pasted and hit Save without the fields
+    // populating.
+    let rawUri = baseUri
+    let rawPass = password
+    if ((!rawUri.trim() || !rawPass.trim()) && pastedJson.trim()) {
       try {
         const parsed = JSON.parse(pastedJson.trim()) as { baseUri?: unknown; password?: unknown }
-        if (typeof parsed.baseUri === 'string') uri = parsed.baseUri
-        if (typeof parsed.password === 'string') pass = parsed.password
-        setBaseUri(uri)
-        setPassword(pass)
+        if (typeof parsed.baseUri === 'string') rawUri = parsed.baseUri
+        if (typeof parsed.password === 'string') rawPass = parsed.password
       } catch {
-        // Fall through to the validation below.
+        // Not valid JSON — fall through to the validation below.
       }
     }
-    if (!uri.trim() || !pass.trim()) {
+
+    const cleanUri = sanitizeBaseUri(rawUri)
+    const cleanPassword = rawPass.trim()
+    if (!cleanUri || !cleanPassword) {
       setLocalError('Both baseUri and password are required')
       return
     }
+    if (!isValidBaseUri(cleanUri)) {
+      setLocalError('Base URI must be a valid URL, e.g. https://example.com/ (no quotes)')
+      return
+    }
     try {
-      await setServerConfig({ baseUri: uri.trim(), password: pass.trim() })
+      // Reflect the sanitized values back into the fields so the user sees what
+      // was actually saved (e.g. wrapping quotes stripped).
+      setBaseUri(cleanUri)
+      setPassword(cleanPassword)
+      await setServerConfig({ baseUri: cleanUri, password: cleanPassword })
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
