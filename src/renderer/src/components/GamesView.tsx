@@ -2327,7 +2327,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 {prefs.viewMode === 'cards' ? (
                   <div
                     className="games-card-grid"
-                    style={{ '--card-min-w': `${140 + Math.round(prefs.cardSize * 1.4)}px` } as React.CSSProperties}
+                    style={{ '--card-min-w': `${140 + Math.round(prefs.cardSize * 0.7)}px` } as React.CSSProperties}
                   >
                     {rows.map((row) => {
                       const game = row.original
