@@ -730,6 +730,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           const label = starred ? t('unstarGame') : t('starGame')
           return (
             <Button
+              className={mergeClasses('game-row-star', starred && 'is-starred')}
               appearance="subtle"
               size="small"
               icon={starred ? <StarFilled /> : <StarRegular />}

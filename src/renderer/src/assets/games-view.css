@@ -470,6 +470,16 @@
   border: 1px solid rgba(var(--vrcd-neon-raw), 0.35);
   border-radius: 50%;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s, background 0.15s, border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.game-card:hover .game-card-star,
+.game-card:focus-within .game-card-star,
+.game-card-star:focus-visible,
+.game-card-star.is-starred {
+  opacity: 1;
 }
 
 .game-card-star:hover,
@@ -482,8 +492,32 @@
 }
 
 .game-card-star:disabled {
-  opacity: 0.35;
+  opacity: 0;
   cursor: not-allowed;
+}
+
+.game-card:hover .game-card-star:disabled,
+.game-card:focus-within .game-card-star:disabled {
+  opacity: 0.35;
+}
+
+.game-row-star {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.games-table tbody tr:hover .game-row-star,
+.game-row-star:focus-visible,
+.game-row-star.is-starred {
+  opacity: 1;
+}
+
+.game-row-star:disabled {
+  opacity: 0;
+}
+
+.games-table tbody tr:hover .game-row-star:disabled {
+  opacity: 0.3;
 }
 
 .game-card-badge.installed {
