@@ -131,7 +131,8 @@ chmod +x vr-cyberdeck-x.x.x-x86_64.AppImage
 
 That's it — no account, no server, no JSON to edit.
 
-> Want a browsable library instead? Add your own server — a server config or your own rclone config — under **Manage Remotes**. Other advanced flows live in **Other Settings**.
+> Want a browsable library instead? Add your own server — a server config or your own rclone config — under **Manage Remotes**. Other advanced flows live in **Other Settings**. [Tutorial Video for Server Setup](https://streamable.com/v0ljxx)
+
 
 > Power user? Open the **ADB Shell** right from the deck — the shortcut panel above the terminal covers most Quest tweaks in one click, and you can save your own commands as `MY MACROS` pills.
 
