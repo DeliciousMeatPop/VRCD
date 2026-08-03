@@ -2,141 +2,149 @@
  * Shared type definitions for both main and renderer processes
  */
 
-import { BrowserWindow } from 'electron'
+import { BrowserWindow } from "electron";
 
-type Modify<T, R> = Omit<T, keyof R> & R
+type Modify<T, R> = Omit<T, keyof R> & R;
 
 // Device types
 export interface DeviceInfo {
-  id: string
-  type: 'emulator' | 'device' | 'offline' | 'unauthorized' | 'unknown' | 'wifi-bookmark'
-  model: string | null
-  isQuestDevice: boolean
-  batteryLevel: number | null
-  storageTotal: string | null
-  storageFree: string | null
-  friendlyModelName: string | null
-  ipAddress: string | null
-  // Ping status for WiFi devices
-  pingStatus?: 'checking' | 'reachable' | 'unreachable' | 'unknown'
-  pingResponseTime?: number // in milliseconds
+	id: string;
+	type:
+		| "emulator"
+		| "device"
+		| "offline"
+		| "unauthorized"
+		| "unknown"
+		| "wifi-bookmark";
+	model: string | null;
+	isQuestDevice: boolean;
+	batteryLevel: number | null;
+	storageTotal: string | null;
+	storageFree: string | null;
+	friendlyModelName: string | null;
+	ipAddress: string | null;
+	// Ping status for WiFi devices
+	pingStatus?: "checking" | "reachable" | "unreachable" | "unknown";
+	pingResponseTime?: number; // in milliseconds
 }
 
 export interface WiFiBookmark {
-  id: string
-  name: string
-  ipAddress: string
-  port: number
-  dateAdded: Date
-  lastConnected?: Date
+	id: string;
+	name: string;
+	ipAddress: string;
+	port: number;
+	dateAdded: Date;
+	lastConnected?: Date;
 }
 
 // Extended device type that includes bookmark data
 export interface DeviceWithBookmark extends DeviceInfo {
-  bookmarkData: WiFiBookmark
+	bookmarkData: WiFiBookmark;
 }
 
 // Union type for devices that may or may not have bookmark data
-export type ExtendedDeviceInfo = DeviceInfo | DeviceWithBookmark
+export type ExtendedDeviceInfo = DeviceInfo | DeviceWithBookmark;
 
 // Type guard to check if a device has bookmark data
-export function hasBookmarkData(device: ExtendedDeviceInfo): device is DeviceWithBookmark {
-  return 'bookmarkData' in device && device.bookmarkData !== undefined
+export function hasBookmarkData(
+	device: ExtendedDeviceInfo,
+): device is DeviceWithBookmark {
+	return "bookmarkData" in device && device.bookmarkData !== undefined;
 }
 
 // Type guard to check if a device is a WiFi bookmark
 export function isWiFiBookmark(device: ExtendedDeviceInfo): boolean {
-  return device.type === 'wifi-bookmark'
+	return device.type === "wifi-bookmark";
 }
 
 // Type guard to check if a device is a TCP device (has IP:PORT format)
 export function isTcpDevice(device: ExtendedDeviceInfo): boolean {
-  return device.id.includes(':')
+	return device.id.includes(":");
 }
 
 export interface PackageInfo {
-  packageName: string
-  versionCode: number
-  // More metadata fields will be added in the future
+	packageName: string;
+	versionCode: number;
+	// More metadata fields will be added in the future
 }
 
 // Game types
 export interface GameInfo {
-  id: string
-  name: string
-  packageName: string
-  version: string
-  size: string
-  lastUpdated: string
-  releaseName: string
-  downloads: number
-  thumbnailPath: string
-  notePath: string
-  isInstalled: boolean
-  deviceVersionCode?: number
-  hasUpdate?: boolean
-  /**
-   * ms timestamp of when this packageName first appeared in our local
-   * library snapshot. 0 = present at initial-sync (so we don't badge every
-   * game NEW for new installs). Undefined = no snapshot info.
-   */
-  firstSeenAt?: number
-  /**
-   * ms timestamp of when this package's version most recently changed
-   * compared to the previous sync. 0 = never changed since first seen.
-   */
-  versionChangedAt?: number
+	id: string;
+	name: string;
+	packageName: string;
+	version: string;
+	size: string;
+	lastUpdated: string;
+	releaseName: string;
+	downloads: number;
+	thumbnailPath: string;
+	notePath: string;
+	isInstalled: boolean;
+	deviceVersionCode?: number;
+	hasUpdate?: boolean;
+	/**
+	 * ms timestamp of when this packageName first appeared in our local
+	 * library snapshot. 0 = present at initial-sync (so we don't badge every
+	 * game NEW for new installs). Undefined = no snapshot info.
+	 */
+	firstSeenAt?: number;
+	/**
+	 * ms timestamp of when this package's version most recently changed
+	 * compared to the previous sync. 0 = never changed since first seen.
+	 */
+	versionChangedAt?: number;
 }
 
 export interface UploadCandidate {
-  packageName: string
-  gameName: string
-  versionCode: number
-  reason: 'missing' | 'newer'
-  storeVersion?: string
+	packageName: string;
+	gameName: string;
+	versionCode: number;
+	reason: "missing" | "newer";
+	storeVersion?: string;
 }
 
 // Upload types
 export interface UploadPreparationProgress {
-  packageName: string
-  stage: string
-  progress: number
+	packageName: string;
+	stage: string;
+	progress: number;
 }
 
 export type UploadStatus =
-  | 'Queued'
-  | 'Preparing'
-  | 'Uploading'
-  | 'Completed'
-  | 'Error'
-  | 'Cancelled'
+	| "Queued"
+	| "Preparing"
+	| "Uploading"
+	| "Completed"
+	| "Error"
+	| "Cancelled";
 
 export interface UploadItem {
-  packageName: string
-  gameName: string
-  versionCode: number
-  deviceId: string
-  status: UploadStatus
-  progress: number
-  stage?: string
-  error?: string
-  addedDate: number
-  zipPath?: string
-  isLocalUpload?: boolean
-  sourcePath?: string
+	packageName: string;
+	gameName: string;
+	versionCode: number;
+	deviceId: string;
+	status: UploadStatus;
+	progress: number;
+	stage?: string;
+	error?: string;
+	addedDate: number;
+	zipPath?: string;
+	isLocalUpload?: boolean;
+	sourcePath?: string;
 }
 
 // Download types
 export type DownloadStatus =
-  | 'Queued'
-  | 'Downloading'
-  | 'Paused'
-  | 'Completed'
-  | 'Error'
-  | 'Cancelled'
-  | 'Extracting'
-  | 'Installing'
-  | 'InstallError'
+	| "Queued"
+	| "Downloading"
+	| "Paused"
+	| "Completed"
+	| "Error"
+	| "Cancelled"
+	| "Extracting"
+	| "Installing"
+	| "InstallError";
 
 /**
  * Marker embedded in DownloadItem.error when an install/update failed because
@@ -144,313 +152,349 @@ export type DownloadStatus =
  * (INSTALL_FAILED_UPDATE_INCOMPATIBLE). The UI uses this to offer the user an
  * explicit choice instead of silently failing or silently uninstalling.
  */
-export const SIGNATURE_MISMATCH_ERROR_PREFIX = 'SIGNATURE_MISMATCH'
+export const SIGNATURE_MISMATCH_ERROR_PREFIX = "SIGNATURE_MISMATCH";
 
 export function isSignatureMismatchError(error?: string | null): boolean {
-  return !!error && error.includes(SIGNATURE_MISMATCH_ERROR_PREFIX)
+	return !!error && error.includes(SIGNATURE_MISMATCH_ERROR_PREFIX);
 }
 
 export interface DownloadItem {
-  gameId: string
-  releaseName: string
-  gameName: string
-  packageName: string
-  status: DownloadStatus
-  progress: number
-  error?: string
-  downloadPath: string
-  pid?: number
-  addedDate: number
-  thumbnailPath?: string
-  speed?: string
-  eta?: string
-  extractProgress?: number
-  size?: string
+	gameId: string;
+	releaseName: string;
+	gameName: string;
+	packageName: string;
+	status: DownloadStatus;
+	progress: number;
+	error?: string;
+	downloadPath: string;
+	pid?: number;
+	addedDate: number;
+	thumbnailPath?: string;
+	speed?: string;
+	eta?: string;
+	extractProgress?: number;
+	size?: string;
 }
 
 export interface DownloadProgress {
-  packageName: string
-  stage: 'download' | 'extract' | 'copy' | 'install'
-  progress: number
+	packageName: string;
+	stage: "download" | "extract" | "copy" | "install";
+	progress: number;
 }
 
 // Update types
 export interface CommitInfo {
-  sha: string
-  message: string
-  author: string
-  date: string
-  url: string
+	sha: string;
+	message: string;
+	author: string;
+	date: string;
+	url: string;
 }
 
 export interface UpdateInfo {
-  version: string
-  releaseNotes?: string
-  releaseDate?: string
-  downloadUrl?: string
-  /** Direct download URL for the platform-specific installer asset. */
-  assetUrl?: string
-  commits?: CommitInfo[]
-  isConnectivityCheck?: boolean
+	version: string;
+	releaseNotes?: string;
+	releaseDate?: string;
+	downloadUrl?: string;
+	/** Direct download URL for the platform-specific installer asset. */
+	assetUrl?: string;
+	commits?: CommitInfo[];
+	isConnectivityCheck?: boolean;
 }
 
 export interface UpdateProgressInfo {
-  bytesPerSecond: number
-  percent: number
-  transferred: number
-  total: number
+	bytesPerSecond: number;
+	percent: number;
+	transferred: number;
+	total: number;
 }
 
 // Dependency types
 export interface DependencyStatus {
-  sevenZip: {
-    ready: boolean
-    path: string | null
-    error: string | null
-  }
-  rclone: {
-    ready: boolean
-    path: string | null
-    error: string | null
-    downloading: boolean
-  }
-  adb: {
-    ready: boolean
-    path: string | null
-    error: string | null
-    downloading: boolean
-  }
-  services: ServiceStatus
+	sevenZip: {
+		ready: boolean;
+		path: string | null;
+		error: string | null;
+	};
+	rclone: {
+		ready: boolean;
+		path: string | null;
+		error: string | null;
+		downloading: boolean;
+	};
+	adb: {
+		ready: boolean;
+		path: string | null;
+		error: string | null;
+		downloading: boolean;
+	};
+	services: ServiceStatus;
 }
 
 export interface BlacklistEntry {
-  packageName: string
-  version: number | 'any'
+	packageName: string;
+	version: number | "any";
 }
 
 export interface AdbAPI {
-  listDevices: () => Promise<DeviceInfo[]>
-  connectDevice: (serial: string) => Promise<boolean>
-  connectTcpDevice: (ipAddress: string, port?: number) => Promise<boolean>
-  disconnectTcpDevice: (ipAddress: string, port?: number) => Promise<boolean>
-  getDeviceIp: (serial: string) => Promise<string | null>
-  getInstalledPackages: (serial: string) => Promise<PackageInfo[]>
-  getApplicationLabel: (serial: string, packageName: string) => Promise<string | null>
-  uninstallPackage: (serial: string, packageName: string) => Promise<boolean>
-  deleteGameFiles: (releaseName: string) => Promise<{ deleted: boolean; path: string; error?: string }>
-  startTrackingDevices: (mainWindow?: BrowserWindow) => void
-  stopTrackingDevices: () => void
-  getUserName: (serial: string) => Promise<string>
-  setUserName: (serial: string, name: string) => Promise<void>
-  pingDevice: (ipAddress: string) => Promise<{ reachable: boolean; responseTime?: number }>
-  runShellCommand: (serial: string, command: string) => Promise<string | null>
-  runLocalAdbCommand: (args: string) => Promise<string>
+	listDevices: () => Promise<DeviceInfo[]>;
+	connectDevice: (serial: string) => Promise<boolean>;
+	connectTcpDevice: (ipAddress: string, port?: number) => Promise<boolean>;
+	disconnectTcpDevice: (ipAddress: string, port?: number) => Promise<boolean>;
+	getDeviceIp: (serial: string) => Promise<string | null>;
+	getInstalledPackages: (serial: string) => Promise<PackageInfo[]>;
+	getApplicationLabel: (
+		serial: string,
+		packageName: string,
+	) => Promise<string | null>;
+	uninstallPackage: (serial: string, packageName: string) => Promise<boolean>;
+	deleteGameFiles: (
+		releaseName: string,
+	) => Promise<{ deleted: boolean; path: string; error?: string }>;
+	startTrackingDevices: (mainWindow?: BrowserWindow) => void;
+	stopTrackingDevices: () => void;
+	getUserName: (serial: string) => Promise<string>;
+	setUserName: (serial: string, name: string) => Promise<void>;
+	pingDevice: (
+		ipAddress: string,
+	) => Promise<{ reachable: boolean; responseTime?: number }>;
+	runShellCommand: (serial: string, command: string) => Promise<string | null>;
+	runLocalAdbCommand: (args: string) => Promise<string>;
 }
 
 export interface DependencyAPI {
-  getStatus: () => Promise<DependencyStatus>
+	getStatus: () => Promise<DependencyStatus>;
 }
 
 export interface DependencyAPIRenderer extends DependencyAPI {}
 
 export interface AdbAPIRenderer extends AdbAPI {
-  onDeviceAdded: (callback: (device: DeviceInfo) => void) => () => void
-  onDeviceRemoved: (callback: (device: DeviceInfo) => void) => () => void
-  onDeviceChanged: (callback: (device: DeviceInfo) => void) => () => void
-  onTrackerError: (callback: (error: string) => void) => () => void
-  onInstallationCompleted: (callback: (deviceId: string) => void) => () => void
+	onDeviceAdded: (callback: (device: DeviceInfo) => void) => () => void;
+	onDeviceRemoved: (callback: (device: DeviceInfo) => void) => () => void;
+	onDeviceChanged: (callback: (device: DeviceInfo) => void) => () => void;
+	onTrackerError: (callback: (error: string) => void) => () => void;
+	onInstallationCompleted: (callback: (deviceId: string) => void) => () => void;
 }
 
 export interface GamesAPI {
-  getGames: () => Promise<GameInfo[]>
-  getLastSyncTime: () => Promise<Date | null>
-  forceSync: () => Promise<GameInfo[]>
-  getNote: (releaseName: string) => Promise<string>
-  getBlacklistGames: () => Promise<BlacklistEntry[]>
-  getTrailerUrl: (gameName: string, packageName: string | undefined) => Promise<string | null>
-  addToBlacklist: (packageName: string, version?: number | 'any') => Promise<boolean>
-  removeFromBlacklist: (packageName: string) => Promise<boolean>
-  isGameBlacklisted: (packageName: string, version?: number) => boolean
+	getGames: () => Promise<GameInfo[]>;
+	getLastSyncTime: () => Promise<Date | null>;
+	forceSync: () => Promise<GameInfo[]>;
+	getNote: (releaseName: string) => Promise<string>;
+	getBlacklistGames: () => Promise<BlacklistEntry[]>;
+	getTrailerUrl: (
+		gameName: string,
+		packageName: string | undefined,
+	) => Promise<string | null>;
+	addToBlacklist: (
+		packageName: string,
+		version?: number | "any",
+	) => Promise<boolean>;
+	removeFromBlacklist: (packageName: string) => Promise<boolean>;
+	isGameBlacklisted: (packageName: string, version?: number) => boolean;
 }
 
 export interface GameAPIRenderer
-  extends Modify<
-    GamesAPI,
-    {
-      isGameBlacklisted: (packageName: string, version?: number) => Promise<boolean>
-    }
-  > {
-  onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void
-  onBackgroundSyncComplete: (callback: (games: GameInfo[]) => void) => () => void
-  onBackgroundSyncError: (callback: (error: string) => void) => () => void
+	extends Modify<
+		GamesAPI,
+		{
+			isGameBlacklisted: (
+				packageName: string,
+				version?: number,
+			) => Promise<boolean>;
+		}
+	> {
+	onDownloadProgress: (
+		callback: (progress: DownloadProgress) => void,
+	) => () => void;
+	onBackgroundSyncComplete: (
+		callback: (games: GameInfo[]) => void,
+	) => () => void;
+	onBackgroundSyncError: (callback: (error: string) => void) => () => void;
 }
 
 /** Result codes returned by DownloadService.addToQueue. */
 export type AddToQueueResult =
-  /** New entry was added to the queue and the rclone pipeline will run. */
-  | 'added'
-  /** Already in the queue (or already complete in the queue). No-op. */
-  | 'duplicate'
-  /** Found a finished copy on disk and imported it as Completed. Caller can install. */
-  | 'imported'
-  /**
-   * Found a finished copy on disk but the user's preference is 'ask'. Caller
-   * must show a prompt and follow up with addToQueueResolveExisting.
-   */
-  | 'needs-prompt'
+	/** New entry was added to the queue and the rclone pipeline will run. */
+	| "added"
+	/** Already in the queue (or already complete in the queue). No-op. */
+	| "duplicate"
+	/** Found a finished copy on disk and imported it as Completed. Caller can install. */
+	| "imported"
+	/**
+	 * Found a finished copy on disk but the user's preference is 'ask'. Caller
+	 * must show a prompt and follow up with addToQueueResolveExisting.
+	 */
+	| "needs-prompt";
 
 export interface DownloadAPI {
-  getQueue: () => Promise<DownloadItem[]>
-  addToQueue: (game: GameInfo) => Promise<AddToQueueResult>
-  addToQueueResolveExisting: (
-    game: GameInfo,
-    action: 'reinstall' | 'redownload'
-  ) => Promise<AddToQueueResult>
-  removeFromQueue: (releaseName: string) => Promise<void>
-  removeFromQueueOnly: (releaseName: string) => Promise<void>
-  moveToFront: (releaseName: string) => Promise<boolean>
-  cancelUserRequest: (releaseName: string) => void
-  retryDownload: (releaseName: string) => void
-  pauseDownload: (releaseName: string) => void
-  resumeDownload: (releaseName: string) => void
-  deleteDownloadedFiles: (releaseName: string) => Promise<boolean>
-  setDownloadPath: (path: string) => void
-  setAppConnectionState: (selectedDevice: string | null, isConnected: boolean) => void
-  setSideloadingDisabled: (disabled: boolean) => void
-  scanDownloadFolder: () => Promise<{ added: number; pruned: number }>
+	getQueue: () => Promise<DownloadItem[]>;
+	addToQueue: (game: GameInfo) => Promise<AddToQueueResult>;
+	addToQueueResolveExisting: (
+		game: GameInfo,
+		action: "reinstall" | "redownload",
+	) => Promise<AddToQueueResult>;
+	removeFromQueue: (releaseName: string) => Promise<void>;
+	removeFromQueueOnly: (releaseName: string) => Promise<void>;
+	moveToFront: (releaseName: string) => Promise<boolean>;
+	moveQueuedUp: (releaseName: string) => Promise<boolean>;
+	moveQueuedDown: (releaseName: string) => Promise<boolean>;
+	cancelUserRequest: (releaseName: string) => void;
+	retryDownload: (releaseName: string) => void;
+	pauseDownload: (releaseName: string) => void;
+	resumeDownload: (releaseName: string) => void;
+	deleteDownloadedFiles: (releaseName: string) => Promise<boolean>;
+	setDownloadPath: (path: string) => void;
+	setAppConnectionState: (
+		selectedDevice: string | null,
+		isConnected: boolean,
+	) => void;
+	setSideloadingDisabled: (disabled: boolean) => void;
+	scanDownloadFolder: () => Promise<{ added: number; pruned: number }>;
 }
 
 export interface DownloadAPIRenderer extends DownloadAPI {
-  onQueueUpdated: (callback: (queue: DownloadItem[]) => void) => () => void
-  installFromCompleted: (releaseName: string, deviceId: string) => Promise<void>
-  installManualFile: (filePath: string, deviceId: string) => Promise<boolean>
-  copyObbFolder: (folderPath: string, deviceId: string) => Promise<boolean>
+	onQueueUpdated: (callback: (queue: DownloadItem[]) => void) => () => void;
+	installFromCompleted: (
+		releaseName: string,
+		deviceId: string,
+	) => Promise<void>;
+	installManualFile: (filePath: string, deviceId: string) => Promise<boolean>;
+	copyObbFolder: (folderPath: string, deviceId: string) => Promise<boolean>;
 }
 
 export interface LocalUploadError {
-  path: string
-  error: string
+	path: string;
+	error: string;
 }
 
 export interface UploadAPI {
-  prepareUpload: (
-    packageName: string,
-    gameName: string,
-    versionCode: number,
-    deviceId: string
-  ) => Promise<string | null>
-  getQueue: () => Promise<UploadItem[]>
-  addToQueue: (
-    packageName: string,
-    gameName: string,
-    versionCode: number,
-    deviceId: string
-  ) => Promise<boolean>
-  removeFromQueue: (packageName: string) => void
-  cancelUpload: (packageName: string) => void
-  addLocalItemsToQueue: (paths: string[]) => Promise<{ errors: LocalUploadError[] }>
+	prepareUpload: (
+		packageName: string,
+		gameName: string,
+		versionCode: number,
+		deviceId: string,
+	) => Promise<string | null>;
+	getQueue: () => Promise<UploadItem[]>;
+	addToQueue: (
+		packageName: string,
+		gameName: string,
+		versionCode: number,
+		deviceId: string,
+	) => Promise<boolean>;
+	removeFromQueue: (packageName: string) => void;
+	cancelUpload: (packageName: string) => void;
+	addLocalItemsToQueue: (
+		paths: string[],
+	) => Promise<{ errors: LocalUploadError[] }>;
 }
 
 export interface UploadAPIRenderer extends UploadAPI {
-  onUploadProgress: (callback: (progress: UploadPreparationProgress) => void) => () => void
-  onQueueUpdated: (callback: (queue: UploadItem[]) => void) => () => void
+	onUploadProgress: (
+		callback: (progress: UploadPreparationProgress) => void,
+	) => () => void;
+	onQueueUpdated: (callback: (queue: UploadItem[]) => void) => () => void;
 }
 
 // Update API
 export interface UpdateAPI {
-  checkForUpdates: () => Promise<void>
-  openDownloadPage: (url: string) => void
-  openReleasesPage: () => void
-  openRepositoryPage: () => void
-  startDownload: () => void
-  installUpdate: () => void
+	checkForUpdates: () => Promise<void>;
+	openDownloadPage: (url: string) => void;
+	openReleasesPage: () => void;
+	openRepositoryPage: () => void;
+	startDownload: () => void;
+	installUpdate: () => void;
 }
 
 export interface UpdateAPIRenderer extends UpdateAPI {
-  onCheckingForUpdate: (callback: () => void) => () => void
-  onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void
-  onUpdateError: (callback: (error: Error) => void) => () => void
-  onDownloadProgress: (callback: (progressInfo: UpdateProgressInfo) => void) => () => void
-  onUpdateDownloaded: (callback: (updateInfo: UpdateInfo) => void) => () => void
+	onCheckingForUpdate: (callback: () => void) => () => void;
+	onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void;
+	onUpdateError: (callback: (error: Error) => void) => () => void;
+	onDownloadProgress: (
+		callback: (progressInfo: UpdateProgressInfo) => void,
+	) => () => void;
+	onUpdateDownloaded: (
+		callback: (updateInfo: UpdateInfo) => void,
+	) => () => void;
 }
 
 export interface ServerConfigInfo {
-  baseUri: string
-  password: string
+	baseUri: string;
+	password: string;
 }
 
-export type AppLanguage = 'en' | 'es'
+export type AppLanguage = "en" | "es";
 
-export type ExistingDownloadAction = 'ask' | 'reinstall' | 'redownload'
+export type ExistingDownloadAction = "ask" | "reinstall" | "redownload";
 
 export interface WindowBounds {
-  x?: number
-  y?: number
-  width: number
-  height: number
-  maximized?: boolean
+	x?: number;
+	y?: number;
+	width: number;
+	height: number;
+	maximized?: boolean;
 }
 
 export interface Settings {
-  downloadPath: string
-  downloadSpeedLimit: number
-  uploadSpeedLimit: number
-  hideAdultContent: boolean
-  colorScheme: 'light' | 'dark'
-  serverConfig: ServerConfigInfo
-  language?: AppLanguage
-  maxConcurrentDownloads: number
-  existingDownloadAction?: ExistingDownloadAction
-  windowBounds?: WindowBounds
+	downloadPath: string;
+	downloadSpeedLimit: number;
+	uploadSpeedLimit: number;
+	hideAdultContent: boolean;
+	colorScheme: "light" | "dark";
+	serverConfig: ServerConfigInfo;
+	language?: AppLanguage;
+	maxConcurrentDownloads: number;
+	existingDownloadAction?: ExistingDownloadAction;
+	windowBounds?: WindowBounds;
 }
 
 export interface SettingsAPI {
-  getDownloadPath: () => string
-  setDownloadPath: (path: string) => void
-  getDownloadSpeedLimit: () => number
-  setDownloadSpeedLimit: (limit: number) => void
-  getUploadSpeedLimit: () => number
-  setUploadSpeedLimit: (limit: number) => void
-  getColorScheme: () => 'light' | 'dark'
-  setColorScheme: (scheme: 'light' | 'dark') => void
-  getServerConfig: () => ServerConfigInfo
-  setServerConfig: (config: ServerConfigInfo) => void
-  getLanguage: () => AppLanguage
-  setLanguage: (lang: AppLanguage) => void
-  getMaxConcurrentDownloads: () => number
-  setMaxConcurrentDownloads: (n: number) => void
-  getExistingDownloadAction: () => ExistingDownloadAction
-  setExistingDownloadAction: (v: ExistingDownloadAction) => void
+	getDownloadPath: () => string;
+	setDownloadPath: (path: string) => void;
+	getDownloadSpeedLimit: () => number;
+	setDownloadSpeedLimit: (limit: number) => void;
+	getUploadSpeedLimit: () => number;
+	setUploadSpeedLimit: (limit: number) => void;
+	getColorScheme: () => "light" | "dark";
+	setColorScheme: (scheme: "light" | "dark") => void;
+	getServerConfig: () => ServerConfigInfo;
+	setServerConfig: (config: ServerConfigInfo) => void;
+	getLanguage: () => AppLanguage;
+	setLanguage: (lang: AppLanguage) => void;
+	getMaxConcurrentDownloads: () => number;
+	setMaxConcurrentDownloads: (n: number) => void;
+	getExistingDownloadAction: () => ExistingDownloadAction;
+	setExistingDownloadAction: (v: ExistingDownloadAction) => void;
 }
 
 export interface SettingsAPIRenderer
-  extends Modify<
-    SettingsAPI,
-    {
-      getDownloadPath: () => Promise<string>
-      setDownloadPath: (path: string) => Promise<void>
-      getDownloadSpeedLimit: () => Promise<number>
-      setDownloadSpeedLimit: (limit: number) => Promise<void>
-      getUploadSpeedLimit: () => Promise<number>
-      setUploadSpeedLimit: (limit: number) => Promise<void>
-      getColorScheme: () => Promise<'light' | 'dark'>
-      setColorScheme: (scheme: 'light' | 'dark') => Promise<void>
-      getServerConfig: () => Promise<ServerConfigInfo>
-      setServerConfig: (config: ServerConfigInfo) => Promise<void>
-      getLanguage: () => Promise<AppLanguage>
-      setLanguage: (lang: AppLanguage) => Promise<void>
-      getMaxConcurrentDownloads: () => Promise<number>
-      setMaxConcurrentDownloads: (n: number) => Promise<void>
-      getExistingDownloadAction: () => Promise<ExistingDownloadAction>
-      setExistingDownloadAction: (v: ExistingDownloadAction) => Promise<void>
-    }
-  > {}
+	extends Modify<
+		SettingsAPI,
+		{
+			getDownloadPath: () => Promise<string>;
+			setDownloadPath: (path: string) => Promise<void>;
+			getDownloadSpeedLimit: () => Promise<number>;
+			setDownloadSpeedLimit: (limit: number) => Promise<void>;
+			getUploadSpeedLimit: () => Promise<number>;
+			setUploadSpeedLimit: (limit: number) => Promise<void>;
+			getColorScheme: () => Promise<"light" | "dark">;
+			setColorScheme: (scheme: "light" | "dark") => Promise<void>;
+			getServerConfig: () => Promise<ServerConfigInfo>;
+			setServerConfig: (config: ServerConfigInfo) => Promise<void>;
+			getLanguage: () => Promise<AppLanguage>;
+			setLanguage: (lang: AppLanguage) => Promise<void>;
+			getMaxConcurrentDownloads: () => Promise<number>;
+			setMaxConcurrentDownloads: (n: number) => Promise<void>;
+			getExistingDownloadAction: () => Promise<ExistingDownloadAction>;
+			setExistingDownloadAction: (v: ExistingDownloadAction) => Promise<void>;
+		}
+	> {}
 
 // ─── Save Backup (BETA) ───────────────────────────────────────────────────────
 // Experimental save/restore module. See main/services/backup for details.
 
 /** User's assessment of whether a restore actually worked. */
-export type BackupVerification = 'pending' | 'worked' | 'failed' | 'unsure'
+export type BackupVerification = "pending" | "worked" | "failed" | "unsure";
 
 /**
  * A single captured source tree inside a backup. A default backup has exactly
@@ -459,14 +503,14 @@ export type BackupVerification = 'pending' | 'worked' | 'failed' | 'unsure'
  * and/or private internal data pulled via `run-as`.
  */
 export interface BackupRoot {
-  /** Device-side path this tree was captured from. */
-  remotePath: string
-  /** Sub-directory under the backup folder that mirrors this tree. */
-  localDir: string
-  /** How this root is transferred: adb push (external) or run-as (internal). */
-  method: 'push' | 'run-as'
-  fileCount: number
-  totalBytes: number
+	/** Device-side path this tree was captured from. */
+	remotePath: string;
+	/** Sub-directory under the backup folder that mirrors this tree. */
+	localDir: string;
+	/** How this root is transferred: adb push (external) or run-as (internal). */
+	method: "push" | "run-as";
+	fileCount: number;
+	totalBytes: number;
 }
 
 /**
@@ -477,150 +521,162 @@ export interface BackupRoot {
  * in the repo and every client picks it up on the next backup/restore.
  */
 export interface BackupProfile {
-  packageName: string
-  appLabel?: string
-  /**
-   * Device paths to snapshot. Defaults to `['/sdcard/Android/data/<pkg>']` when
-   * omitted. The first entry is treated as the primary root.
-   */
-  paths?: string[]
-  /**
-   * Also attempt to capture private internal data (`/data/data/<pkg>`) via
-   * `run-as`. Best-effort — only works on debuggable app builds. Needed for
-   * games that keep progress in PlayerPrefs / shared_prefs (e.g. many Unity
-   * titles) rather than in external storage.
-   */
-  includeInternalData?: boolean
-  /** Human-readable note about this game's quirks, surfaced in UI and logs. */
-  notes?: string
+	packageName: string;
+	appLabel?: string;
+	/**
+	 * Device paths to snapshot. Defaults to `['/sdcard/Android/data/<pkg>']` when
+	 * omitted. The first entry is treated as the primary root.
+	 */
+	paths?: string[];
+	/**
+	 * Also attempt to capture private internal data (`/data/data/<pkg>`) via
+	 * `run-as`. Best-effort — only works on debuggable app builds. Needed for
+	 * games that keep progress in PlayerPrefs / shared_prefs (e.g. many Unity
+	 * titles) rather than in external storage.
+	 */
+	includeInternalData?: boolean;
+	/** Human-readable note about this game's quirks, surfaced in UI and logs. */
+	notes?: string;
 }
 
 export interface BackupEntry {
-  id: string
-  packageName: string
-  appLabel: string
-  deviceModel: string | null
-  createdAt: number
-  fileCount: number
-  totalBytes: number
-  /** Device-side path the save data was pulled from (primary root). */
-  sourcePath: string
-  verification: BackupVerification
-  verifiedAt?: number
-  /** rentry URL of a filed failure report, if any. */
-  reportUrl?: string
-  /**
-   * Captured source trees. Present on profile-aware backups (and all backups
-   * created after that change). Legacy single-root backups omit it and are
-   * treated as one `push` root rooted at `sourcePath` / `data`.
-   */
-  roots?: BackupRoot[]
-  /** True when a per-package profile was applied when this backup was made. */
-  profileApplied?: boolean
-  /** Note from the applied profile, if any. */
-  profileNotes?: string
+	id: string;
+	packageName: string;
+	appLabel: string;
+	deviceModel: string | null;
+	createdAt: number;
+	fileCount: number;
+	totalBytes: number;
+	/** Device-side path the save data was pulled from (primary root). */
+	sourcePath: string;
+	verification: BackupVerification;
+	verifiedAt?: number;
+	/** rentry URL of a filed failure report, if any. */
+	reportUrl?: string;
+	/**
+	 * Captured source trees. Present on profile-aware backups (and all backups
+	 * created after that change). Legacy single-root backups omit it and are
+	 * treated as one `push` root rooted at `sourcePath` / `data`.
+	 */
+	roots?: BackupRoot[];
+	/** True when a per-package profile was applied when this backup was made. */
+	profileApplied?: boolean;
+	/** Note from the applied profile, if any. */
+	profileNotes?: string;
 }
 
 export interface BackupResult {
-  ok: boolean
-  error?: string
+	ok: boolean;
+	error?: string;
 }
 
 export interface BackupCreateResult extends BackupResult {
-  backup?: BackupEntry
+	backup?: BackupEntry;
 }
 
 export interface BackupReportResult {
-  issueUrl: string
-  rentryUrl: string | null
+	issueUrl: string;
+	rentryUrl: string | null;
 }
 
 export interface BackupAPI {
-  listBackups: () => Promise<BackupEntry[]>
-  createBackup: (
-    deviceId: string,
-    packageName: string,
-    appLabel: string
-  ) => Promise<BackupCreateResult>
-  restoreBackup: (backupId: string, deviceId: string) => Promise<BackupResult>
-  deleteBackup: (backupId: string) => Promise<boolean>
-  setVerification: (
-    backupId: string,
-    result: BackupVerification
-  ) => Promise<BackupEntry | null>
-  reportFailure: (backupId: string) => Promise<BackupReportResult | null>
-  /**
-   * Look up the (remote, cached) save-backup profile for a package, or null if
-   * the game uses the default method. Lets the UI show when a custom method
-   * will be used before the user commits to a backup/restore.
-   */
-  getProfile: (packageName: string) => Promise<BackupProfile | null>
+	listBackups: () => Promise<BackupEntry[]>;
+	createBackup: (
+		deviceId: string,
+		packageName: string,
+		appLabel: string,
+	) => Promise<BackupCreateResult>;
+	restoreBackup: (backupId: string, deviceId: string) => Promise<BackupResult>;
+	deleteBackup: (backupId: string) => Promise<boolean>;
+	setVerification: (
+		backupId: string,
+		result: BackupVerification,
+	) => Promise<BackupEntry | null>;
+	reportFailure: (backupId: string) => Promise<BackupReportResult | null>;
+	/**
+	 * Look up the (remote, cached) save-backup profile for a package, or null if
+	 * the game uses the default method. Lets the UI show when a custom method
+	 * will be used before the user commits to a backup/restore.
+	 */
+	getProfile: (packageName: string) => Promise<BackupProfile | null>;
 }
 
 export interface BackupAPIRenderer extends BackupAPI {}
 
 // Logs API
 export interface LogsAPI {
-  uploadCurrentLog: () => Promise<{ url: string; password: string; slug: string } | null>
-  openLogFolder: () => Promise<void>
-  openLogFile: () => Promise<void>
+	uploadCurrentLog: () => Promise<{
+		url: string;
+		password: string;
+		slug: string;
+	} | null>;
+	openLogFolder: () => Promise<void>;
+	openLogFile: () => Promise<void>;
 }
 
 export interface LogsAPIRenderer extends LogsAPI {}
 
-export type ServiceStatus = 'NOT_INITIALIZED' | 'INITIALIZING' | 'INITIALIZED' | 'ERROR'
+export type ServiceStatus =
+	| "NOT_INITIALIZED"
+	| "INITIALIZING"
+	| "INITIALIZED"
+	| "ERROR";
 
 // Mirror types - all mirrors use rclone
 export interface MirrorConfig {
-  id: string
-  name: string
-  type: string // rclone type (ftp, http, webdav, etc.)
-  host: string
-  port?: number
-  user?: string
-  pass?: string
-  path?: string
-  md5sum_command?: string
-  sha1sum_command?: string
-  // Additional rclone config options can be stored as key-value pairs
-  [key: string]: unknown
+	id: string;
+	name: string;
+	type: string; // rclone type (ftp, http, webdav, etc.)
+	host: string;
+	port?: number;
+	user?: string;
+	pass?: string;
+	path?: string;
+	md5sum_command?: string;
+	sha1sum_command?: string;
+	// Additional rclone config options can be stored as key-value pairs
+	[key: string]: unknown;
 }
 
 export interface Mirror {
-  id: string
-  name: string
-  config: MirrorConfig
-  isActive: boolean
-  lastTested?: Date
-  testStatus: 'untested' | 'testing' | 'success' | 'failed'
-  testError?: string
-  addedDate: Date
+	id: string;
+	name: string;
+	config: MirrorConfig;
+	isActive: boolean;
+	lastTested?: Date;
+	testStatus: "untested" | "testing" | "success" | "failed";
+	testError?: string;
+	addedDate: Date;
 }
 
 export interface MirrorTestResult {
-  id: string
-  success: boolean
-  responseTime?: number
-  error?: string
-  timestamp: Date
+	id: string;
+	success: boolean;
+	responseTime?: number;
+	error?: string;
+	timestamp: Date;
 }
 
 // Mirror API
 export interface MirrorAPI {
-  getMirrors: () => Promise<Mirror[]>
-  addMirror: (configFile: string) => Promise<boolean>
-  removeMirror: (id: string) => Promise<boolean>
-  setActiveMirror: (id: string) => Promise<boolean>
-  clearActiveMirror: () => Promise<boolean>
-  testMirror: (id: string) => Promise<MirrorTestResult>
-  testAllMirrors: () => Promise<MirrorTestResult[]>
-  getActiveMirror: () => Promise<Mirror | null>
+	getMirrors: () => Promise<Mirror[]>;
+	addMirror: (configFile: string) => Promise<boolean>;
+	removeMirror: (id: string) => Promise<boolean>;
+	setActiveMirror: (id: string) => Promise<boolean>;
+	clearActiveMirror: () => Promise<boolean>;
+	testMirror: (id: string) => Promise<MirrorTestResult>;
+	testAllMirrors: () => Promise<MirrorTestResult[]>;
+	getActiveMirror: () => Promise<Mirror | null>;
 }
 
 export interface MirrorAPIRenderer extends MirrorAPI {
-  onMirrorTestProgress: (
-    callback: (id: string, status: 'testing' | 'success' | 'failed', error?: string) => void
-  ) => () => void
-  onMirrorsUpdated: (callback: (mirrors: Mirror[]) => void) => () => void
-  importFromFile: () => Promise<string | null>
+	onMirrorTestProgress: (
+		callback: (
+			id: string,
+			status: "testing" | "success" | "failed",
+			error?: string,
+		) => void,
+	) => () => void;
+	onMirrorsUpdated: (callback: (mirrors: Mirror[]) => void) => () => void;
+	importFromFile: () => Promise<string | null>;
 }
