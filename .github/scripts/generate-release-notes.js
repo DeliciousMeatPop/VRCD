@@ -32,7 +32,7 @@ ${changelog}
  ---
 
 <details>
-<summary>## // HEADLINE FEATURES (Click to Expand - ITS A SPOILER!</summary>
+<summary>## // HEADLINE FEATURES (Click to Expand - ITS A SPOILER!)</summary>
 
 ### \`[ LIBRARY ]\` — optional, when you add a server
 - Sideloader-first: works first launch with zero config; add your own server (a server config or an rclone config) under **Manage Remotes** for a browsable library
