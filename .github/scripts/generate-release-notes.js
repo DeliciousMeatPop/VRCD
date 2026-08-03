@@ -139,6 +139,8 @@ GNU Affero GPL v3
 
 ---
 
+[Need help adding a server? Tutorial Video by CrazyScamp here](https://streamable.com/v0ljxx)
+
 \`> v${v} — END_OF_FILE\``
 
 process.stdout.write(notes)
