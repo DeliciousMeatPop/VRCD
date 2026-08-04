@@ -452,6 +452,26 @@ function parseStorageGB(s: string | null | undefined): number {
   return /T/i.test(m[2]) ? parseFloat(m[1]) * 1024 : parseFloat(m[1])
 }
 
+const CARD_COLS_MIN = 3
+const CARD_COLS_MAX = 12
+
+/**
+ * Map the 0..100 card size preference to cards per row (12 at 0, 3 at 100).
+ * The grid consumes this as --card-cols; see .games-card-grid for why the
+ * slider drives a column count instead of a card min-width.
+ *
+ * The floor is 3 rather than 2 because the grid's tracks are `1fr`, so cards
+ * always stretch to fill the row: on a 2560px window two columns would render
+ * ~1140px-wide cards with square thumbnails to match. Capping the track's min
+ * width cannot prevent that (`1fr` still stretches) and only costs slider
+ * travel, so the column floor is the lever that actually works.
+ */
+function cardColumns(cardSize: number): number {
+  const size = Math.min(100, Math.max(0, cardSize))
+  const span = CARD_COLS_MAX - CARD_COLS_MIN
+  return CARD_COLS_MAX - Math.round((size / 100) * span)
+}
+
 const COLOR_SWATCHES = [
   { label: 'None',    value: 'transparent' },
   { label: 'Cyan',    value: 'rgba(0, 212, 255, 0.07)' },
@@ -2387,7 +2407,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 {prefs.viewMode === 'cards' ? (
                   <div
                     className="games-card-grid"
-                    style={{ '--card-min-w': `${140 + Math.round(prefs.cardSize * 0.7)}px` } as React.CSSProperties}
+                    style={{ '--card-cols': String(cardColumns(prefs.cardSize)) } as React.CSSProperties}
                   >
                     {rows.map((row) => {
                       const game = row.original
