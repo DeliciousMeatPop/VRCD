@@ -81,6 +81,20 @@ const PRESETS: PresetCategory[] = [
     ]
   },
   {
+    name: 'MAINTENANCE',
+    items: [
+      {
+        label: 'SCAN STALE OBBs',
+        // Read-only scan of /sdcard/Android/obb: flags apps with more than one
+        // main.*.obb or patch.*.obb — the fingerprint of leftover versioned
+        // OBBs (e.g. Bonelab) that bloat an app's OBB folder. Deletes nothing.
+        command:
+          'r=/sdcard/Android/obb; n=0; for d in "$r"/*/; do [ -d "$d" ] || continue; p=${d%/}; p=${p##*/}; m=0; t=0; for f in "$d"main.*.obb; do [ -f "$f" ] && m=$((m+1)); done; for f in "$d"patch.*.obb; do [ -f "$f" ] && t=$((t+1)); done; if [ "$m" -gt 1 ] || [ "$t" -gt 1 ]; then n=$((n+1)); echo "AFFECTED: $p (main=$m patch=$t)"; for f in "$d"*.obb; do [ -f "$f" ] || continue; echo "   $(du -h "$f" 2>/dev/null | cut -f1)  ${f##*/}"; done; echo "   total: $(du -sh "$d" 2>/dev/null | cut -f1)"; fi; done; [ "$n" = 0 ] && echo "No apps with stale/duplicate OBBs found." || echo "$n app(s) affected - reinstall in VRCD or delete the older .obb files."',
+        desc: 'List apps with leftover old versioned OBBs (read-only, deletes nothing)'
+      }
+    ]
+  },
+  {
     name: 'WIRELESS',
     items: [
       { label: 'TCPIP 5555', command: 'adb tcpip 5555', desc: 'Switch local adbd to TCP mode on port 5555' },
