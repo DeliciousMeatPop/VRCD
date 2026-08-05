@@ -10,6 +10,10 @@ import settingsService from '../settingsService'
 import { DownloadItem } from '@shared/types'
 import { DownloadStatus } from '@shared/types'
 import { getAvailableDiskSpace, parseSizeToBytes, formatBytes } from './utils'
+import {
+  isCompletedDownloadFile,
+  validateDownloadCompletion
+} from './archiveDiscovery'
 
 // Type for VRP config - adjust if needed elsewhere
 interface VrpConfig {
@@ -209,7 +213,9 @@ export class DownloadProcessor {
   }
 
   // rclone copy based download (no macFUSE required)
-  // Supports pause/resume via --partial-suffix and file-level skip
+  // Supports pause/retry via --partial-suffix and file-level skip. The HTTP
+  // backend cannot resume a partial file across invocations, but it does retain
+  // finalized volumes so rclone can skip those on the next attempt.
   public async startRcloneCopyDownload(
     item: DownloadItem,
     mirrorConfig?: { configFilePath: string; remoteName: string },
@@ -267,7 +273,7 @@ export class DownloadProcessor {
         try {
           const existingFiles = await this.getFilesRecursively(downloadPath)
           for (const f of existingFiles) {
-            if (!f.relativePath.endsWith('.partial')) {
+            if (isCompletedDownloadFile(f.relativePath, !mirrorConfig)) {
               baselineBytes += f.size
             }
           }
@@ -533,54 +539,21 @@ export class DownloadProcessor {
         return { success: false, startExtraction: false, finalState: finalItem }
       }
 
-      // rclone exited 0, but that alone does not guarantee it finalized its
-      // downloads. With --partial-suffix, in-progress files are written as
-      // `<name>.<rand>.partial` and only renamed to their final names once each
-      // transfer completes. If a rename never happened (e.g. the destination
-      // file was momentarily locked by antivirus on Windows, or rclone reported
-      // success without finalizing), the folder is left containing only
-      // `.partial` files. We must NOT treat that as a successful download:
-      // deleting those partials would destroy the only copy of the data and the
-      // extraction step would then fail with a misleading ".7z.001 not found" /
-      // "could not be unpacked" error. Instead, verify real (non-.partial)
-      // files exist first, and only then clean up any leftover partials.
-      let realFileCount = 0
-      let partialFileCount = 0
+      // rclone exit 0 only means it copied everything exposed by the source.
+      // It does not prove that the source filenames were finalized, that every
+      // split volume exists, or that rclone completed its final renames. Apply
+      // the same fail-closed archive rules used by extraction before advancing
+      // the queue. Leftover partial data is deliberately kept until Retry.
+      let downloadedFiles: Array<{ relativePath: string; size: number }>
       try {
-        const files = await this.getFilesRecursively(downloadPath)
-        for (const file of files) {
-          if (file.relativePath.endsWith('.partial')) {
-            partialFileCount++
-          } else {
-            realFileCount++
-          }
-        }
+        downloadedFiles = await this.getFilesRecursively(downloadPath)
       } catch (listErr) {
-        console.warn(
+        const message = 'Download finished, but its files could not be inspected safely.'
+        console.error(
           `[DownProc] Could not list download folder for ${item.releaseName} after rclone exit:`,
           String(listErr)
         )
-      }
-
-      if (realFileCount === 0) {
-        // rclone exited successfully but produced no finalized files. Keep any
-        // .partial files in place so the next attempt can resume, and report a
-        // failed (not "extraction") error so the user isn't sent chasing disk
-        // space that isn't the problem.
-        const message =
-          partialFileCount > 0
-            ? 'Download did not finalize: rclone exited but left only partial files (the archive parts were never renamed to their final names). This is often caused by antivirus locking the download folder, or by a server/network hiccup. Retry - the leftover partial files are kept so it can resume.'
-            : 'Download did not finalize: no files were produced. Retry - this is usually a transient server or network hiccup.'
-        console.error(
-          `[DownProc] rclone exited successfully for ${item.releaseName} but no finalized files were found ` +
-            `(real=${realFileCount}, partial=${partialFileCount}). Treating as failed download.`
-        )
-        this.updateItemStatus(
-          item.releaseName,
-          'Error',
-          finalItem.progress ?? 0,
-          message
-        )
+        this.updateItemStatus(item.releaseName, 'Error', finalItem.progress ?? 0, message)
         return {
           success: false,
           startExtraction: false,
@@ -588,9 +561,22 @@ export class DownloadProcessor {
         }
       }
 
-      // Real files exist — safe to clean up any leftover .partial stragglers.
-      if (partialFileCount > 0) {
-        await this.cleanupPartialFiles(downloadPath)
+      const completion = validateDownloadCompletion(downloadedFiles, !mirrorConfig)
+      if (!completion.ok) {
+        console.error(
+          `[DownProc] Download completion validation failed for ${item.releaseName}: ${completion.error}`
+        )
+        this.updateItemStatus(
+          item.releaseName,
+          'Error',
+          finalItem.progress ?? 0,
+          completion.error
+        )
+        return {
+          success: false,
+          startExtraction: false,
+          finalState: this.queueManager.findItem(item.releaseName)
+        }
       }
 
       console.log(`[DownProc] rclone copy download completed successfully for ${item.releaseName}`)
