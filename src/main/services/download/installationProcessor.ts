@@ -418,6 +418,24 @@ export class InstallationProcessor {
             )
           }
 
+          // Clear any existing OBB directory for this package before pushing the
+          // new files. OBB filenames can include a version number (e.g. Bonelab's
+          // main.<versionCode>.com.StressLevelZero.BONELAB.obb), so pushing an
+          // update creates a new filename alongside the old one instead of
+          // overwriting it. Without this cleanup the device accumulates stale
+          // OBBs from previous versions and bloats the app's OBB folder.
+          console.log(
+            `[InstallProc Standard] Clearing existing OBB directory ${deviceObbTargetPath} before push...`
+          )
+          try {
+            await this.adbService.runShellCommand(deviceId, `rm -rf "${deviceObbTargetPath}"`)
+          } catch (clearError) {
+            console.warn(
+              `[InstallProc Standard] Could not clear existing OBB directory (may not exist):`,
+              clearError
+            )
+          }
+
           // Calculate total size of OBB files and track progress
           const filesInfo = await this.getDirectoryFilesInfo(obbPath)
           if (filesInfo.length === 0) {
