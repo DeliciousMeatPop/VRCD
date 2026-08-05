@@ -21,6 +21,8 @@ import {
   ArrowUpRegular,
   InfoRegular,
   CheckmarkCircleRegular,
+  StarFilled,
+  StarRegular,
   BroomRegular as UninstallIcon
 } from '@fluentui/react-icons'
 import placeholderImage from '../assets/images/game-placeholder.png'
@@ -30,6 +32,7 @@ import { getSideloadingDisabled } from '@renderer/hooks/useExtrasSettings'
 import ErrorDetailDialog, { ErrorPhase } from './ErrorDetailDialog'
 import NoteRenderer from './NoteRenderer'
 import GameSaveBackupControls from './backup/GameSaveBackupControls'
+import { useLanguage } from '@renderer/hooks/useLanguage'
 
 const NEON = 'var(--vrcd-neon)'
 const PURPLE = 'var(--vrcd-purple)'
@@ -66,6 +69,8 @@ interface GameDetailsDialogProps {
   getNote: (releaseName: string) => Promise<string | null>
   isConnected: boolean
   isBusy: boolean
+  isStarred: boolean
+  onToggleStarred: () => void
 }
 
 const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
@@ -73,10 +78,11 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   onInstall, onUninstall, onReinstall, onUpdate,
   onRetry, onCancelDownload, onDeleteDownloaded,
   onInstallFromCompleted, onUninstallAndUpdate, onDismissUpdateError,
-  getNote, isConnected, isBusy
+  getNote, isConnected, isBusy, isStarred, onToggleStarred
 }) => {
   const { getTrailerUrl } = useGames()
   const { selectedDevice } = useAdb()
+  const { t } = useLanguage()
   const [currentGameNote, setCurrentGameNote] = useState<string | null>(null)
   const [loadingNote, setLoadingNote] = useState(false)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
@@ -343,7 +349,19 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
             {/* Game meta */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: NEON, fontFamily: 'monospace', letterSpacing: '0.04em', lineHeight: 1.2 }}>{game.name}</div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1, fontSize: 18, fontWeight: 700, color: NEON, fontFamily: 'monospace', letterSpacing: '0.04em', lineHeight: 1.2 }}>{game.name}</div>
+                <Button
+                  appearance="subtle"
+                  size="small"
+                  icon={isStarred ? <StarFilled /> : <StarRegular />}
+                  aria-label={isStarred ? t('unstarGame') : t('starGame')}
+                  title={isStarred ? t('unstarGame') : t('starGame')}
+                  disabled={!game.packageName}
+                  onClick={onToggleStarred}
+                  style={{ minWidth: 28, padding: 2, color: isStarred ? NEON : 'rgba(var(--vrcd-neon-raw),0.55)' }}
+                />
+              </div>
               <div style={{ fontSize: 11, color: `${PURPLE}cc`, fontFamily: 'monospace' }}>{game.packageName}</div>
 
               {/* Status badge */}

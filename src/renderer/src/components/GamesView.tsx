@@ -64,6 +64,8 @@ import {
   SettingsRegular,
   ArrowSyncRegular,
   DismissRegular,
+  StarFilled,
+  StarRegular,
   CloudRegular as CloudIcon,
   ServerRegular as ServerIcon
 } from '@fluentui/react-icons'
@@ -76,9 +78,11 @@ import { AdbShellDialog } from './AdbShellDialog'
 import { useTablePreferences } from '@renderer/hooks/useTablePreferences'
 import { useSettings } from '../hooks/useSettings'
 import { useMirrors } from '../hooks/useMirrors'
+import { useStarredGames } from '../hooks/useStarredGames'
 
 // Column width constants
 const COLUMN_WIDTHS = {
+  STARRED: 44,
   STATUS: 60,
   THUMBNAIL: 90,
   VERSION: 180,
@@ -90,6 +94,7 @@ const COLUMN_WIDTHS = {
 
 // Calculate fixed columns total width
 const FIXED_COLUMNS_WIDTH =
+  COLUMN_WIDTHS.STARRED +
   COLUMN_WIDTHS.STATUS +
   COLUMN_WIDTHS.THUMBNAIL +
   COLUMN_WIDTHS.VERSION +
@@ -97,7 +102,7 @@ const FIXED_COLUMNS_WIDTH =
   COLUMN_WIDTHS.SIZE +
   COLUMN_WIDTHS.LAST_UPDATED
 
-type FilterType = 'all' | 'installed' | 'update'
+type FilterType = 'all' | 'installed' | 'update' | 'starred'
 
 // Parse "1.2 GB" / "500 MB" / "100 KB" to bytes for numeric sort
 const parseSizeBytes = (s: string): number => {
@@ -447,6 +452,26 @@ function parseStorageGB(s: string | null | undefined): number {
   return /T/i.test(m[2]) ? parseFloat(m[1]) * 1024 : parseFloat(m[1])
 }
 
+const CARD_COLS_MIN = 3
+const CARD_COLS_MAX = 12
+
+/**
+ * Map the 0..100 card size preference to cards per row (12 at 0, 3 at 100).
+ * The grid consumes this as --card-cols; see .games-card-grid for why the
+ * slider drives a column count instead of a card min-width.
+ *
+ * The floor is 3 rather than 2 because the grid's tracks are `1fr`, so cards
+ * always stretch to fill the row: on a 2560px window two columns would render
+ * ~1140px-wide cards with square thumbnails to match. Capping the track's min
+ * width cannot prevent that (`1fr` still stretches) and only costs slider
+ * travel, so the column floor is the lever that actually works.
+ */
+function cardColumns(cardSize: number): number {
+  const size = Math.min(100, Math.max(0, cardSize))
+  const span = CARD_COLS_MAX - CARD_COLS_MIN
+  return CARD_COLS_MAX - Math.round((size / 100) * span)
+}
+
 const COLOR_SWATCHES = [
   { label: 'None',    value: 'transparent' },
   { label: 'Cyan',    value: 'rgba(0, 212, 255, 0.07)' },
@@ -521,6 +546,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { prefs, setPrefs } = useTablePreferences()
+  const { starredPackages, isStarred, toggleStarred } = useStarredGames()
   const [globalFilter, setGlobalFilter] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -556,12 +582,33 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
 
+  const baseVisibleGames = useMemo(() => {
+    let hideAdult = true
+    try { hideAdult = localStorage.getItem('vrcyberdeck:hideAdult') !== 'false' } catch { /* ignore */ }
+    return games.filter((game) => {
+      const size = String(game.size ?? '').trim()
+      if (size === '0 MB' || size === '') return false
+      if (hideAdult && String(game.name ?? '').includes('18+')) return false
+      return true
+    })
+  }, [games])
+
   const counts = useMemo(() => {
     const total = games.length
     const installed = games.filter((g) => g.isInstalled).length
     const updates = games.filter((g) => g.hasUpdate).length
-    return { total, installed, updates }
-  }, [games])
+    const starred = baseVisibleGames.filter((g) =>
+      starredPackages.has(String(g.packageName ?? '').trim())
+    ).length
+    return { total, installed, updates, starred }
+  }, [baseVisibleGames, games, starredPackages])
+
+  const filteredGames = useMemo(
+    () => activeFilter === 'starred'
+      ? baseVisibleGames.filter((game) => isStarred(game.packageName ?? ''))
+      : baseVisibleGames,
+    [activeFilter, baseVisibleGames, isStarred]
+  )
 
   const activeTransferCount = useMemo(
     () =>
@@ -602,6 +649,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             { id: 'hasUpdate', value: true }
           ]
         case 'all':
+        case 'starred':
         default:
           return otherFilters
       }
@@ -690,6 +738,38 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     )
 
     return [
+      {
+        id: 'starred',
+        header: '',
+        size: COLUMN_WIDTHS.STARRED,
+        enableResizing: false,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const packageName = row.original.packageName ?? ''
+          const starred = isStarred(packageName)
+          const label = starred ? t('unstarGame') : t('starGame')
+          return (
+            <Button
+              className={mergeClasses('game-row-star', starred && 'is-starred')}
+              appearance="subtle"
+              size="small"
+              icon={starred ? <StarFilled /> : <StarRegular />}
+              aria-label={label}
+              title={label}
+              disabled={!packageName}
+              onClick={(event) => {
+                event.stopPropagation()
+                toggleStarred(packageName)
+              }}
+              style={{
+                minWidth: 28,
+                padding: 2,
+                color: starred ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.55)'
+              }}
+            />
+          )
+        }
+      },
       {
         id: 'downloadStatus',
         header: '',
@@ -938,18 +1018,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       }
     ]
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [styles, tableWidth, t])
-
-  const filteredGames = useMemo(() => {
-    let hideAdult = true
-    try { hideAdult = localStorage.getItem('vrcyberdeck:hideAdult') !== 'false' } catch { /* ignore */ }
-    return games.filter((game) => {
-      const size = String(game.size ?? '').trim()
-      if (size === '0 MB' || size === '') return false
-      if (hideAdult && String(game.name ?? '').includes('18+')) return false
-      return true
-    })
-  }, [games])
+  }, [isStarred, styles, tableWidth, t, toggleStarred])
 
   const table = useReactTable({
     data: filteredGames,
@@ -2134,6 +2203,9 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               <button onClick={() => setActiveFilter('update')} className={activeFilter === 'update' ? 'active' : ''} disabled={counts.updates === 0}>
                 {t('filterUpdates')} ({counts.updates})
               </button>
+              <button onClick={() => setActiveFilter('starred')} className={activeFilter === 'starred' ? 'active' : ''}>
+                {t('filterStarred')} ({counts.starred})
+              </button>
             </div>
             <span className="game-count">{table.getFilteredRowModel().rows.length} {t('displayed')}</span>
             <Button
@@ -2322,12 +2394,20 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   {isBusy ? t('working') : t('refreshGames')}
                 </Button>
               </div>
+            ) : activeFilter === 'starred' && counts.starred === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', flex: 1, padding: '40px 20px', textAlign: 'center' }}>
+                <StarRegular fontSize={56} color="rgba(var(--vrcd-neon-raw),0.45)" />
+                <Text size={500} weight="semibold">{t('noStarredGames')}</Text>
+                <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
+                  {t('noStarredGamesHint')}
+                </Text>
+              </div>
             ) : (
               <>
                 {prefs.viewMode === 'cards' ? (
                   <div
                     className="games-card-grid"
-                    style={{ '--card-min-w': `${140 + Math.round(prefs.cardSize * 1.4)}px` } as React.CSSProperties}
+                    style={{ '--card-cols': String(cardColumns(prefs.cardSize)) } as React.CSSProperties}
                   >
                     {rows.map((row) => {
                       const game = row.original
@@ -2340,6 +2420,19 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                         >
                           <div className="game-card-thumbnail-wrap">
                             <img src={game.thumbnailPath ? `file://${game.thumbnailPath}` : placeholderImage} alt={game.name} />
+                            <Button
+                              className={mergeClasses('game-card-star', isStarred(game.packageName ?? '') && 'is-starred')}
+                              appearance="subtle"
+                              size="small"
+                              icon={isStarred(game.packageName ?? '') ? <StarFilled /> : <StarRegular />}
+                              aria-label={isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')}
+                              title={isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')}
+                              disabled={!game.packageName}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                toggleStarred(game.packageName ?? '')
+                              }}
+                            />
                             {game.isInstalled ? (
                               <span className={`game-card-badge ${game.hasUpdate ? 'update' : 'installed'}`}>
                                 {game.hasUpdate ? 'Update' : 'Installed'}
@@ -2487,6 +2580,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           getNote={getNote}
           isConnected={isConnected}
           isBusy={isBusy}
+          isStarred={isStarred(dialogGame.packageName ?? '')}
+          onToggleStarred={() => toggleStarred(dialogGame.packageName ?? '')}
         />
       )}
 

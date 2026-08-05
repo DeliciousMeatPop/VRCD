@@ -32,7 +32,7 @@ ${changelog}
  ---
 
 <details>
-<summary>## // HEADLINE FEATURES (Click to Expand - ITS A SPOILER!</summary>
+<summary>## // HEADLINE FEATURES (Click to Expand - ITS A SPOILER!)</summary>
 
 ### \`[ LIBRARY ]\` — optional, when you add a server
 - Sideloader-first: works first launch with zero config; add your own server (a server config or an rclone config) under **Manage Remotes** for a browsable library
@@ -138,6 +138,8 @@ And to everyone who tested the 0.x builds and reported issues — y'all shaped t
 GNU Affero GPL v3
 
 ---
+
+[Need help adding a server? Tutorial Video by CrazyScamp here](https://streamable.com/v0ljxx)
 
 \`> v${v} — END_OF_FILE\``
 
