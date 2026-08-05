@@ -46,6 +46,7 @@ import { useLanguage } from '@renderer/hooks/useLanguage'
 import CreditsDialog from './CreditsDialog'
 import HackerConsole from './HackerConsole'
 import TransferStrip from './TransferStrip'
+import DownloadStorageWarning from './DownloadStorageWarning'
 import { ErrorBoundary } from './ErrorBoundary'
 import { playSound } from '../hooks/useSoundEffects'
 import '../assets/credits-dialog.css'
@@ -573,7 +574,7 @@ const AppLayout: React.FC = () => {
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false)
   const mountNodeRef = useRef<HTMLDivElement>(null)
   const styles = useStyles()
-  const { queue: downloadQueue } = useDownload()
+  const { queue: downloadQueue, storageStatus } = useDownload()
   const { queue: uploadQueue } = useUpload()
   const { t } = useLanguage()
 
@@ -603,13 +604,14 @@ const AppLayout: React.FC = () => {
 
   const hasActiveTransfers = useMemo(() => {
     const activeDownload = downloadQueue.some((i) =>
-      ['Queued', 'Downloading', 'Extracting', 'Installing'].includes(i.status)
+      ['Downloading', 'Extracting', 'Installing'].includes(i.status) ||
+      (i.status === 'Queued' && storageStatus.state === 'available')
     )
     const activeUpload = uploadQueue.some((i) =>
       ['Queued', 'Preparing', 'Uploading'].includes(i.status)
     )
     return activeDownload || activeUpload
-  }, [downloadQueue, uploadQueue])
+  }, [downloadQueue, storageStatus.state, uploadQueue])
 
   // Keep a ref so the close-requested listener always sees the latest value
   // without needing to resubscribe (which would race with main-process events).
@@ -806,6 +808,8 @@ const AppLayout: React.FC = () => {
               <div className={styles.transferStrip}>
                 <TransferStrip />
               </div>
+
+              <DownloadStorageWarning onOpenSettings={() => setIsSettingsOpen(true)} />
 
               <div className={styles.mainContent} id="mainContent">
                 <MainContent
