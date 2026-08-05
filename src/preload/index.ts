@@ -5,6 +5,7 @@ import {
   DeviceInfo,
   DependencyStatus,
   DownloadItem,
+  DownloadStorageStatus,
   DownloadProgress,
   AdbAPIRenderer,
   GameAPIRenderer,
@@ -143,6 +144,10 @@ const api = {
   // Download Queue APIs
   downloads: {
     getQueue: (): Promise<DownloadItem[]> => typedIpcRenderer.invoke('download:get-queue'),
+    getStorageStatus: (): Promise<DownloadStorageStatus> =>
+      typedIpcRenderer.invoke('download:get-storage-status'),
+    retryStorage: (): Promise<DownloadStorageStatus> =>
+      typedIpcRenderer.invoke('download:retry-storage'),
     addToQueue: (game) => typedIpcRenderer.invoke('download:add', game),
     addToQueueResolveExisting: (game, action) =>
       typedIpcRenderer.invoke('download:add-resolve-existing', game, action),
@@ -174,6 +179,11 @@ const api = {
       const listener = (_: IpcRendererEvent, queue: DownloadItem[]): void => callback(queue)
       typedIpcRenderer.on('download:queue-updated', listener)
       return () => typedIpcRenderer.removeListener('download:queue-updated', listener)
+    },
+    onStorageStatusChanged: (callback: (status: DownloadStorageStatus) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, status: DownloadStorageStatus): void => callback(status)
+      typedIpcRenderer.on('download:storage-status-changed', listener)
+      return () => typedIpcRenderer.removeListener('download:storage-status-changed', listener)
     },
     setDownloadPath: (path: string): void =>
       typedIpcRenderer.send('download:set-download-path', path),

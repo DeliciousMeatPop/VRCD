@@ -18,6 +18,7 @@ import {
   AppLanguage,
   ExistingDownloadAction,
   AddToQueueResult,
+  DownloadStorageStatus,
   BackupEntry,
   BackupResult,
   BackupCreateResult,
@@ -79,6 +80,8 @@ export interface IPCChannels {
 
   // Download related channels
   'download:get-queue': DefineChannel<[], DownloadItem[]>
+  'download:get-storage-status': DefineChannel<[], DownloadStorageStatus>
+  'download:retry-storage': DefineChannel<[], DownloadStorageStatus>
   'download:add': DefineChannel<[game: GameInfo], AddToQueueResult>
   'download:add-resolve-existing': DefineChannel<
     [game: GameInfo, action: 'reinstall' | 'redownload'],
@@ -225,6 +228,7 @@ export interface IPCEvents {
   'games:background-sync-complete': [games: GameInfo[]]
   'games:background-sync-error': [error: string]
   'download:queue-updated': [queue: DownloadItem[]]
+  'download:storage-status-changed': [status: DownloadStorageStatus]
   'upload:progress': [progress: UploadPreparationProgress]
   'upload:queue-updated': [queue: UploadItem[]]
   'settings:download-speed-limit-changed': [limit: number]

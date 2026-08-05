@@ -1,10 +1,12 @@
 import { createContext } from 'react'
-import { DownloadItem, GameInfo } from '@shared/types'
+import { DownloadItem, DownloadStorageStatus, GameInfo } from '@shared/types'
 
 export interface DownloadContextType {
   queue: DownloadItem[]
   isLoading: boolean
   error: string | null
+  storageStatus: DownloadStorageStatus
+  retryStorage: () => Promise<DownloadStorageStatus>
   addToQueue: (game: GameInfo) => Promise<boolean>
   removeFromQueue: (releaseName: string) => Promise<void>
   removeFromQueueOnly: (releaseName: string) => Promise<void>
