@@ -174,6 +174,13 @@ export interface DownloadProgress {
   progress: number
 }
 
+export interface DownloadStorageStatus {
+  path: string
+  state: 'checking' | 'available' | 'unavailable'
+  error: string | null
+  code: string | null
+}
+
 // Update types
 export interface CommitInfo {
   sha: string
@@ -298,9 +305,13 @@ export type AddToQueueResult =
    * must show a prompt and follow up with addToQueueResolveExisting.
    */
   | 'needs-prompt'
+  /** The configured download location is currently unavailable. */
+  | 'storage-unavailable'
 
 export interface DownloadAPI {
   getQueue: () => Promise<DownloadItem[]>
+  getStorageStatus: () => Promise<DownloadStorageStatus>
+  retryStorage: () => Promise<DownloadStorageStatus>
   addToQueue: (game: GameInfo) => Promise<AddToQueueResult>
   addToQueueResolveExisting: (
     game: GameInfo,
@@ -322,6 +333,7 @@ export interface DownloadAPI {
 
 export interface DownloadAPIRenderer extends DownloadAPI {
   onQueueUpdated: (callback: (queue: DownloadItem[]) => void) => () => void
+  onStorageStatusChanged: (callback: (status: DownloadStorageStatus) => void) => () => void
   installFromCompleted: (releaseName: string, deviceId: string) => Promise<void>
   installManualFile: (filePath: string, deviceId: string) => Promise<boolean>
   copyObbFolder: (folderPath: string, deviceId: string) => Promise<boolean>

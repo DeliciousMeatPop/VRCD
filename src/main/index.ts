@@ -529,6 +529,8 @@ app.whenReady().then(async () => {
 
   // --- Download Handlers ---
   typedIpcMain.handle('download:get-queue', () => downloadService.getQueue())
+  typedIpcMain.handle('download:get-storage-status', () => downloadService.getStorageStatus())
+  typedIpcMain.handle('download:retry-storage', () => downloadService.retryStorage())
   typedIpcMain.handle('download:add', (_event, game) => downloadService.addToQueue(game))
   typedIpcMain.handle('download:add-resolve-existing', (_event, game, action) =>
     downloadService.addToQueueResolveExisting(game, action)
