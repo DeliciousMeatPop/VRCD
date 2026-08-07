@@ -8,6 +8,12 @@
       "paths": ["/sdcard/Android/data/com.fyian.TheThrillOfTheFight"],
       "includeInternalData": true,
       "notes": "Career progression is stored in PlayerPrefs (private internal shared_prefs), not external storage. The external Android/data tree is mostly cache. Internal capture is best-effort and only succeeds on debuggable builds; retail builds need root for a full restore."
+    },
+    "com.MightyCoconut.WalkaboutMiniGolf": {
+      "appLabel": "Walkabout Mini Golf",
+      "paths": ["/sdcard/Android/data/com.MightyCoconut.WalkaboutMiniGolf"],
+      "includeInternalData": true,
+      "notes": "Restoring the external Android/data snapshot brings the files back but not progress, so the real save state lives elsewhere — PlayerPrefs in private internal storage and/or an online game account. Internal capture is best-effort and only succeeds on debuggable builds; retail builds need root. If your progress is tied to an online account it is synced server-side and a local save backup cannot restore it — sign in with the same account to recover it."
     }
   }
 }
