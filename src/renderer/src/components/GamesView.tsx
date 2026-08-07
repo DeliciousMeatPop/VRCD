@@ -1982,6 +1982,52 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               </div>
             )}
 
+            {/* No server configured yet → the deck can only sideload local files.
+                Make it explicit that browsing/downloading the game library needs a
+                server, and point straight at Manage Remotes — otherwise users just
+                see the sideload deck and wonder why they "can't connect to the
+                server". */}
+            {!hasServerConfig && (
+              <div
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  padding: '12px 14px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(var(--vrcd-purple-raw),0.4)',
+                  background: 'rgba(var(--vrcd-purple-raw),0.08)'
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    fontFamily: 'var(--vrcd-font-mono)',
+                    fontSize: 11,
+                    lineHeight: 1.5,
+                    color: 'rgba(var(--vrcd-neon-raw),0.85)'
+                  }}
+                >
+                  <ServerIcon style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>
+                    <b>No server connected.</b> This deck only sideloads local files.
+                    To browse and download the game library you need to add a server
+                    config — do it under <b>Manage Remotes</b>.
+                  </span>
+                </div>
+                <button
+                  className="cyber-deck-btn purple"
+                  style={{ width: '100%' }}
+                  onClick={() => setShowMirrorMgmt(true)}
+                >
+                  <CloudIcon /><span>Add a Server</span>
+                </button>
+              </div>
+            )}
+
             {/* Footer: version + github */}
             <div className="sideloader-footer">
               {appVersion && <span className="ver">v{appVersion}</span>}
