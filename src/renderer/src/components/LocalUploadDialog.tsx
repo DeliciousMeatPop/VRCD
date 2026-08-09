@@ -161,10 +161,26 @@ const LocalUploadDialog: React.FC = () => {
         {t('uploadLocalFiles')}
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={(_, data) => { if (!data.open) handleClose() }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(_, data) => {
+          if (!data.open) handleClose()
+        }}
+      >
         <DialogSurface
           mountNode={document.getElementById('portal')}
-          style={{ maxWidth: '680px', width: '90vw', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}
+          style={{
+            maxWidth: '680px',
+            width: '90vw',
+            background: '#050514',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+            ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+            ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+            ['--colorNeutralBackground1' as string]: '#050514',
+            ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)',
+            ['--colorBrandBackground' as string]: 'var(--vrcd-neon)',
+            ['--colorNeutralForegroundOnBrand' as string]: '#050514'
+          }}
         >
           <DialogBody>
             <DialogTitle>{t('localUploadTitle')}</DialogTitle>
@@ -255,9 +271,7 @@ const LocalUploadDialog: React.FC = () => {
                 disabled={selectedPaths.length === 0 || isProcessing}
                 icon={<ArrowUploadRegular />}
               >
-                {isProcessing
-                  ? t('validating')
-                  : `${t('uploadItems')} (${selectedPaths.length})`}
+                {isProcessing ? t('validating') : `${t('uploadItems')} (${selectedPaths.length})`}
               </Button>
             </DialogActions>
           </DialogBody>

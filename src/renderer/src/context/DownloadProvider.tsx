@@ -230,7 +230,22 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       resumeDownload,
       deleteFiles
     }),
-    [queue, isLoading, error, storageStatus, retryStorage, addToQueue, removeFromQueue, removeFromQueueOnly, moveToFront, cancelDownload, retryDownload, pauseDownload, resumeDownload, deleteFiles]
+    [
+      queue,
+      isLoading,
+      error,
+      storageStatus,
+      retryStorage,
+      addToQueue,
+      removeFromQueue,
+      removeFromQueueOnly,
+      moveToFront,
+      cancelDownload,
+      retryDownload,
+      pauseDownload,
+      resumeDownload,
+      deleteFiles
+    ]
   )
 
   return (
@@ -322,8 +337,7 @@ const ExistingDownloadPromptDialog: React.FC<PromptDialogProps> = ({
             marginBottom: '18px'
           }}
         >
-          A complete copy of <strong>{gameName}</strong> already exists in your
-          downloads folder.
+          A complete copy of <strong>{gameName}</strong> already exists in your downloads folder.
           <br />
           <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '11px' }}>
             {releaseName}
@@ -410,8 +424,7 @@ const PromptButton: React.FC<{
         borderRadius: '6px',
         cursor: 'pointer',
         textTransform: 'uppercase',
-        boxShadow:
-          hovered && !dimMode ? `0 0 12px rgba(${raw},0.25)` : 'none',
+        boxShadow: hovered && !dimMode ? `0 0 12px rgba(${raw},0.25)` : 'none',
         transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s'
       }}
     >

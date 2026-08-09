@@ -53,7 +53,10 @@ export interface IPCChannels {
   'adb:get-device-ip': DefineChannel<[serial: string], string | null>
   'adb:get-installed-packages': DefineChannel<[serial: string], PackageInfo[]>
   'adb:uninstallPackage': DefineChannel<[serial: string, packageName: string], boolean>
-  'adb:deleteGameFiles': DefineChannel<[releaseName: string], { deleted: boolean; path: string; error?: string }>
+  'adb:deleteGameFiles': DefineChannel<
+    [releaseName: string],
+    { deleted: boolean; path: string; error?: string }
+  >
   'adb:get-application-label': DefineChannel<[serial: string, packageName: string], string | null>
   'adb:get-user-name': DefineChannel<[serial: string], string>
   'adb:set-user-name': DefineChannel<[serial: string, name: string], void>

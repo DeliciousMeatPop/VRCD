@@ -244,7 +244,9 @@ export interface AdbAPI {
   getInstalledPackages: (serial: string) => Promise<PackageInfo[]>
   getApplicationLabel: (serial: string, packageName: string) => Promise<string | null>
   uninstallPackage: (serial: string, packageName: string) => Promise<boolean>
-  deleteGameFiles: (releaseName: string) => Promise<{ deleted: boolean; path: string; error?: string }>
+  deleteGameFiles: (
+    releaseName: string
+  ) => Promise<{ deleted: boolean; path: string; error?: string }>
   startTrackingDevices: (mainWindow?: BrowserWindow) => void
   stopTrackingDevices: () => void
   getUserName: (serial: string) => Promise<string>
@@ -556,10 +558,7 @@ export interface BackupAPI {
   ) => Promise<BackupCreateResult>
   restoreBackup: (backupId: string, deviceId: string) => Promise<BackupResult>
   deleteBackup: (backupId: string) => Promise<boolean>
-  setVerification: (
-    backupId: string,
-    result: BackupVerification
-  ) => Promise<BackupEntry | null>
+  setVerification: (backupId: string, result: BackupVerification) => Promise<BackupEntry | null>
   reportFailure: (backupId: string) => Promise<BackupReportResult | null>
   /**
    * Look up the (remote, cached) save-backup profile for a package, or null if

@@ -114,8 +114,8 @@ const parseSizeBytes = (s: string): number => {
   return n * ({ B: 1, KB: 1024, MB: 1048576, GB: 1073741824 }[u] ?? 1)
 }
 
-const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000   // 30 days
-const UPDATED_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000  // 7 days
+const NEW_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
+const UPDATED_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 // Hard floor: snapshot tracking shipped on this date. Anything observed
 // before then was bulk-recorded as "always existed" (firstSeenAt = 0) so we
 // don't badge every game NEW after upgrading. Belt-and-suspenders: also
@@ -473,13 +473,13 @@ function cardColumns(cardSize: number): number {
 }
 
 const COLOR_SWATCHES = [
-  { label: 'None',    value: 'transparent' },
-  { label: 'Cyan',    value: 'rgba(0, 212, 255, 0.07)' },
-  { label: 'Purple',  value: 'rgba(176, 64, 255, 0.07)' },
-  { label: 'Pink',    value: 'rgba(255, 0, 180, 0.06)' },
-  { label: 'Green',   value: 'rgba(0, 255, 128, 0.07)' },
-  { label: 'Blue',    value: 'rgba(40, 120, 255, 0.08)' },
-  { label: 'Subtle',  value: 'rgba(255, 255, 255, 0.05)' },
+  { label: 'None', value: 'transparent' },
+  { label: 'Cyan', value: 'rgba(0, 212, 255, 0.07)' },
+  { label: 'Purple', value: 'rgba(176, 64, 255, 0.07)' },
+  { label: 'Pink', value: 'rgba(255, 0, 180, 0.06)' },
+  { label: 'Green', value: 'rgba(0, 255, 128, 0.07)' },
+  { label: 'Blue', value: 'rgba(40, 120, 255, 0.08)' },
+  { label: 'Subtle', value: 'rgba(255, 255, 255, 0.05)' }
 ] as const
 
 const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onSettings }) => {
@@ -551,15 +551,12 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [searchInput, setSearchInput] = useState('')
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = String(e.target.value)
-      setSearchInput(val)
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-      searchTimerRef.current = setTimeout(() => setGlobalFilter(val), 400)
-    },
-    []
-  )
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = String(e.target.value)
+    setSearchInput(val)
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => setGlobalFilter(val), 400)
+  }, [])
   const [sorting, setSorting] = useState<SortingState>(() =>
     prefs.tableSortKey ? [{ id: prefs.tableSortKey, desc: prefs.tableSortDir === 'desc' }] : []
   )
@@ -584,7 +581,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
 
   const baseVisibleGames = useMemo(() => {
     let hideAdult = true
-    try { hideAdult = localStorage.getItem('vrcyberdeck:hideAdult') !== 'false' } catch { /* ignore */ }
+    try {
+      hideAdult = localStorage.getItem('vrcyberdeck:hideAdult') !== 'false'
+    } catch {
+      /* ignore */
+    }
     return games.filter((game) => {
       const size = String(game.size ?? '').trim()
       if (size === '0 MB' || size === '') return false
@@ -604,9 +605,10 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   }, [baseVisibleGames, games, starredPackages])
 
   const filteredGames = useMemo(
-    () => activeFilter === 'starred'
-      ? baseVisibleGames.filter((game) => isStarred(game.packageName ?? ''))
-      : baseVisibleGames,
+    () =>
+      activeFilter === 'starred'
+        ? baseVisibleGames.filter((game) => isStarred(game.packageName ?? ''))
+        : baseVisibleGames,
     [activeFilter, baseVisibleGames, isStarred]
   )
 
@@ -628,12 +630,12 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   useEffect(() => {
     const el = tableContainerRef.current
     if (!el) return
-    const padV  = 4  + (prefs.rowDensity / 100) * 12   // 4 → 16 px
-    const thumb = 48 + (prefs.rowDensity / 100) * 42   // 48 → 90 px
-    el.style.setProperty('--row-pad-v',       `${padV}px`)
-    el.style.setProperty('--row-thumb-size',  `${Math.round(thumb)}px`)
-    el.style.setProperty('--row-even-color',  prefs.evenRowColor)
-    el.style.setProperty('--row-odd-color',   prefs.oddRowColor)
+    const padV = 4 + (prefs.rowDensity / 100) * 12 // 4 → 16 px
+    const thumb = 48 + (prefs.rowDensity / 100) * 42 // 48 → 90 px
+    el.style.setProperty('--row-pad-v', `${padV}px`)
+    el.style.setProperty('--row-thumb-size', `${Math.round(thumb)}px`)
+    el.style.setProperty('--row-even-color', prefs.evenRowColor)
+    el.style.setProperty('--row-odd-color', prefs.oddRowColor)
   }, [prefs])
 
   useEffect(() => {
@@ -674,11 +676,21 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     return () => {
       unsubscribe()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDevice, loadPackages])
 
   const downloadStatusMap = useMemo(() => {
-    const map = new Map<string, { status: string; progress: number; speed?: string; eta?: string; error?: string; downloadPath?: string }>()
+    const map = new Map<
+      string,
+      {
+        status: string
+        progress: number
+        speed?: string
+        eta?: string
+        error?: string
+        downloadPath?: string
+      }
+    >()
     downloadQueue.forEach((item) => {
       if (item.releaseName) {
         const progress =
@@ -844,11 +856,13 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           for (let i = 0; i < Math.max(a.length, b.length); i++) {
             if (i >= a.length) return -1
             if (i >= b.length) return 1
-            const ca = a[i], cb = b[i]
+            const ca = a[i],
+              cb = b[i]
             if (ca === cb) continue
             // priority: _ (0) → 0-9 (1) → everything else (2)
-            const p = (c: string) => c === '_' ? 0 : c >= '0' && c <= '9' ? 1 : 2
-            const pa = p(ca), pb = p(cb)
+            const p = (c: string) => (c === '_' ? 0 : c >= '0' && c <= '9' ? 1 : 2)
+            const pa = p(ca),
+              pb = p(cb)
             if (pa !== pb) return pa - pb
             return ca < cb ? -1 : 1
           }
@@ -888,18 +902,30 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               >
                 {(() => {
                   const badge = getGameBadge(game)
-                  if (badge === 'new') return (
-                    <Badge shape="rounded" color="success" appearance="filled" size="small"
-                      style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
-                      NEW
-                    </Badge>
-                  )
-                  if (badge === 'updated') return (
-                    <Badge shape="rounded" color="warning" appearance="filled" size="small"
-                      style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
-                      UPDATED
-                    </Badge>
-                  )
+                  if (badge === 'new')
+                    return (
+                      <Badge
+                        shape="rounded"
+                        color="success"
+                        appearance="filled"
+                        size="small"
+                        style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}
+                      >
+                        NEW
+                      </Badge>
+                    )
+                  if (badge === 'updated')
+                    return (
+                      <Badge
+                        shape="rounded"
+                        color="warning"
+                        appearance="filled"
+                        size="small"
+                        style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}
+                      >
+                        UPDATED
+                      </Badge>
+                    )
                   return null
                 })()}
                 {isQueued && (
@@ -917,10 +943,18 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   >
                     <Spinner size="tiny" aria-label="Installing" />
                     <Badge shape="rounded" color="brand" appearance="outline">
-                      {downloadInfo?.status}{isDownloading && downloadInfo?.progress != null ? ` ${downloadInfo.progress}%` : ''}
+                      {downloadInfo?.status}
+                      {isDownloading && downloadInfo?.progress != null
+                        ? ` ${downloadInfo.progress}%`
+                        : ''}
                     </Badge>
                     {isDownloading && downloadInfo?.speed && (
-                      <span style={{ fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 }}>
+                      <span
+                        style={{
+                          fontSize: tokens.fontSizeBase200,
+                          color: tokens.colorNeutralForeground3
+                        }}
+                      >
                         {downloadInfo.speed}
                       </span>
                     )}
@@ -983,7 +1017,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         accessorKey: 'size',
         header: () => t('size'),
         size: COLUMN_WIDTHS.SIZE,
-        sortingFn: (a, b) => parseSizeBytes(a.original.size ?? '') - parseSizeBytes(b.original.size ?? ''),
+        sortingFn: (a, b) =>
+          parseSizeBytes(a.original.size ?? '') - parseSizeBytes(b.original.size ?? ''),
         cell: (info) => {
           const sizeValue = info.getValue()
           const sizeStr = String(sizeValue || '')
@@ -1017,7 +1052,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         enableResizing: false
       }
     ]
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStarred, styles, tableWidth, t, toggleStarred])
 
   const table = useReactTable({
@@ -1705,8 +1740,13 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   useEffect(() => {
     let mounted = true
     const p = window.api.app?.getVersion?.()
-    if (p) p.then((v) => { if (mounted) setAppVersion(v) }).catch(() => {})
-    return () => { mounted = false }
+    if (p)
+      p.then((v) => {
+        if (mounted) setAppVersion(v)
+      }).catch(() => {})
+    return () => {
+      mounted = false
+    }
   }, [])
 
   const isBusy = adbLoading || loadingGames || isLoading || isManualInstalling
@@ -1714,7 +1754,9 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const storageFreeGB = parseStorageGB(selectedDeviceDetails?.storageFree)
   const storageTotalGB = parseStorageGB(selectedDeviceDetails?.storageTotal)
   const storageUsedPct =
-    storageTotalGB > 0 ? Math.min(100, Math.round(((storageTotalGB - storageFreeGB) / storageTotalGB) * 100)) : 0
+    storageTotalGB > 0
+      ? Math.min(100, Math.round(((storageTotalGB - storageFreeGB) / storageTotalGB) * 100))
+      : 0
   const storageBarColor =
     storageUsedPct > 85
       ? tokens.colorPaletteRedForeground1
@@ -1746,8 +1788,19 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   // OBB-copy confirmation.
   const installDialogs = (
     <>
-      <Dialog open={showInstallDialog} onOpenChange={(_, data) => !data.open && closeInstallDialog()}>
-        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
+      <Dialog
+        open={showInstallDialog}
+        onOpenChange={(_, data) => !data.open && closeInstallDialog()}
+      >
+        <DialogSurface
+          style={{
+            background: '#050514',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+            ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+            ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+            ['--colorNeutralBackground1' as string]: '#050514'
+          }}
+        >
           <DialogBody>
             <DialogTitle>{t('manualOperation')}</DialogTitle>
             <DialogContent>
@@ -1755,7 +1808,14 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 <Text>{installStatusMessage}</Text>
               </div>
               {isManualInstalling && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalM }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: tokens.spacingHorizontalS,
+                    marginBottom: tokens.spacingVerticalM
+                  }}
+                >
                   <Spinner size="small" />
                   <Text>{t('processing')}</Text>
                 </div>
@@ -1766,8 +1826,12 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                     marginTop: tokens.spacingVerticalM,
                     padding: tokens.spacingVerticalS,
                     borderRadius: tokens.borderRadiusMedium,
-                    backgroundColor: installSuccess ? tokens.colorPaletteGreenBackground1 : tokens.colorPaletteRedBackground1,
-                    color: installSuccess ? tokens.colorPaletteGreenForeground1 : tokens.colorPaletteRedForeground1
+                    backgroundColor: installSuccess
+                      ? tokens.colorPaletteGreenBackground1
+                      : tokens.colorPaletteRedBackground1,
+                    color: installSuccess
+                      ? tokens.colorPaletteGreenForeground1
+                      : tokens.colorPaletteRedForeground1
                   }}
                 >
                   <Text weight="semibold">
@@ -1782,7 +1846,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="primary" onClick={closeInstallDialog} disabled={isManualInstalling}>
+              <Button
+                appearance="primary"
+                onClick={closeInstallDialog}
+                disabled={isManualInstalling}
+              >
                 {isManualInstalling ? t('processing') : t('close')}
               </Button>
             </DialogActions>
@@ -1799,25 +1867,84 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       )}
 
       <Dialog open={showMirrorMgmt} onOpenChange={(_, data) => setShowMirrorMgmt(data.open)}>
-        <DialogSurface style={{ width: '80vw', maxWidth: '1200px', height: '80vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}>
-          <DialogBody style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
-            <DialogTitle style={{ padding: '16px 24px', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>Server & Remotes</DialogTitle>
-            <DialogContent style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '16px 24px' }}>
+        <DialogSurface
+          style={{
+            width: '80vw',
+            maxWidth: '1200px',
+            height: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: 0,
+            overflow: 'hidden',
+            background: '#050514',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+            ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+            ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+            ['--colorNeutralBackground1' as string]: '#050514',
+            ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)',
+            ['--colorBrandBackground' as string]: 'var(--vrcd-neon)',
+            ['--colorNeutralForegroundOnBrand' as string]: '#050514'
+          }}
+        >
+          <DialogBody
+            style={{
+              flex: 1,
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0
+            }}
+          >
+            <DialogTitle
+              style={{
+                padding: '16px 24px',
+                borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)'
+              }}
+            >
+              Server & Remotes
+            </DialogTitle>
+            <DialogContent
+              style={{
+                flex: 1,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '16px 24px'
+              }}
+            >
               <MirrorManagement
                 serverConfigured={hasServerConfig}
                 serverActive={isServerMode}
                 onToggleServer={setServerMode}
               />
             </DialogContent>
-            <DialogActions style={{ padding: '12px 24px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.15)' }}>
-              <Button appearance="secondary" onClick={() => setShowMirrorMgmt(false)}>Close</Button>
+            <DialogActions
+              style={{
+                padding: '12px 24px',
+                borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.15)'
+              }}
+            >
+              <Button appearance="secondary" onClick={() => setShowMirrorMgmt(false)}>
+                Close
+              </Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
 
-      <Dialog open={showObbConfirmDialog} onOpenChange={(_, data) => !data.open && handleObbCancelCopy()}>
-        <DialogSurface style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514' }}>
+      <Dialog
+        open={showObbConfirmDialog}
+        onOpenChange={(_, data) => !data.open && handleObbCancelCopy()}
+      >
+        <DialogSurface
+          style={{
+            background: '#050514',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+            ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+            ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+            ['--colorNeutralBackground1' as string]: '#050514'
+          }}
+        >
           <DialogBody>
             <DialogTitle>{t('confirmObbCopy')}</DialogTitle>
             <DialogContent>
@@ -1831,10 +1958,18 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               </div>
             </DialogContent>
             <DialogActions>
-              <Button appearance="primary" onClick={handleObbConfirmCopy} disabled={isManualInstalling}>
+              <Button
+                appearance="primary"
+                onClick={handleObbConfirmCopy}
+                disabled={isManualInstalling}
+              >
                 {t('copyAnyway')}
               </Button>
-              <Button appearance="secondary" onClick={handleObbCancelCopy} disabled={isManualInstalling}>
+              <Button
+                appearance="secondary"
+                onClick={handleObbCancelCopy}
+                disabled={isManualInstalling}
+              >
                 {t('cancel')}
               </Button>
             </DialogActions>
@@ -1921,42 +2056,76 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               <div className="dz-frame" />
               <svg className="dz-icon" width="60" height="60" viewBox="0 0 64 64" fill="none">
                 <path d="M32 8v30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                <path d="M20 28l12 12 12-12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M12 46v6a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4v-6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                <path
+                  d="M20 28l12 12 12-12"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M12 46v6a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4v-6"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
               </svg>
               <div className="dz-title">
                 {isManualInstalling ? t('manualInstalling') : 'DROP TO SIDELOAD'}
               </div>
               <div className="dz-sub">
                 Drag an <b>APK</b>, a <b>.zip</b>, a game <b>folder</b> (APK + OBB + install.txt),
-                <br />or an <b>OBB folder</b> named after its package — dropped here to deploy.
+                <br />
+                or an <b>OBB folder</b> named after its package — dropped here to deploy.
               </div>
               {!isConnected && <div className="dz-warn">{'// CONNECT A DEVICE TO SIDELOAD'}</div>}
             </div>
 
             {/* Primary install actions */}
             <div className="sideloader-actions">
-              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={() => handleManualInstall('apk')}>
-                <DocumentRegular /><span>{t('installApkFile')}</span>
+              <button
+                className="cyber-deck-btn"
+                disabled={!isConnected || isManualInstalling}
+                onClick={() => handleManualInstall('apk')}
+              >
+                <DocumentRegular />
+                <span>{t('installApkFile')}</span>
               </button>
-              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={() => handleManualInstall('folder')}>
-                <FolderAddRegular /><span>{t('installFolder')}</span>
+              <button
+                className="cyber-deck-btn"
+                disabled={!isConnected || isManualInstalling}
+                onClick={() => handleManualInstall('folder')}
+              >
+                <FolderAddRegular />
+                <span>{t('installFolder')}</span>
               </button>
-              <button className="cyber-deck-btn" disabled={!isConnected || isManualInstalling} onClick={handleCopyObbFolder}>
-                <CopyRegular /><span>{t('copyObbFolder')}</span>
+              <button
+                className="cyber-deck-btn"
+                disabled={!isConnected || isManualInstalling}
+                onClick={handleCopyObbFolder}
+              >
+                <CopyRegular />
+                <span>{t('copyObbFolder')}</span>
               </button>
             </div>
 
             {/* Secondary deck controls */}
             <div className="sideloader-actions secondary">
               <button className="cyber-deck-btn purple" onClick={() => setShowMirrorMgmt(true)}>
-                <CloudIcon /><span>Manage Remotes</span>
+                <CloudIcon />
+                <span>Manage Remotes</span>
               </button>
-              <button className="cyber-deck-btn" disabled={!isConnected} onClick={() => setShellDialogOpen(true)}>
-                <WindowConsoleRegular /><span>ADB Shell</span>
+              <button
+                className="cyber-deck-btn"
+                disabled={!isConnected}
+                onClick={() => setShellDialogOpen(true)}
+              >
+                <WindowConsoleRegular />
+                <span>ADB Shell</span>
               </button>
               <button className="cyber-deck-btn purple" onClick={onTransfers}>
-                <ArrowSyncRegular /><span>Installs</span>
+                <ArrowSyncRegular />
+                <span>Installs</span>
                 {activeTransferCount > 0 && (
                   <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: 4 }}>
                     {activeTransferCount}
@@ -1964,7 +2133,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 )}
               </button>
               <button className="cyber-deck-btn" onClick={onSettings}>
-                <SettingsRegular /><span>Other Settings</span>
+                <SettingsRegular />
+                <span>Other Settings</span>
               </button>
             </div>
 
@@ -1977,7 +2147,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   style={{ width: '100%' }}
                   onClick={() => setServerMode(true)}
                 >
-                  <ServerIcon /><span>Enter Server Mode</span>
+                  <ServerIcon />
+                  <span>Enter Server Mode</span>
                 </button>
               </div>
             )}
@@ -2013,9 +2184,9 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 >
                   <ServerIcon style={{ flexShrink: 0, marginTop: 1 }} />
                   <span>
-                    <b>No server connected.</b> This deck only sideloads local files.
-                    To browse and download the game library you need to add a server
-                    config — do it under <b>Manage Remotes</b>.
+                    <b>No server connected.</b> This deck only sideloads local files. To browse and
+                    download the game library you need to add a server config — do it under{' '}
+                    <b>Manage Remotes</b>.
                   </span>
                 </div>
                 <button
@@ -2023,7 +2194,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   style={{ width: '100%' }}
                   onClick={() => setShowMirrorMgmt(true)}
                 >
-                  <CloudIcon /><span>Add a Server</span>
+                  <CloudIcon />
+                  <span>Add a Server</span>
                 </button>
               </div>
             )}
@@ -2031,7 +2203,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             {/* Footer: version + github */}
             <div className="sideloader-footer">
               {appVersion && <span className="ver">v{appVersion}</span>}
-              <a href="https://github.com/DeliciousMeatPop/VRCD" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://github.com/DeliciousMeatPop/VRCD"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 GITHUB
               </a>
             </div>
@@ -2044,9 +2220,23 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   }
 
   return (
-    <div className={styles.root} style={{ '--colorNeutralBackground1': '#050514', '--colorNeutralBackground2': '#060615', '--colorNeutralBackground3': '#060615', '--colorNeutralForeground1': 'var(--vrcd-neon)', '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.75)', '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.2)', '--colorNeutralStrokeAccessible': 'rgba(var(--vrcd-neon-raw),0.3)', '--colorBrandBackground': 'var(--vrcd-neon)', '--colorNeutralForegroundOnBrand': '#050514' } as React.CSSProperties}>
+    <div
+      className={styles.root}
+      style={
+        {
+          '--colorNeutralBackground1': '#050514',
+          '--colorNeutralBackground2': '#060615',
+          '--colorNeutralBackground3': '#060615',
+          '--colorNeutralForeground1': 'var(--vrcd-neon)',
+          '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.75)',
+          '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.2)',
+          '--colorNeutralStrokeAccessible': 'rgba(var(--vrcd-neon-raw),0.3)',
+          '--colorBrandBackground': 'var(--vrcd-neon)',
+          '--colorNeutralForegroundOnBrand': '#050514'
+        } as React.CSSProperties
+      }
+    >
       <div className={styles.layout}>
-
         {/* ════════════ SIDEBAR ════════════ */}
         {/* Floating open button shown only when sidebar is collapsed */}
         {!sidebarOpen && (
@@ -2070,29 +2260,78 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           </button>
 
           <div className={styles.sidebarScroll}>
-
             {/* ── DEVICE ── */}
             <section className={styles.sidebarSection}>
               <div className={styles.sidebarLabel}>Device</div>
               {selectedDeviceDetails ? (
-                <div style={{ border: '1px solid rgba(var(--vrcd-neon-raw),0.4)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: 'rgba(var(--vrcd-neon-raw),0.03)' }}>
+                <div
+                  style={{
+                    border: '1px solid rgba(var(--vrcd-neon-raw),0.4)',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    backgroundColor: 'rgba(var(--vrcd-neon-raw),0.03)'
+                  }}
+                >
                   {/* Device name with green dot */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--vrcd-neon)', boxShadow: '0 0 6px var(--vrcd-neon)', flexShrink: 0 }} />
-                    <Text weight="semibold" style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--vrcd-neon)',
+                        boxShadow: '0 0 6px var(--vrcd-neon)',
+                        flexShrink: 0
+                      }}
+                    />
+                    <Text
+                      weight="semibold"
+                      style={{
+                        fontSize: '13px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
                       {(selectedDeviceDetails.friendlyModelName || 'Connected Device')
                         .split(' ')
                         .map((word, i) => (
-                          <span key={i} style={{ color: i % 2 === 0 ? 'var(--vrcd-neon)' : 'var(--vrcd-purple)' }}>{i > 0 ? ' ' : ''}{word}</span>
+                          <span
+                            key={i}
+                            style={{
+                              color: i % 2 === 0 ? 'var(--vrcd-neon)' : 'var(--vrcd-purple)'
+                            }}
+                          >
+                            {i > 0 ? ' ' : ''}
+                            {word}
+                          </span>
                         ))}
                     </Text>
                   </div>
 
                   {/* Disconnect centered below name */}
                   {isConnected && (
-                    <Button appearance="subtle" size="small" icon={<PlugDisconnectedRegular />}
-                      onClick={() => { requestUploadCheck(); disconnectDevice() }}
-                      title={t('disconnectFromDevice')} style={CB}>
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      icon={<PlugDisconnectedRegular />}
+                      onClick={() => {
+                        requestUploadCheck()
+                        disconnectDevice()
+                      }}
+                      title={t('disconnectFromDevice')}
+                      style={CB}
+                    >
                       Disconnect
                     </Button>
                   )}
@@ -2111,8 +2350,14 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                           fontSize: '12px',
                           letterSpacing: '0.04em',
                           border: `1px solid ${selectedDeviceDetails.batteryLevel > 20 ? 'rgba(var(--vrcd-neon-raw),0.55)' : 'rgba(255,68,68,0.6)'}`,
-                          color: selectedDeviceDetails.batteryLevel > 20 ? 'var(--vrcd-neon)' : '#ff4444',
-                          background: selectedDeviceDetails.batteryLevel > 20 ? 'rgba(var(--vrcd-neon-raw),0.06)' : 'rgba(255,68,68,0.08)'
+                          color:
+                            selectedDeviceDetails.batteryLevel > 20
+                              ? 'var(--vrcd-neon)'
+                              : '#ff4444',
+                          background:
+                            selectedDeviceDetails.batteryLevel > 20
+                              ? 'rgba(var(--vrcd-neon-raw),0.06)'
+                              : 'rgba(255,68,68,0.08)'
                         }}
                       >
                         <BatteryChargeRegular />
@@ -2124,30 +2369,71 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   {/* Storage bar + centered text */}
                   {selectedDeviceDetails.storageFree && selectedDeviceDetails.storageTotal && (
                     <>
-                      <Text size={100} style={{ color: tokens.colorNeutralForeground3, textAlign: 'center', fontFamily: 'monospace' }}>
-                        {selectedDeviceDetails.storageFree} Free ({100 - storageUsedPct}%) / {selectedDeviceDetails.storageTotal}
+                      <Text
+                        size={100}
+                        style={{
+                          color: tokens.colorNeutralForeground3,
+                          textAlign: 'center',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        {selectedDeviceDetails.storageFree} Free ({100 - storageUsedPct}%) /{' '}
+                        {selectedDeviceDetails.storageTotal}
                       </Text>
                       <div className={styles.storageBarTrack}>
-                        <div className={styles.storageBarFill} style={{ width: `${storageUsedPct}%`, backgroundColor: storageBarColor }} />
+                        <div
+                          className={styles.storageBarFill}
+                          style={{ width: `${storageUsedPct}%`, backgroundColor: storageBarColor }}
+                        />
                       </div>
                     </>
                   )}
 
                   {/* Refresh Quest */}
                   {isConnected && (
-                    <Button appearance="subtle" size="small" icon={<ArrowClockwiseRegular />} onClick={() => loadPackages()} disabled={isBusy}
-                      style={CB}>
+                    <Button
+                      appearance="subtle"
+                      size="small"
+                      icon={<ArrowClockwiseRegular />}
+                      onClick={() => loadPackages()}
+                      disabled={isBusy}
+                      style={CB}
+                    >
                       {isBusy ? t('working') : t('refreshQuest')}
                     </Button>
                   )}
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ff4444', boxShadow: '0 0 6px #ff4444', flexShrink: 0 }} />
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}
+                >
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: '#ff4444',
+                      boxShadow: '0 0 6px #ff4444',
+                      flexShrink: 0
+                    }}
+                  />
                   <div>
-                    <Text size={200} style={{ color: '#ff6666', display: 'block' }}>No device connected</Text>
+                    <Text size={200} style={{ color: '#ff6666', display: 'block' }}>
+                      No device connected
+                    </Text>
                     <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
-                      <button onClick={onBackToDevices} style={{ background: 'none', border: 'none', color: 'rgba(var(--vrcd-neon-raw),0.7)', cursor: 'pointer', fontSize: '11px', padding: 0, textDecoration: 'underline' }}>
+                      <button
+                        onClick={onBackToDevices}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'rgba(var(--vrcd-neon-raw),0.7)',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          padding: 0,
+                          textDecoration: 'underline'
+                        }}
+                      >
                         Click to connect a headset
                       </button>
                     </Text>
@@ -2159,23 +2445,52 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             {/* ── ACTIONS ── */}
             <section className={styles.sidebarSection}>
               <div className={styles.sidebarLabel}>Actions</div>
-              <Button appearance="subtle" size="small" onClick={() => setShowMirrorMgmt(true)} style={CB}>
+              <Button
+                appearance="subtle"
+                size="small"
+                onClick={() => setShowMirrorMgmt(true)}
+                style={CB}
+              >
                 Manage Remotes
               </Button>
-              <Button appearance="subtle" size="small" icon={<ArrowClockwiseRegular />} onClick={refreshGames} disabled={isBusy}
-                style={CB}>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<ArrowClockwiseRegular />}
+                onClick={refreshGames}
+                disabled={isBusy}
+                style={CB}
+              >
                 {isBusy ? t('working') : t('refreshGames')}
               </Button>
-              <Button appearance="subtle" size="small" icon={<WindowConsoleRegular />} onClick={() => setShellDialogOpen(true)}
-                disabled={!isConnected} style={isConnected ? CB : { ...CB, opacity: 0.4 }}>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<WindowConsoleRegular />}
+                onClick={() => setShellDialogOpen(true)}
+                disabled={!isConnected}
+                style={isConnected ? CB : { ...CB, opacity: 0.4 }}
+              >
                 ADB Shell
               </Button>
-              <Button appearance="subtle" size="small" icon={<SettingsRegular />} onClick={onSettings} style={CB}>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<SettingsRegular />}
+                onClick={onSettings}
+                style={CB}
+              >
                 Other Settings
               </Button>
               {/* Turn the configured server off (kept, not wiped) and drop back
                   to the sideloader deck — handy for testing a server setup. */}
-              <Button appearance="subtle" size="small" icon={<ServerIcon />} onClick={() => setServerMode(false)} style={CBP}>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<ServerIcon />}
+                onClick={() => setServerMode(false)}
+                style={CBP}
+              >
                 Back to Sideloader
               </Button>
             </section>
@@ -2183,43 +2498,128 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             {/* ── TRANSFERS ── */}
             <section className={styles.sidebarSection}>
               <div className={styles.sidebarLabel}>Transfers</div>
-              <Button appearance="subtle" size="small" icon={<ArrowSyncRegular />} onClick={onTransfers} style={CBP}>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<ArrowSyncRegular />}
+                onClick={onTransfers}
+                style={CBP}
+              >
                 Transfers
                 {activeTransferCount > 0 && (
-                  <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: 'auto' }}>{activeTransferCount}</Badge>
+                  <Badge
+                    appearance="filled"
+                    color="brand"
+                    size="small"
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    {activeTransferCount}
+                  </Badge>
                 )}
               </Button>
               <Menu>
                 <MenuTrigger disableButtonEnhancement>
-                  <Button appearance="subtle" size="small" icon={<FolderAddRegular />} disabled={isBusy || !isConnected}
-                    style={CB}>
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    icon={<FolderAddRegular />}
+                    disabled={isBusy || !isConnected}
+                    style={CB}
+                  >
                     {isManualInstalling ? t('manualInstalling') : 'Manual Install'}
                   </Button>
                 </MenuTrigger>
-                <MenuPopover style={{ background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.2)' } as React.CSSProperties}>
+                <MenuPopover
+                  style={
+                    {
+                      background: '#050514',
+                      border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+                      ['--colorNeutralBackground1' as string]: '#050514',
+                      ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+                      ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+                      ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.2)'
+                    } as React.CSSProperties
+                  }
+                >
                   <MenuList>
-                    <MenuItem icon={<DocumentRegular />} onClick={() => handleManualInstall('apk')} disabled={isManualInstalling}>{t('installApkFile')}</MenuItem>
-                    <MenuItem icon={<FolderAddRegular />} onClick={() => handleManualInstall('folder')} disabled={isManualInstalling}>{t('installFolder')}</MenuItem>
-                    <MenuItem icon={<CopyRegular />} onClick={handleCopyObbFolder} disabled={isManualInstalling}>{t('copyObbFolder')}</MenuItem>
+                    <MenuItem
+                      icon={<DocumentRegular />}
+                      onClick={() => handleManualInstall('apk')}
+                      disabled={isManualInstalling}
+                    >
+                      {t('installApkFile')}
+                    </MenuItem>
+                    <MenuItem
+                      icon={<FolderAddRegular />}
+                      onClick={() => handleManualInstall('folder')}
+                      disabled={isManualInstalling}
+                    >
+                      {t('installFolder')}
+                    </MenuItem>
+                    <MenuItem
+                      icon={<CopyRegular />}
+                      onClick={handleCopyObbFolder}
+                      disabled={isManualInstalling}
+                    >
+                      {t('copyObbFolder')}
+                    </MenuItem>
                   </MenuList>
                 </MenuPopover>
               </Menu>
             </section>
-
           </div>
 
           {/* ── SIDEBAR FOOTER — outside scroll so always visible ── */}
-          <div style={{ flexShrink: 0, borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.10)', padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM} 10px`, display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+          <div
+            style={{
+              flexShrink: 0,
+              borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.10)',
+              padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM} 10px`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              alignItems: 'center'
+            }}
+          >
             {appVersion && (
-              <Text size={100} style={{ color: 'rgba(var(--vrcd-neon-raw),0.5)', fontFamily: 'monospace', letterSpacing: '0.12em' }}>
+              <Text
+                size={100}
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.5)',
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.12em'
+                }}
+              >
                 v{appVersion}
               </Text>
             )}
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="https://github.com/DeliciousMeatPop/VRCD" target="_blank" rel="noopener noreferrer"
-                style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '9px', letterSpacing: '0.1em', textDecoration: 'none', fontFamily: 'monospace' }}>G|THU|3</a>
+            <div
+              style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}
+            >
+              <a
+                href="https://github.com/DeliciousMeatPop/VRCD"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.55)',
+                  fontSize: '9px',
+                  letterSpacing: '0.1em',
+                  textDecoration: 'none',
+                  fontFamily: 'monospace'
+                }}
+              >
+                G|THU|3
+              </a>
             </div>
-            <Text size={100} style={{ color: 'rgba(var(--vrcd-neon-raw),0.3)', textAlign: 'center', fontFamily: 'monospace', fontSize: '8px' }}>
+            <Text
+              size={100}
+              style={{
+                color: 'rgba(var(--vrcd-neon-raw),0.3)',
+                textAlign: 'center',
+                fontFamily: 'monospace',
+                fontSize: '8px'
+              }}
+            >
               {t('lastSynced')} {formatDate(lastSyncTime)}
             </Text>
           </div>
@@ -2227,7 +2627,6 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
 
         {/* ════════════ MAIN ════════════ */}
         <div className={styles.sidebarMain}>
-
           {/* Control Row */}
           <div className={styles.controlRow}>
             <div className="search-wrap" style={{ flex: 1, minWidth: '140px' }}>
@@ -2240,20 +2639,35 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               />
             </div>
             <div className="filter-buttons" style={{ margin: 0 }}>
-              <button onClick={() => setActiveFilter('all')} className={activeFilter === 'all' ? 'active' : ''}>
+              <button
+                onClick={() => setActiveFilter('all')}
+                className={activeFilter === 'all' ? 'active' : ''}
+              >
                 {t('filterAll')} ({counts.total})
               </button>
-              <button onClick={() => setActiveFilter('installed')} className={activeFilter === 'installed' ? 'active' : ''}>
+              <button
+                onClick={() => setActiveFilter('installed')}
+                className={activeFilter === 'installed' ? 'active' : ''}
+              >
                 {t('filterInstalled')} ({counts.installed})
               </button>
-              <button onClick={() => setActiveFilter('update')} className={activeFilter === 'update' ? 'active' : ''} disabled={counts.updates === 0}>
+              <button
+                onClick={() => setActiveFilter('update')}
+                className={activeFilter === 'update' ? 'active' : ''}
+                disabled={counts.updates === 0}
+              >
                 {t('filterUpdates')} ({counts.updates})
               </button>
-              <button onClick={() => setActiveFilter('starred')} className={activeFilter === 'starred' ? 'active' : ''}>
+              <button
+                onClick={() => setActiveFilter('starred')}
+                className={activeFilter === 'starred' ? 'active' : ''}
+              >
                 {t('filterStarred')} ({counts.starred})
               </button>
             </div>
-            <span className="game-count">{table.getFilteredRowModel().rows.length} {t('displayed')}</span>
+            <span className="game-count">
+              {table.getFilteredRowModel().rows.length} {t('displayed')}
+            </span>
             <Button
               appearance="subtle"
               size="small"
@@ -2268,23 +2682,57 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 }
               }}
               title={prefs.viewMode === 'table' ? 'Switch to card view' : 'Switch to table view'}
-              style={{ color: 'rgba(var(--vrcd-neon-raw),0.7)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', borderRadius: '6px' }}
+              style={{
+                color: 'rgba(var(--vrcd-neon-raw),0.7)',
+                border: '1px solid rgba(var(--vrcd-neon-raw),0.3)',
+                borderRadius: '6px'
+              }}
             />
-            <Popover open={viewOptionsOpen} onOpenChange={(_, d) => setViewOptionsOpen(d.open)} positioning="below-end">
+            <Popover
+              open={viewOptionsOpen}
+              onOpenChange={(_, d) => setViewOptionsOpen(d.open)}
+              positioning="below-end"
+            >
               <PopoverTrigger>
-                <Button appearance="subtle" icon={<OptionsRegular />}
+                <Button
+                  appearance="subtle"
+                  icon={<OptionsRegular />}
                   title={prefs.viewMode === 'cards' ? 'Card view options' : 'Display options'}
                   size="small"
-                  style={{ color: 'rgba(var(--vrcd-neon-raw),0.7)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', borderRadius: '6px' }} />
+                  style={{
+                    color: 'rgba(var(--vrcd-neon-raw),0.7)',
+                    border: '1px solid rgba(var(--vrcd-neon-raw),0.3)',
+                    borderRadius: '6px'
+                  }}
+                />
               </PopoverTrigger>
-              <PopoverSurface style={{ minWidth: '260px', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM }}>
+              <PopoverSurface
+                style={{
+                  minWidth: '260px',
+                  background: '#050514',
+                  border: '1px solid rgba(var(--vrcd-neon-raw),0.3)',
+                  ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+                  ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+                  ['--colorNeutralBackground1' as string]: '#050514',
+                  ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)',
+                  ['--colorBrandBackground' as string]: 'var(--vrcd-neon)',
+                  ['--colorNeutralForegroundOnBrand' as string]: '#050514'
+                }}
+              >
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM }}
+                >
                   {prefs.viewMode === 'cards' ? (
                     <>
                       <Text weight="semibold">Card View Options</Text>
                       <div>
                         <Text size={200}>Card Size</Text>
-                        <Slider min={0} max={100} value={prefs.cardSize} onChange={(_, d) => setPrefs({ cardSize: d.value })} />
+                        <Slider
+                          min={0}
+                          max={100}
+                          value={prefs.cardSize}
+                          onChange={(_, d) => setPrefs({ cardSize: d.value })}
+                        />
                       </div>
                       <div>
                         <Text size={200}>Sort By</Text>
@@ -2294,9 +2742,21 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                             onChange={(e) => {
                               const key = e.target.value
                               setPrefs({ cardSortKey: key })
-                              setSorting(key ? [{ id: key, desc: prefs.cardSortDir === 'desc' }] : [])
+                              setSorting(
+                                key ? [{ id: key, desc: prefs.cardSortDir === 'desc' }] : []
+                              )
                             }}
-                            style={{ flex: 1, background: '#050514', color: 'var(--vrcd-neon)', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', borderRadius: 4, padding: '3px 6px', fontFamily: 'monospace', fontSize: 12, cursor: 'pointer' }}
+                            style={{
+                              flex: 1,
+                              background: '#050514',
+                              color: 'var(--vrcd-neon)',
+                              border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+                              borderRadius: 4,
+                              padding: '3px 6px',
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              cursor: 'pointer'
+                            }}
                           >
                             <option value="name">Name</option>
                             <option value="size">Size</option>
@@ -2308,9 +2768,18 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                             onClick={() => {
                               const dir = prefs.cardSortDir === 'asc' ? 'desc' : 'asc'
                               setPrefs({ cardSortDir: dir })
-                              if (prefs.cardSortKey) setSorting([{ id: prefs.cardSortKey, desc: dir === 'desc' }])
+                              if (prefs.cardSortKey)
+                                setSorting([{ id: prefs.cardSortKey, desc: dir === 'desc' }])
                             }}
-                            style={{ background: 'transparent', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', borderRadius: 4, color: 'var(--vrcd-neon)', cursor: 'pointer', padding: '3px 8px', fontFamily: 'monospace' }}
+                            style={{
+                              background: 'transparent',
+                              border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+                              borderRadius: 4,
+                              color: 'var(--vrcd-neon)',
+                              cursor: 'pointer',
+                              padding: '3px 8px',
+                              fontFamily: 'monospace'
+                            }}
                           >
                             {prefs.cardSortDir === 'asc' ? '▲ ASC' : '▼ DESC'}
                           </button>
@@ -2322,14 +2791,34 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                       <Text weight="semibold">Display Options</Text>
                       <div>
                         <Text size={200}>Row Density</Text>
-                        <Slider min={50} max={100} value={Math.max(50, prefs.rowDensity)} onChange={(_, d) => setPrefs({ rowDensity: d.value })} />
+                        <Slider
+                          min={50}
+                          max={100}
+                          value={Math.max(50, prefs.rowDensity)}
+                          onChange={(_, d) => setPrefs({ rowDensity: d.value })}
+                        />
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}
+                      >
                         <Text size={200}>Alternating rows</Text>
-                        <Switch checked={prefs.alternatingRows} onChange={(_, d) => setPrefs({ alternatingRows: d.checked })} />
+                        <Switch
+                          checked={prefs.alternatingRows}
+                          onChange={(_, d) => setPrefs({ alternatingRows: d.checked })}
+                        />
                       </div>
                       {prefs.alternatingRows && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: tokens.spacingVerticalS
+                          }}
+                        >
                           {(
                             [
                               { label: 'Even row colour', key: 'evenRowColor' as const },
@@ -2338,17 +2827,48 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                           ).map(({ label, key }) => (
                             <div key={key}>
                               <Text size={200}>{label}</Text>
-                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  gap: '6px',
+                                  flexWrap: 'wrap',
+                                  marginTop: '4px'
+                                }}
+                              >
                                 {COLOR_SWATCHES.map((sw) => (
-                                  <button key={sw.label} title={sw.label}
-                                    style={{ width: '22px', height: '22px', borderRadius: '4px', padding: 0, cursor: 'pointer', background: sw.value, border: prefs[key] === sw.value ? '2px solid #00d4ff' : '1px solid rgba(128,128,128,0.3)' }}
-                                    onClick={() => setPrefs({ [key]: sw.value })} />
+                                  <button
+                                    key={sw.label}
+                                    title={sw.label}
+                                    style={{
+                                      width: '22px',
+                                      height: '22px',
+                                      borderRadius: '4px',
+                                      padding: 0,
+                                      cursor: 'pointer',
+                                      background: sw.value,
+                                      border:
+                                        prefs[key] === sw.value
+                                          ? '2px solid #00d4ff'
+                                          : '1px solid rgba(128,128,128,0.3)'
+                                    }}
+                                    onClick={() => setPrefs({ [key]: sw.value })}
+                                  />
                                 ))}
-                                <input type="color"
+                                <input
+                                  type="color"
                                   value={prefs[key] === 'transparent' ? '#000000' : prefs[key]}
                                   title="Custom colour"
-                                  style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid rgba(128,128,128,0.3)', padding: 0, cursor: 'pointer', background: 'none' }}
-                                  onChange={(e) => setPrefs({ [key]: e.target.value })} />
+                                  style={{
+                                    width: '22px',
+                                    height: '22px',
+                                    borderRadius: '4px',
+                                    border: '1px solid rgba(128,128,128,0.3)',
+                                    padding: 0,
+                                    cursor: 'pointer',
+                                    background: 'none'
+                                  }}
+                                  onChange={(e) => setPrefs({ [key]: e.target.value })}
+                                />
                               </div>
                             </div>
                           ))}
@@ -2375,43 +2895,60 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             </div>
           )}
 
-          {syncError && (() => {
-            const isTls = /tls:|handshake|first record/i.test(syncError)
-            return (
-              <div style={{
-                margin: '8px 12px 0',
-                padding: '10px 14px',
-                background: 'rgba(255,50,50,0.08)',
-                border: '1px solid rgba(255,80,80,0.4)',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 10
-              }}>
-                <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 12, color: 'rgba(var(--vrcd-neon-raw),0.85)', lineHeight: 1.5 }}>
-                  {isTls ? (
-                    <>
-                      <strong style={{ color: '#ff7070' }}>Game list sync failed — TLS error.</strong>
-                      {' '}Your ISP or router is blocking the connection. Try a VPN
-                      {' '}(ProtonVPN or Cloudflare WARP, both free), then click Refresh Games.
-                    </>
-                  ) : (
-                    <>
-                      <strong style={{ color: '#ff7070' }}>Game list sync failed.</strong>
-                      {' '}{syncError}
-                    </>
-                  )}
+          {syncError &&
+            (() => {
+              const isTls = /tls:|handshake|first record/i.test(syncError)
+              return (
+                <div
+                  style={{
+                    margin: '8px 12px 0',
+                    padding: '10px 14px',
+                    background: 'rgba(255,50,50,0.08)',
+                    border: '1px solid rgba(255,80,80,0.4)',
+                    borderRadius: 6,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: 'rgba(var(--vrcd-neon-raw),0.85)',
+                      lineHeight: 1.5
+                    }}
+                  >
+                    {isTls ? (
+                      <>
+                        <strong style={{ color: '#ff7070' }}>
+                          Game list sync failed — TLS error.
+                        </strong>{' '}
+                        Your ISP or router is blocking the connection. Try a VPN (ProtonVPN or
+                        Cloudflare WARP, both free), then click Refresh Games.
+                      </>
+                    ) : (
+                      <>
+                        <strong style={{ color: '#ff7070' }}>Game list sync failed.</strong>{' '}
+                        {syncError}
+                      </>
+                    )}
+                  </div>
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    icon={<DismissRegular />}
+                    onClick={dismissSyncError}
+                    style={{
+                      minWidth: 0,
+                      padding: '2px 4px',
+                      color: 'rgba(var(--vrcd-neon-raw),0.5)'
+                    }}
+                  />
                 </div>
-                <Button
-                  appearance="subtle"
-                  size="small"
-                  icon={<DismissRegular />}
-                  onClick={dismissSyncError}
-                  style={{ minWidth: 0, padding: '2px 4px', color: 'rgba(var(--vrcd-neon-raw),0.5)' }}
-                />
-              </div>
-            )
-          })()}
+              )
+            })()}
 
           {/* Content area */}
           <div className={styles.contentArea}>
@@ -2420,30 +2957,105 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             ) : gamesError ? (
               <div className="error-message">{gamesError}</div>
             ) : games.length === 0 && !loadingGames ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', flex: 1, padding: '40px 20px' }}>
-                <svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="8" y="20" width="48" height="28" rx="14" stroke="rgba(var(--vrcd-neon-raw),0.45)" strokeWidth="2" fill="rgba(var(--vrcd-neon-raw),0.04)"/>
-                  <path d="M20 32h-6M17 29v6" stroke="rgba(var(--vrcd-neon-raw),0.7)" strokeWidth="2.5" strokeLinecap="round"/>
-                  <circle cx="44" cy="29" r="2.5" fill="rgba(176,64,255,0.7)"/>
-                  <circle cx="50" cy="32" r="2.5" fill="rgba(var(--vrcd-neon-raw),0.7)"/>
-                  <circle cx="44" cy="35" r="2.5" fill="rgba(var(--vrcd-neon-raw),0.5)"/>
-                  <circle cx="38" cy="32" r="2.5" fill="rgba(255,100,0,0.6)"/>
-                  <path d="M14 44 Q10 54 15 58" stroke="rgba(var(--vrcd-neon-raw),0.3)" strokeWidth="2" strokeLinecap="round" fill="none"/>
-                  <path d="M50 44 Q54 54 49 58" stroke="rgba(var(--vrcd-neon-raw),0.3)" strokeWidth="2" strokeLinecap="round" fill="none"/>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  flex: 1,
+                  padding: '40px 20px'
+                }}
+              >
+                <svg
+                  width="72"
+                  height="72"
+                  viewBox="0 0 64 64"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect
+                    x="8"
+                    y="20"
+                    width="48"
+                    height="28"
+                    rx="14"
+                    stroke="rgba(var(--vrcd-neon-raw),0.45)"
+                    strokeWidth="2"
+                    fill="rgba(var(--vrcd-neon-raw),0.04)"
+                  />
+                  <path
+                    d="M20 32h-6M17 29v6"
+                    stroke="rgba(var(--vrcd-neon-raw),0.7)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="44" cy="29" r="2.5" fill="rgba(176,64,255,0.7)" />
+                  <circle cx="50" cy="32" r="2.5" fill="rgba(var(--vrcd-neon-raw),0.7)" />
+                  <circle cx="44" cy="35" r="2.5" fill="rgba(var(--vrcd-neon-raw),0.5)" />
+                  <circle cx="38" cy="32" r="2.5" fill="rgba(255,100,0,0.6)" />
+                  <path
+                    d="M14 44 Q10 54 15 58"
+                    stroke="rgba(var(--vrcd-neon-raw),0.3)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  <path
+                    d="M50 44 Q54 54 49 58"
+                    stroke="rgba(var(--vrcd-neon-raw),0.3)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    fill="none"
+                  />
                 </svg>
                 <div style={{ textAlign: 'center' }}>
-                  <Text size={500} weight="semibold" style={{ display: 'block', marginBottom: '8px' }}>No games found</Text>
-                  <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>Click Refresh Games to sync the game library</Text>
+                  <Text
+                    size={500}
+                    weight="semibold"
+                    style={{ display: 'block', marginBottom: '8px' }}
+                  >
+                    No games found
+                  </Text>
+                  <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
+                    Click Refresh Games to sync the game library
+                  </Text>
                 </div>
-                <Button appearance="subtle" size="medium" icon={<ArrowClockwiseRegular />} onClick={refreshGames} disabled={isBusy}
-                  style={{ background: 'transparent', border: '1px solid rgba(var(--vrcd-neon-raw),0.45)', color: 'var(--vrcd-neon)', letterSpacing: '0.1em', boxShadow: '0 0 6px rgba(var(--vrcd-neon-raw),0.12)' }}>
+                <Button
+                  appearance="subtle"
+                  size="medium"
+                  icon={<ArrowClockwiseRegular />}
+                  onClick={refreshGames}
+                  disabled={isBusy}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(var(--vrcd-neon-raw),0.45)',
+                    color: 'var(--vrcd-neon)',
+                    letterSpacing: '0.1em',
+                    boxShadow: '0 0 6px rgba(var(--vrcd-neon-raw),0.12)'
+                  }}
+                >
                   {isBusy ? t('working') : t('refreshGames')}
                 </Button>
               </div>
             ) : activeFilter === 'starred' && counts.starred === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', flex: 1, padding: '40px 20px', textAlign: 'center' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  flex: 1,
+                  padding: '40px 20px',
+                  textAlign: 'center'
+                }}
+              >
                 <StarRegular fontSize={56} color="rgba(var(--vrcd-neon-raw),0.45)" />
-                <Text size={500} weight="semibold">{t('noStarredGames')}</Text>
+                <Text size={500} weight="semibold">
+                  {t('noStarredGames')}
+                </Text>
                 <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
                   {t('noStarredGamesHint')}
                 </Text>
@@ -2453,26 +3065,49 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 {prefs.viewMode === 'cards' ? (
                   <div
                     className="games-card-grid"
-                    style={{ '--card-cols': String(cardColumns(prefs.cardSize)) } as React.CSSProperties}
+                    style={
+                      { '--card-cols': String(cardColumns(prefs.cardSize)) } as React.CSSProperties
+                    }
                   >
                     {rows.map((row) => {
                       const game = row.original
-                      const ds = game.releaseName ? downloadStatusMap.get(game.releaseName) : undefined
+                      const ds = game.releaseName
+                        ? downloadStatusMap.get(game.releaseName)
+                        : undefined
                       return (
                         <div
                           key={row.id}
                           className="game-card"
-                          onClick={() => { setDialogGame(game); setIsDialogOpen(true) }}
+                          onClick={() => {
+                            setDialogGame(game)
+                            setIsDialogOpen(true)
+                          }}
                         >
                           <div className="game-card-thumbnail-wrap">
-                            <img src={game.thumbnailPath ? `file://${game.thumbnailPath}` : placeholderImage} alt={game.name} />
+                            <img
+                              src={
+                                game.thumbnailPath
+                                  ? `file://${game.thumbnailPath}`
+                                  : placeholderImage
+                              }
+                              alt={game.name}
+                            />
                             <Button
-                              className={mergeClasses('game-card-star', isStarred(game.packageName ?? '') && 'is-starred')}
+                              className={mergeClasses(
+                                'game-card-star',
+                                isStarred(game.packageName ?? '') && 'is-starred'
+                              )}
                               appearance="subtle"
                               size="small"
-                              icon={isStarred(game.packageName ?? '') ? <StarFilled /> : <StarRegular />}
-                              aria-label={isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')}
-                              title={isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')}
+                              icon={
+                                isStarred(game.packageName ?? '') ? <StarFilled /> : <StarRegular />
+                              }
+                              aria-label={
+                                isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')
+                              }
+                              title={
+                                isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')
+                              }
                               disabled={!game.packageName}
                               onClick={(event) => {
                                 event.stopPropagation()
@@ -2480,21 +3115,35 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                               }}
                             />
                             {game.isInstalled ? (
-                              <span className={`game-card-badge ${game.hasUpdate ? 'update' : 'installed'}`}>
+                              <span
+                                className={`game-card-badge ${game.hasUpdate ? 'update' : 'installed'}`}
+                              >
                                 {game.hasUpdate ? 'Update' : 'Installed'}
                               </span>
-                            ) : (() => {
-                              const badge = getGameBadge(game)
-                              if (badge === 'new') return <span className="game-card-badge new-game">NEW</span>
-                              if (badge === 'updated') return <span className="game-card-badge updated-game">UPDATED</span>
-                              return null
-                            })()}
+                            ) : (
+                              (() => {
+                                const badge = getGameBadge(game)
+                                if (badge === 'new')
+                                  return <span className="game-card-badge new-game">NEW</span>
+                                if (badge === 'updated')
+                                  return (
+                                    <span className="game-card-badge updated-game">UPDATED</span>
+                                  )
+                                return null
+                              })()
+                            )}
                           </div>
                           <div className="game-card-body">
                             <div className="game-card-title">{game.name}</div>
-                            <div className="game-card-meta">v{game.version}{game.size ? ` · ${game.size}` : ''}</div>
+                            <div className="game-card-meta">
+                              v{game.version}
+                              {game.size ? ` · ${game.size}` : ''}
+                            </div>
                             {ds && ds.status !== 'Completed' && (
-                              <div className="game-card-status-text">{ds.status}{ds.progress ? ` ${ds.progress}%` : ''}</div>
+                              <div className="game-card-status-text">
+                                {ds.status}
+                                {ds.progress ? ` ${ds.progress}%` : ''}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -2511,91 +3160,150 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                       const colPct = (size: number): string =>
                         `${((size / totalSize) * 100).toFixed(4)}%`
                       return (
-                    <table className="games-table" style={{ width: '100%', minWidth: totalSize, display: 'block' }}>
-                      <thead style={{ display: 'block', position: 'sticky', top: 0, zIndex: 1 }}>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                          <tr key={headerGroup.id} style={{ display: 'flex', width: '100%' }}>
-                            {headerGroup.headers.map((header) => (
-                              <th
-                                key={header.id}
-                                colSpan={header.colSpan}
-                                style={{
-                                  flex: `${header.getSize()} 0 0`,
-                                  minWidth: header.getSize(),
-                                  position: 'relative',
-                                  display: 'flex',
-                                  alignItems: 'center'
-                                }}
-                              >
-                                {header.isPlaceholder ? null : (
-                                  <div
-                                    {...{
-                                      className: header.column.getCanSort() ? 'cursor-pointer select-none' : '',
-                                      onClick: header.column.getToggleSortingHandler()
+                        <table
+                          className="games-table"
+                          style={{ width: '100%', minWidth: totalSize, display: 'block' }}
+                        >
+                          <thead
+                            style={{ display: 'block', position: 'sticky', top: 0, zIndex: 1 }}
+                          >
+                            {table.getHeaderGroups().map((headerGroup) => (
+                              <tr key={headerGroup.id} style={{ display: 'flex', width: '100%' }}>
+                                {headerGroup.headers.map((header) => (
+                                  <th
+                                    key={header.id}
+                                    colSpan={header.colSpan}
+                                    style={{
+                                      flex: `${header.getSize()} 0 0`,
+                                      minWidth: header.getSize(),
+                                      position: 'relative',
+                                      display: 'flex',
+                                      alignItems: 'center'
                                     }}
-                                    style={{ flex: 1, minWidth: 0 }}
                                   >
-                                    {flexRender(header.column.columnDef.header, header.getContext())}
-                                    {header.column.getIsSorted() === 'asc' && <span style={{ color: 'var(--vrcd-neon)', marginLeft: '4px', fontSize: '10px' }}>▲</span>}
-                                    {header.column.getIsSorted() === 'desc' && <span style={{ color: 'var(--vrcd-purple)', marginLeft: '4px', fontSize: '10px' }}>▼</span>}
-                                    {!header.column.getIsSorted() && header.column.getCanSort() && <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.2)', marginLeft: '4px', fontSize: '10px' }}>⇅</span>}
-                                  </div>
-                                )}
-                                {header.column.getCanResize() && (
-                                  <div
-                                    onMouseDown={header.getResizeHandler()}
-                                    onTouchStart={header.getResizeHandler()}
-                                    className={`${styles.resizer} ${header.column.getIsResizing() ? styles.isResizing : ''}`}
-                                  />
-                                )}
-                              </th>
+                                    {header.isPlaceholder ? null : (
+                                      <div
+                                        {...{
+                                          className: header.column.getCanSort()
+                                            ? 'cursor-pointer select-none'
+                                            : '',
+                                          onClick: header.column.getToggleSortingHandler()
+                                        }}
+                                        style={{ flex: 1, minWidth: 0 }}
+                                      >
+                                        {flexRender(
+                                          header.column.columnDef.header,
+                                          header.getContext()
+                                        )}
+                                        {header.column.getIsSorted() === 'asc' && (
+                                          <span
+                                            style={{
+                                              color: 'var(--vrcd-neon)',
+                                              marginLeft: '4px',
+                                              fontSize: '10px'
+                                            }}
+                                          >
+                                            ▲
+                                          </span>
+                                        )}
+                                        {header.column.getIsSorted() === 'desc' && (
+                                          <span
+                                            style={{
+                                              color: 'var(--vrcd-purple)',
+                                              marginLeft: '4px',
+                                              fontSize: '10px'
+                                            }}
+                                          >
+                                            ▼
+                                          </span>
+                                        )}
+                                        {!header.column.getIsSorted() &&
+                                          header.column.getCanSort() && (
+                                            <span
+                                              style={{
+                                                color: 'rgba(var(--vrcd-neon-raw),0.2)',
+                                                marginLeft: '4px',
+                                                fontSize: '10px'
+                                              }}
+                                            >
+                                              ⇅
+                                            </span>
+                                          )}
+                                      </div>
+                                    )}
+                                    {header.column.getCanResize() && (
+                                      <div
+                                        onMouseDown={header.getResizeHandler()}
+                                        onTouchStart={header.getResizeHandler()}
+                                        className={`${styles.resizer} ${header.column.getIsResizing() ? styles.isResizing : ''}`}
+                                      />
+                                    )}
+                                  </th>
+                                ))}
+                              </tr>
                             ))}
-                          </tr>
-                        ))}
-                      </thead>
-                      <tbody style={{ display: 'block', height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                          const row = rows[virtualRow.index]
-                          if (!row) return null
-                          const rowClasses = [
-                            row.original.isInstalled ? 'row-installed' : 'row-not-installed',
-                            row.original.hasUpdate ? 'row-update-available' : '',
-                            virtualRow.index % 2 === 0 ? 'row-even' : 'row-odd'
-                          ].filter(Boolean).join(' ')
-                          return (
-                            <tr
-                              key={row.id}
-                              className={rowClasses}
-                              style={{
-                                display: 'flex',
-                                position: 'absolute', top: 0, left: 0, width: '100%',
-                                height: `${virtualRow.size}px`,
-                                transform: `translateY(${virtualRow.start}px)`
-                              }}
-                              onClick={(e) => handleRowClick(e, row)}
-                            >
-                              {row.getVisibleCells().map((cell) => (
-                                <td
-                                  key={cell.id}
+                          </thead>
+                          <tbody
+                            style={{
+                              display: 'block',
+                              height: `${rowVirtualizer.getTotalSize()}px`,
+                              position: 'relative'
+                            }}
+                          >
+                            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                              const row = rows[virtualRow.index]
+                              if (!row) return null
+                              const rowClasses = [
+                                row.original.isInstalled ? 'row-installed' : 'row-not-installed',
+                                row.original.hasUpdate ? 'row-update-available' : '',
+                                virtualRow.index % 2 === 0 ? 'row-even' : 'row-odd'
+                              ]
+                                .filter(Boolean)
+                                .join(' ')
+                              return (
+                                <tr
+                                  key={row.id}
+                                  className={rowClasses}
                                   style={{
-                                    flex: `${cell.column.getSize()} 0 0`,
-                                    minWidth: cell.column.getSize(),
-                                    width: colPct(cell.column.getSize()),
                                     display: 'flex',
-                                    alignItems: 'center',
-                                    overflow: 'hidden'
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: `${virtualRow.size}px`,
+                                    transform: `translateY(${virtualRow.start}px)`
                                   }}
+                                  onClick={(e) => handleRowClick(e, row)}
                                 >
-                                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                  </div>
-                                </td>
-                              ))}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                                  {row.getVisibleCells().map((cell) => (
+                                    <td
+                                      key={cell.id}
+                                      style={{
+                                        flex: `${cell.column.getSize()} 0 0`,
+                                        minWidth: cell.column.getSize(),
+                                        width: colPct(cell.column.getSize()),
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        overflow: 'hidden'
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          flex: 1,
+                                          minWidth: 0,
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis'
+                                        }}
+                                      >
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                      </div>
+                                    </td>
+                                  ))}
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
                       )
                     })()}
                   </div>

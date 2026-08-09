@@ -5,10 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
-import {
-  isCompletedDownloadFile,
-  validateDownloadCompletion
-} from './archiveDiscovery.ts'
+import { isCompletedDownloadFile, validateDownloadCompletion } from './archiveDiscovery.ts'
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const file = (relativePath, size = 100) => ({ relativePath, size })

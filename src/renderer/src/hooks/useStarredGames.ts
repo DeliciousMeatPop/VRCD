@@ -25,9 +25,7 @@ export function parseStarredPackages(raw: string | null): Set<string> {
   }
 }
 
-export function readStarredPackages(
-  storage: StarredGamesStorage | null | undefined
-): Set<string> {
+export function readStarredPackages(storage: StarredGamesStorage | null | undefined): Set<string> {
   if (!storage) return new Set()
   try {
     return parseStarredPackages(storage.getItem(STARRED_GAMES_STORAGE_KEY))
@@ -42,10 +40,7 @@ export function writeStarredPackages(
 ): void {
   if (!storage) return
   try {
-    storage.setItem(
-      STARRED_GAMES_STORAGE_KEY,
-      JSON.stringify(Array.from(packages).sort())
-    )
+    storage.setItem(STARRED_GAMES_STORAGE_KEY, JSON.stringify(Array.from(packages).sort()))
   } catch {
     /* localStorage can be unavailable or full; keep the in-memory state usable */
   }
@@ -64,10 +59,7 @@ export function toggleStarredPackage(
   return next
 }
 
-export function isPackageStarred(
-  packages: ReadonlySet<string>,
-  packageName: string
-): boolean {
+export function isPackageStarred(packages: ReadonlySet<string>, packageName: string): boolean {
   return packages.has(packageName.trim())
 }
 

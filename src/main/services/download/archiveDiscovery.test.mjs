@@ -3,12 +3,7 @@ import test from 'node:test'
 import { discoverArchive } from './archiveDiscovery.ts'
 
 test('ignores AppleDouble metadata and returns the canonical volumes in order', () => {
-  const result = discoverArchive([
-    '._game.7z.002',
-    'game.7z.002',
-    '._game.7z.001',
-    'game.7z.001'
-  ])
+  const result = discoverArchive(['._game.7z.002', 'game.7z.002', '._game.7z.001', 'game.7z.001'])
 
   assert.equal(result.ok, true)
   if (!result.ok) return
@@ -33,11 +28,7 @@ test('selects the real Puzzling Places archive instead of its AppleDouble sideca
 })
 
 test('rejects any server-side tmp archive volume', () => {
-  const result = discoverArchive([
-    'game.7z.001',
-    'game.7z.002.tmp',
-    'game.7z.003'
-  ])
+  const result = discoverArchive(['game.7z.001', 'game.7z.002.tmp', 'game.7z.003'])
 
   assert.equal(result.ok, false)
   if (result.ok) return

@@ -30,21 +30,12 @@ describe('starred games storage', () => {
     expect(parseStarredPackages(null)).toEqual(new Set())
     expect(parseStarredPackages('')).toEqual(new Set())
     expect(parseStarredPackages('{broken')).toEqual(new Set())
-    expect(parseStarredPackages('{"package":"com.example"}')).toEqual(
-      new Set()
-    )
+    expect(parseStarredPackages('{"package":"com.example"}')).toEqual(new Set())
   })
 
   it('trims, validates, and deduplicates package names', () => {
     const result = parseStarredPackages(
-      JSON.stringify([
-        ' com.example.one ',
-        'com.example.one',
-        '',
-        42,
-        null,
-        'com.example.two'
-      ])
+      JSON.stringify([' com.example.one ', 'com.example.one', '', 42, null, 'com.example.two'])
     )
 
     expect(result).toEqual(new Set(['com.example.one', 'com.example.two']))
@@ -62,9 +53,7 @@ describe('starred games storage', () => {
 
     expect(readStarredPackages(unavailable)).toEqual(new Set())
     expect(readStarredPackages(null)).toEqual(new Set())
-    expect(() =>
-      writeStarredPackages(unavailable, new Set(['com.example']))
-    ).not.toThrow()
+    expect(() => writeStarredPackages(unavailable, new Set(['com.example']))).not.toThrow()
     expect(() => writeStarredPackages(null, new Set(['com.example']))).not.toThrow()
   })
 
@@ -90,9 +79,7 @@ describe('starred games storage', () => {
       { releaseName: 'release-two', packageName: 'com.example.shared' }
     ]
 
-    expect(releases.every((release) => isPackageStarred(packages, release.packageName))).toBe(
-      true
-    )
+    expect(releases.every((release) => isPackageStarred(packages, release.packageName))).toBe(true)
   })
 
   it('retains a star while its package is missing from a refreshed catalog', () => {
@@ -111,8 +98,6 @@ describe('starred games storage', () => {
     writeStarredPackages(storage, new Set(['com.zeta', 'com.alpha']))
 
     expect(storage.value).toBe('["com.alpha","com.zeta"]')
-    expect(readStarredPackages(storage)).toEqual(
-      new Set(['com.alpha', 'com.zeta'])
-    )
+    expect(readStarredPackages(storage)).toEqual(new Set(['com.alpha', 'com.zeta']))
   })
 })

@@ -536,8 +536,7 @@ export class InstallationProcessor {
               }
               if (mismatches.length > 0) {
                 const detail = mismatches.slice(0, 5).join('; ')
-                const more =
-                  mismatches.length > 5 ? ` (+${mismatches.length - 5} more)` : ''
+                const more = mismatches.length > 5 ? ` (+${mismatches.length - 5} more)` : ''
                 throw new Error(
                   `OBB verification failed after push: ${mismatches.length} file(s) incomplete or missing: ${detail}${more}`
                 )

@@ -52,13 +52,16 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
 
   // Detect version change on startup — triggers upload check on first launch post-update
   useEffect(() => {
-    window.api.app?.getVersion?.()?.then((v) => {
-      const storedVersion = localStorage.getItem('vr-upload-check-version') ?? ''
-      if (storedVersion !== v) {
-        setForceUploadCheck(true)
-        localStorage.setItem('vr-upload-check-version', v)
-      }
-    }).catch(() => {})
+    window.api.app
+      ?.getVersion?.()
+      ?.then((v) => {
+        const storedVersion = localStorage.getItem('vr-upload-check-version') ?? ''
+        if (storedVersion !== v) {
+          setForceUploadCheck(true)
+          localStorage.setItem('vr-upload-check-version', v)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const requestUploadCheck = useCallback(() => {
@@ -186,7 +189,14 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
     if (forceUploadCheck) setForceUploadCheck(false)
 
     processInstalledPackages()
-  }, [isDeviceConnected, installedPackages, rawGames, selectedDeviceDetails, selectedDevice, forceUploadCheck])
+  }, [
+    isDeviceConnected,
+    installedPackages,
+    rawGames,
+    selectedDeviceDetails,
+    selectedDevice,
+    forceUploadCheck
+  ])
 
   // Check for upload candidates whenever device versions or game data changes (deferred)
   useEffect(() => {
@@ -204,14 +214,10 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
   // enrich the games with the installed packages and the device version codes
   const games = useMemo((): GameInfo[] => {
     // Build a Map for O(1) lookups instead of O(n) .find() per game
-    const installedMap = new Map(
-      installedPackages.map((pkg) => [pkg.packageName, pkg.versionCode])
-    )
+    const installedMap = new Map(installedPackages.map((pkg) => [pkg.packageName, pkg.versionCode]))
 
     return rawGames.map((game) => {
-      const deviceVersionCode = game.packageName
-        ? installedMap.get(game.packageName)
-        : undefined
+      const deviceVersionCode = game.packageName ? installedMap.get(game.packageName) : undefined
       const isInstalled = deviceVersionCode !== undefined
       let hasUpdate = false
 
@@ -294,8 +300,8 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       if (msg.includes('is a directory not a file')) {
         setError(
           'Failed to refresh games — the download was blocked or returned an unexpected response. ' +
-          'If you have antivirus or a VPN active, try whitelisting the app or disabling it temporarily. ' +
-          'Check Other Settings → // RESET APP DATA if the issue persists after a reinstall.'
+            'If you have antivirus or a VPN active, try whitelisting the app or disabling it temporarily. ' +
+            'Check Other Settings → // RESET APP DATA if the issue persists after a reinstall.'
         )
       } else {
         setError('Failed to refresh games')

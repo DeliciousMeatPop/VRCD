@@ -14,11 +14,7 @@ import {
   makeStyles,
   tokens
 } from '@fluentui/react-components'
-import {
-  CheckmarkCircleRegular,
-  ServerRegular,
-  DismissCircleRegular
-} from '@fluentui/react-icons'
+import { CheckmarkCircleRegular, ServerRegular, DismissCircleRegular } from '@fluentui/react-icons'
 import { useSettings } from '../hooks/useSettings'
 import { sanitizeBaseUri, isValidBaseUri } from '@shared/serverConfig'
 
@@ -136,7 +132,6 @@ const ServerConfigSettings: React.FC = () => {
     }
   }
 
-
   return (
     <Dialog open={open} onOpenChange={(_, data) => setOpen(data.open)}>
       <DialogTrigger disableButtonEnhancement>
@@ -155,7 +150,9 @@ const ServerConfigSettings: React.FC = () => {
               fill in the fields yourself. Credentials are stored locally.
             </Text>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS }}
+            >
               <Text size={200} weight="semibold">
                 Paste JSON
               </Text>

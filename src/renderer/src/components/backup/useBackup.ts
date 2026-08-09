@@ -21,10 +21,7 @@ export interface UseBackup {
   create: (deviceId: string, packageName: string, appLabel: string) => Promise<BackupCreateResult>
   restore: (backupId: string, deviceId: string) => Promise<BackupResult>
   remove: (backupId: string) => Promise<boolean>
-  setVerification: (
-    backupId: string,
-    result: BackupVerification
-  ) => Promise<BackupEntry | null>
+  setVerification: (backupId: string, result: BackupVerification) => Promise<BackupEntry | null>
   reportFailure: (backupId: string) => Promise<BackupReportResult | null>
   getProfile: (packageName: string) => Promise<BackupProfile | null>
 }

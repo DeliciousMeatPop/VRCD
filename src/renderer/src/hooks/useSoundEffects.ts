@@ -129,7 +129,9 @@ export interface SoundSettings {
 export function useSoundEffects(): SoundSettings {
   const [enabled, setEnabledState] = useState<boolean>(() => readEnabled())
   const [volume, setVolumeState] = useState<number>(() => readVolume())
-  const [perName, setPerNameState] = useState<Record<SoundName, boolean>>(() => readPerNameEnabled())
+  const [perName, setPerNameState] = useState<Record<SoundName, boolean>>(() =>
+    readPerNameEnabled()
+  )
   const [loaded, setLoaded] = useState<Partial<Record<SoundName, boolean>>>({})
   const mountedRef = useRef(true)
 

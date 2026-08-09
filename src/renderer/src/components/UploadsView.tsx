@@ -14,7 +14,12 @@ import {
 import { useUpload } from '../hooks/useUpload'
 import { useLanguage } from '../hooks/useLanguage'
 import { UploadItem } from '@shared/types'
-import { DismissRegular, DeleteRegular, ArrowCounterclockwiseRegular, DismissCircleRegular } from '@fluentui/react-icons'
+import {
+  DismissRegular,
+  DeleteRegular,
+  ArrowCounterclockwiseRegular,
+  DismissCircleRegular
+} from '@fluentui/react-icons'
 
 const useStyles = makeStyles({
   wrapper: {
@@ -151,7 +156,11 @@ const UploadRow: React.FC<{ item: UploadItem }> = ({ item }) => {
     <TableRow>
       <TableCell>{item.gameName}</TableCell>
       <TableCell style={{ wordBreak: 'break-all' }}>
-        {item.isLocalUpload ? <em style={{ color: tokens.colorNeutralForeground3 }}>local</em> : item.packageName}
+        {item.isLocalUpload ? (
+          <em style={{ color: tokens.colorNeutralForeground3 }}>local</em>
+        ) : (
+          item.packageName
+        )}
       </TableCell>
       <TableCell>{item.versionCode > 0 ? item.versionCode : '—'}</TableCell>
       <TableCell>{statusElement}</TableCell>
@@ -177,7 +186,12 @@ const UploadsView: React.FC = () => {
           onClick={clearCompleted}
           disabled={!hasClearable}
           title="Remove all completed and cancelled entries from the list"
-          style={{ fontFamily: 'monospace', fontSize: '11px', color: 'rgba(var(--vrcd-neon-raw),0.8)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)' }}
+          style={{
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: 'rgba(var(--vrcd-neon-raw),0.8)',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.3)'
+          }}
         >
           Clear Completed
         </Button>

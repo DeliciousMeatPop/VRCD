@@ -815,15 +815,11 @@ class AdbService extends EventEmitter implements AdbAPI {
         // may not yet exist (e.g. /sdcard/Android/obb/<pkg>/ on a fresh device).
         const remoteParentDir = path.posix.dirname(finalRemotePath)
         if (!skipEnsureParentDir && remoteParentDir && remoteParentDir !== '.') {
-          console.log(
-            `[ADB Service] Ensuring remote parent directory exists: ${remoteParentDir}`
-          )
+          console.log(`[ADB Service] Ensuring remote parent directory exists: ${remoteParentDir}`)
           await this.runShellCommand(serial, `mkdir -p "${remoteParentDir}"`)
         }
 
-        console.log(
-          `[ADB Service] Pushing file ${localPath} to ${serial}:${finalRemotePath}...`
-        )
+        console.log(`[ADB Service] Pushing file ${localPath} to ${serial}:${finalRemotePath}...`)
         const transfer = await deviceClient.push(localPath, finalRemotePath)
         return new Promise<boolean>((resolve, reject) => {
           transfer.on('end', () => {
@@ -872,10 +868,7 @@ class AdbService extends EventEmitter implements AdbAPI {
    * can distinguish "verified, mismatch found" from "could not verify" and avoid
    * failing a good install just because verification was unavailable.
    */
-  async getRemoteFileSizes(
-    serial: string,
-    remoteDir: string
-  ): Promise<Map<string, number> | null> {
+  async getRemoteFileSizes(serial: string, remoteDir: string): Promise<Map<string, number> | null> {
     const normalizedDir = remoteDir.replace(/\\/g, '/').replace(/\/+$/, '')
     // `stat -c '%s|%n'` prints "<bytes>|<full-path>" per file. toybox (Quest's
     // shell) supports both `find -exec` and `stat -c`, and batching with `+`
@@ -1077,14 +1070,13 @@ class AdbService extends EventEmitter implements AdbAPI {
     let totalBytes = 0
     for (const rel of rels) {
       if (totalBytes >= AdbService.INTERNAL_PULL_CAP_BYTES) {
-        console.warn(`[ADB Service] run-as pull: hit ${AdbService.INTERNAL_PULL_CAP_BYTES}-byte cap, stopping.`)
+        console.warn(
+          `[ADB Service] run-as pull: hit ${AdbService.INTERNAL_PULL_CAP_BYTES}-byte cap, stopping.`
+        )
         break
       }
       const remoteFile = `${base}/${rel}`
-      const b64 = await this.runShellCommand(
-        serial,
-        `run-as ${packageName} base64 "${remoteFile}"`
-      )
+      const b64 = await this.runShellCommand(serial, `run-as ${packageName} base64 "${remoteFile}"`)
       if (b64 === null || /run-as:|No such file|base64: not found|inaccessible/i.test(b64)) {
         console.warn(`[ADB Service] run-as pull: could not read ${remoteFile}; skipping.`)
         continue
@@ -1192,10 +1184,7 @@ class AdbService extends EventEmitter implements AdbAPI {
    */
   async countRemoteFiles(serial: string, remotePath: string): Promise<number> {
     const escaped = remotePath.replace(/"/g, '\\"')
-    const out = await this.runShellCommand(
-      serial,
-      `find "${escaped}" -type f 2>/dev/null | wc -l`
-    )
+    const out = await this.runShellCommand(serial, `find "${escaped}" -type f 2>/dev/null | wc -l`)
     if (out === null) return -1
     const n = parseInt(out.trim(), 10)
     return Number.isFinite(n) ? n : -1

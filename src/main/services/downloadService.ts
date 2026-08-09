@@ -75,10 +75,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     const previousPath = this.downloadsPath
     this.downloadsPath = path
     if (this.isInitialized && previousPath !== path) {
-      const changed = this.queueManager.updateAllItems(
-        (item) => item.status === 'Queued',
-        { downloadPath: path }
-      )
+      const changed = this.queueManager.updateAllItems((item) => item.status === 'Queued', {
+        downloadPath: path
+      })
       if (changed) this.emitUpdate()
     }
     void this.refreshStorageStatus(true)
@@ -215,7 +214,10 @@ class DownloadService extends EventEmitter implements DownloadAPI {
   updateVrpConfig(vrpConfig: VrpConfig): void {
     this.downloadProcessor.setVrpConfig(vrpConfig)
     this.extractionProcessor.setVrpConfig(vrpConfig)
-    console.log('[DownloadService] Server config updated at runtime - baseUri:', !!vrpConfig.baseUri)
+    console.log(
+      '[DownloadService] Server config updated at runtime - baseUri:',
+      !!vrpConfig.baseUri
+    )
   }
 
   public getQueue(): Promise<DownloadItem[]> {
@@ -360,10 +362,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
           try {
             await fs.rm(folderPath, { recursive: true, force: true })
           } catch (err) {
-            console.error(
-              `[Service] Failed to wipe ${folderPath} before auto-redownload:`,
-              err
-            )
+            console.error(`[Service] Failed to wipe ${folderPath} before auto-redownload:`, err)
           }
           // fall through to normal queueing below
         } else {
@@ -438,7 +437,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     this.cancelActiveItem(releaseName, item)
     const removed = this.queueManager.removeItem(releaseName)
     if (removed) {
-      console.log(`[Service] Removed ${releaseName} from queue without deleting files (status: ${item.status}).`)
+      console.log(
+        `[Service] Removed ${releaseName} from queue without deleting files (status: ${item.status}).`
+      )
       this.emitUpdate()
     }
   }
@@ -665,10 +666,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         )
       }
     } catch (error) {
-      console.error(
-        `[Service ResumeQueue] UNEXPECTED error for ${nextItem.releaseName}:`,
-        error
-      )
+      console.error(`[Service ResumeQueue] UNEXPECTED error for ${nextItem.releaseName}:`, error)
       const currentItem = this.queueManager.findItem(nextItem.releaseName)
       this.updateItemStatus(
         nextItem.releaseName,
@@ -973,9 +971,13 @@ class DownloadService extends EventEmitter implements DownloadAPI {
           const inner = await fs.readdir(join(folderPath, entry.name), { withFileTypes: true })
           const nested = inner.find((e) => e.isFile() && e.name.toLowerCase().endsWith('.apk'))
           if (nested) return join(folderPath, entry.name, nested.name)
-        } catch { /* ignore unreadable subdirs */ }
+        } catch {
+          /* ignore unreadable subdirs */
+        }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return null
   }
 
@@ -1002,7 +1004,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
           console.log(`[Service] Extracted packageName '${name}' via ${tool}`)
           return name
         }
-      } catch { /* tool not available or failed — try next */ }
+      } catch {
+        /* tool not available or failed — try next */
+      }
     }
     return ''
   }
@@ -1013,7 +1017,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       if (!contents.some((f) => f.toLowerCase().endsWith('.apk'))) return ''
       const potentials = contents.filter((f) => f.includes('.') && !f.includes(' ') && f.length > 5)
       if (potentials.length === 1) return potentials[0]
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return ''
   }
 
@@ -1124,9 +1130,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     }
 
     if (added > 0 || pruned > 0) this.emitUpdate()
-    console.log(
-      `[Service scanDownloadFolder] added=${added} pruned=${pruned} skipped=${skipped}`
-    )
+    console.log(`[Service scanDownloadFolder] added=${added} pruned=${pruned} skipped=${skipped}`)
     return { added, pruned }
   }
 
@@ -1237,10 +1241,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     }
   }
 
-  private async installSingleManualFolder(
-    folderPath: string,
-    deviceId: string
-  ): Promise<boolean> {
+  private async installSingleManualFolder(folderPath: string, deviceId: string): Promise<boolean> {
     console.log(`[Service installManualFile] Installing folder: ${folderPath}`)
 
     const manualId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`

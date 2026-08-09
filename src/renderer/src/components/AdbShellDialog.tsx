@@ -37,9 +37,10 @@ const NEON_DIM = 'rgba(var(--vrcd-neon-raw),0.35)'
 const NEON_DIM2 = 'rgba(var(--vrcd-neon-raw),0.18)'
 const BG_SURFACE = '#030310'
 const BG_TERMINAL = '#000008'
-const CHAR_POOL = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF'
+const CHAR_POOL =
+  'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF'
 
-const PHASE_1_END = 1500  // ms — rain + "INITIALIZING..."
+const PHASE_1_END = 1500 // ms — rain + "INITIALIZING..."
 // Phase 3 starts at 2500ms — terminal revealed
 // USERNAME_PREFS_KEY exported from matrixUsername utility
 
@@ -74,7 +75,10 @@ function useMatrixCanvas(
       x: i * fontSize,
       y: Math.random() * -H,
       speed: 1 + Math.random() * 2,
-      chars: Array.from({ length: 30 }, () => CHAR_POOL[Math.floor(Math.random() * CHAR_POOL.length)]),
+      chars: Array.from(
+        { length: 30 },
+        () => CHAR_POOL[Math.floor(Math.random() * CHAR_POOL.length)]
+      ),
       head: 0
     }))
 
@@ -177,13 +181,11 @@ function useTypingAnimation(
       const slice = full.slice(0, charIdx)
       setHistory((prev) =>
         prev.map((e, i) =>
-          i === lastIdx
-            ? { ...e, rendered: slice, typingDone: charIdx >= full.length }
-            : e
+          i === lastIdx ? { ...e, rendered: slice, typingDone: charIdx >= full.length } : e
         )
       )
       if (charIdx < full.length) {
-        const delay = 8 + Math.random() * 4  // 8-12 ms
+        const delay = 8 + Math.random() * 4 // 8-12 ms
         setTimeout(step, delay)
       }
     }
@@ -195,7 +197,7 @@ function useTypingAnimation(
       cancelled = true
       clearTimeout(t)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history.length])
 }
 
@@ -230,7 +232,7 @@ const S = {
   } as React.CSSProperties,
 
   titleText: {
-    fontFamily: "var(--vrcd-font-mono)",
+    fontFamily: 'var(--vrcd-font-mono)',
     fontSize: '13px',
     color: NEON,
     letterSpacing: '0.08em',
@@ -249,7 +251,7 @@ const S = {
     background: BG_TERMINAL,
     border: `1px solid ${NEON_DIM}`,
     borderRadius: '4px',
-    fontFamily: "var(--vrcd-font-mono)",
+    fontFamily: 'var(--vrcd-font-mono)',
     fontSize: '13px',
     color: NEON,
     padding: '12px 14px',
@@ -278,7 +280,7 @@ const S = {
   emptyHint: {
     color: 'rgba(var(--vrcd-neon-raw),0.4)',
     fontStyle: 'italic' as const,
-    fontFamily: "var(--vrcd-font-mono)"
+    fontFamily: 'var(--vrcd-font-mono)'
   } as React.CSSProperties,
 
   prompt: {
@@ -315,7 +317,7 @@ const S = {
     background: 'transparent',
     border: `1px solid ${NEON_DIM}`,
     color: NEON,
-    fontFamily: "var(--vrcd-font-mono)",
+    fontFamily: 'var(--vrcd-font-mono)',
     fontSize: '12px',
     letterSpacing: '0.06em',
     cursor: 'pointer',
@@ -372,7 +374,13 @@ interface MatrixIntroProps {
   username: string
 }
 
-function MatrixIntro({ onComplete, width, height, holdMs, username }: MatrixIntroProps): React.ReactElement {
+function MatrixIntro({
+  onComplete,
+  width,
+  height,
+  holdMs,
+  username
+}: MatrixIntroProps): React.ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [animPhase, setAnimPhase] = useState<AnimPhase>('rain')
   const [initOpacity, setInitOpacity] = useState(0)
@@ -455,7 +463,7 @@ function MatrixIntro({ onComplete, width, height, holdMs, username }: MatrixIntr
             bottom: '40px',
             left: '50%',
             transform: 'translateX(-50%)',
-            fontFamily: "var(--vrcd-font-mono)",
+            fontFamily: 'var(--vrcd-font-mono)',
             fontSize: '12px',
             letterSpacing: '0.25em',
             color: 'rgba(var(--vrcd-neon-raw),0.7)',
@@ -482,7 +490,7 @@ function MatrixIntro({ onComplete, width, height, holdMs, username }: MatrixIntr
             alignItems: 'center',
             justifyContent: 'center',
             textAlign: 'center',
-            fontFamily: "var(--vrcd-font-mono)",
+            fontFamily: 'var(--vrcd-font-mono)',
             userSelect: 'none',
             flexDirection: 'column',
             gap: '12px'
@@ -494,7 +502,8 @@ function MatrixIntro({ onComplete, width, height, holdMs, username }: MatrixIntr
               letterSpacing: '0.25em',
               color: NEON,
               textShadow: `0 0 16px ${NEON}, 0 0 32px rgba(var(--vrcd-neon-raw),0.5), 0 0 60px rgba(var(--vrcd-neon-raw),0.2)`,
-              animation: 'matrixFadeIn 0.4s ease-out forwards, rabbitPulse 1.2s ease-in-out 0.4s infinite'
+              animation:
+                'matrixFadeIn 0.4s ease-out forwards, rabbitPulse 1.2s ease-in-out 0.4s infinite'
             }}
           >
             FOLLOW THE WHITE RABBIT
@@ -515,11 +524,12 @@ function MatrixIntro({ onComplete, width, height, holdMs, username }: MatrixIntr
               fontSize: '13px',
               letterSpacing: '0.15em',
               color: 'rgba(var(--vrcd-neon-raw),0.55)',
-              fontFamily: "var(--vrcd-font-mono)",
+              fontFamily: 'var(--vrcd-font-mono)',
               animation: 'matrixFadeIn 0.6s ease-out 0.2s both'
             }}
           >
-            {`> identity confirmed: `}<span style={{ color: NEON, textShadow: `0 0 8px ${NEON}` }}>{username}</span>
+            {`> identity confirmed: `}
+            <span style={{ color: NEON, textShadow: `0 0 8px ${NEON}` }}>{username}</span>
           </div>
         </div>
       )}
@@ -550,7 +560,13 @@ interface FlashInputProps {
   inputRef: React.RefObject<HTMLInputElement | null>
 }
 
-function FlashInput({ value, onChange, onKeyDown, disabled, inputRef }: FlashInputProps): React.ReactElement {
+function FlashInput({
+  value,
+  onChange,
+  onKeyDown,
+  disabled,
+  inputRef
+}: FlashInputProps): React.ReactElement {
   const [flash, setFlash] = useState(false)
   const [flashKey, setFlashKey] = useState(0)
 
@@ -583,7 +599,7 @@ function FlashInput({ value, onChange, onKeyDown, disabled, inputRef }: FlashInp
           background: 'transparent',
           border: 'none',
           outline: 'none',
-          fontFamily: "var(--vrcd-font-mono)",
+          fontFamily: 'var(--vrcd-font-mono)',
           fontSize: '13px',
           color: NEON,
           caretColor: NEON,
@@ -604,10 +620,14 @@ function FlashInput({ value, onChange, onKeyDown, disabled, inputRef }: FlashInp
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogProps): React.ReactElement {
+export function AdbShellDialog({
+  deviceId,
+  isOpen,
+  onDismiss
+}: AdbShellDialogProps): React.ReactElement {
   const matrixUsername = useRef(getMatrixUsername()).current
   const firstLaunch = useRef(isFirstLaunchToday()).current
-  const PHASE_2_HOLD = firstLaunch ? 4000 : 2500  // hold longer on first launch of day
+  const PHASE_2_HOLD = firstLaunch ? 4000 : 2500 // hold longer on first launch of day
   const matrixEnabled = useRef(shouldShowMatrixShell()).current
 
   const [command, setCommand] = useState('')
@@ -694,10 +714,7 @@ export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogPr
       isError = true
     }
 
-    setHistory((prev) => [
-      ...prev,
-      { command: cmd, output, error: isError }
-    ])
+    setHistory((prev) => [...prev, { command: cmd, output, error: isError }])
     setIsRunning(false)
     setTimeout(() => inputRef.current?.focus(), 50)
   }
@@ -732,21 +749,27 @@ export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogPr
   const promptLabel = `[${deviceId}@cyberdeck]$`
 
   return (
-    <Dialog open={isOpen} onOpenChange={(_, { open }) => { if (!open) onDismiss() }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(_, { open }) => {
+        if (!open) onDismiss()
+      }}
+    >
       <DialogSurface style={S.surface}>
         <DialogBody style={S.body}>
-
           {/* ── Title bar ── */}
           <DialogTitle style={{ padding: 0, margin: 0 }}>
             <div style={S.titleBar}>
               <span style={S.titleText}>[ADB SHELL — {deviceId}]</span>
-              <span style={{
-                fontFamily: "var(--vrcd-font-mono)",
-                fontSize: '10px',
-                letterSpacing: '0.15em',
-                color: 'rgba(var(--vrcd-neon-raw),0.35)',
-                userSelect: 'none'
-              }}>
+              <span
+                style={{
+                  fontFamily: 'var(--vrcd-font-mono)',
+                  fontSize: '10px',
+                  letterSpacing: '0.15em',
+                  color: 'rgba(var(--vrcd-neon-raw),0.35)',
+                  userSelect: 'none'
+                }}
+              >
                 SECURE TERMINAL
               </span>
             </div>
@@ -754,18 +777,12 @@ export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogPr
 
           {/* ── Content ── */}
           <DialogContent style={S.content}>
-
             {/* Quick command shortcuts — only after the matrix animation finishes
                 so they don't appear over the intro */}
-            {animDone && (
-              <AdbShortcuts onRun={(cmd) => runCommand(cmd)} disabled={isRunning} />
-            )}
+            {animDone && <AdbShortcuts onRun={(cmd) => runCommand(cmd)} disabled={isRunning} />}
 
             {/* Terminal area — wraps both the animation overlay and the terminal output */}
-            <div
-              ref={containerRef}
-              style={{ position: 'relative' }}
-            >
+            <div ref={containerRef} style={{ position: 'relative' }}>
               {/* Matrix intro — shown until animDone (skipped when disabled) */}
               {!animDone && matrixEnabled && (
                 <MatrixIntro
@@ -800,9 +817,7 @@ export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogPr
                     {entry.output !== null && (
                       <div style={entry.error ? S.errorText : S.outputText}>
                         {entry.typingDone ? entry.output : (entry.rendered ?? '')}
-                        {!entry.typingDone && (
-                          <span style={{ opacity: 0.7 }}>▌</span>
-                        )}
+                        {!entry.typingDone && <span style={{ opacity: 0.7 }}>▌</span>}
                       </div>
                     )}
                   </div>
@@ -811,7 +826,12 @@ export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogPr
                 {isRunning && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={S.prompt}>{promptLabel}</span>
-                    <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.5)', fontFamily: "var(--vrcd-font-mono)" }}>
+                    <span
+                      style={{
+                        color: 'rgba(var(--vrcd-neon-raw),0.5)',
+                        fontFamily: 'var(--vrcd-font-mono)'
+                      }}
+                    >
                       executing...
                     </span>
                   </div>
@@ -826,12 +846,14 @@ export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogPr
                   marginTop: '8px'
                 }}
               >
-                <span style={{
-                  ...S.prompt,
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  fontSize: '12px'
-                }}>
+                <span
+                  style={{
+                    ...S.prompt,
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    fontSize: '12px'
+                  }}
+                >
                   {promptLabel}
                 </span>
                 <FlashInput
@@ -849,21 +871,15 @@ export function AdbShellDialog({ deviceId, isOpen, onDismiss }: AdbShellDialogPr
                 </NeonButton>
               </div>
             </div>
-
           </DialogContent>
 
           {/* ── Actions ── */}
           <DialogActions style={{ padding: 0, margin: 0 }}>
             <div style={S.actions}>
-              <NeonButton onClick={() => setHistory([])}>
-                CLEAR
-              </NeonButton>
-              <NeonButton onClick={onDismiss}>
-                CLOSE
-              </NeonButton>
+              <NeonButton onClick={() => setHistory([])}>CLEAR</NeonButton>
+              <NeonButton onClick={onDismiss}>CLOSE</NeonButton>
             </div>
           </DialogActions>
-
         </DialogBody>
       </DialogSurface>
     </Dialog>

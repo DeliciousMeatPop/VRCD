@@ -28,7 +28,10 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   const dead = useRef(false)
 
   useEffect(() => {
-    window.api.app.getVersion().then(setAppVersion).catch(() => {})
+    window.api.app
+      .getVersion()
+      .then(setAppVersion)
+      .catch(() => {})
   }, [])
 
   // cursor blink
@@ -164,7 +167,9 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     }
 
     run()
-    return () => { dead.current = true }
+    return () => {
+      dead.current = true
+    }
   }, [onComplete])
 
   const containerStyle: React.CSSProperties = {
@@ -177,7 +182,11 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     alignItems: 'center',
     backgroundColor: phase === 'unauthorized' ? '#0c0000' : '#000000',
     opacity: fading ? 0 : 1,
-    transition: fading ? 'opacity 1.5s ease-in-out' : phase === 'unauthorized' ? 'background-color 0.1s' : 'none',
+    transition: fading
+      ? 'opacity 1.5s ease-in-out'
+      : phase === 'unauthorized'
+        ? 'background-color 0.1s'
+        : 'none',
     fontFamily: 'var(--vrcd-font-mono)',
     fontSize: '17px',
     color: '#39ff14',
@@ -211,14 +220,27 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
     <div style={containerStyle}>
       {/* top-left boot badge */}
       {phase !== 'boot' && (
-        <div style={{
-          position: 'absolute', top: 36, left: 40,
-          color: 'rgba(57,255,20,0.4)', fontSize: '11px',
-          lineHeight: '1.6', letterSpacing: '0.08em'
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 36,
+            left: 40,
+            color: 'rgba(57,255,20,0.4)',
+            fontSize: '11px',
+            lineHeight: '1.6',
+            letterSpacing: '0.08em'
+          }}
+        >
           <div>VR CYBERDECK v{appVersion}</div>
           <div>SECURE TERMINAL — DELICIOUSMEATPOP</div>
-          <div>STATUS: {phase === 'authorized' || phase === 'fade' ? 'ACCESS GRANTED' : phase === 'unauthorized' ? 'ACCESS DENIED' : 'CONNECTING...'}</div>
+          <div>
+            STATUS:{' '}
+            {phase === 'authorized' || phase === 'fade'
+              ? 'ACCESS GRANTED'
+              : phase === 'unauthorized'
+                ? 'ACCESS DENIED'
+                : 'CONNECTING...'}
+          </div>
         </div>
       )}
 
@@ -226,14 +248,17 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       {phase !== 'unauthorized' && phase !== 'authorized' && phase !== 'fade' && (
         <div style={{ width: '440px' }}>
           {committedLines.map((line, i) => (
-            <div key={i} style={{ whiteSpace: 'pre', opacity: 0.85 }}>{line}</div>
+            <div key={i} style={{ whiteSpace: 'pre', opacity: 0.85 }}>
+              {line}
+            </div>
           ))}
           <div style={{ whiteSpace: 'pre' }}>
             {activeLine}
-            {cursorOn
-              ? <span style={{ color: '#39ff14' }}>█</span>
-              : <span style={{ opacity: 0 }}>█</span>
-            }
+            {cursorOn ? (
+              <span style={{ color: '#39ff14' }}>█</span>
+            ) : (
+              <span style={{ opacity: 0 }}>█</span>
+            )}
           </div>
         </div>
       )}
@@ -242,14 +267,16 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       {phase === 'unauthorized' && (
         <>
           <div style={unauthorizedStyle}>UNAUTHORIZED!</div>
-          <div style={{
-            position: 'absolute',
-            bottom: '38%',
-            fontSize: '13px',
-            letterSpacing: '0.3em',
-            color: 'rgba(255,60,60,0.55)',
-            fontFamily: 'var(--vrcd-font-mono)'
-          }}>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '38%',
+              fontSize: '13px',
+              letterSpacing: '0.3em',
+              color: 'rgba(255,60,60,0.55)',
+              fontFamily: 'var(--vrcd-font-mono)'
+            }}
+          >
             ACCESS DENIED — AUTHENTICATION FAILED
           </div>
         </>
@@ -261,10 +288,16 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       )}
 
       {/* bottom tagline */}
-      <div style={{
-        position: 'absolute', bottom: 30, right: 40,
-        color: 'rgba(57,255,20,0.3)', fontSize: '10px', letterSpacing: '0.12em'
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 30,
+          right: 40,
+          color: 'rgba(57,255,20,0.3)',
+          fontSize: '10px',
+          letterSpacing: '0.12em'
+        }}
+      >
         OPERATE. DEPLOY. CONTROL.
       </div>
     </div>

@@ -10,10 +10,7 @@ import settingsService from '../settingsService'
 import { DownloadItem } from '@shared/types'
 import { DownloadStatus } from '@shared/types'
 import { getAvailableDiskSpace, parseSizeToBytes, formatBytes } from './utils'
-import {
-  isCompletedDownloadFile,
-  validateDownloadCompletion
-} from './archiveDiscovery'
+import { isCompletedDownloadFile, validateDownloadCompletion } from './archiveDiscovery'
 
 // Type for VRP config - adjust if needed elsewhere
 interface VrpConfig {
@@ -201,9 +198,7 @@ export class DownloadProcessor {
           // Fall through to public endpoint
         }
       } else {
-        console.warn(
-          '[DownProc] Failed to get mirror config, falling back to public endpoint'
-        )
+        console.warn('[DownProc] Failed to get mirror config, falling back to public endpoint')
       }
     }
 
@@ -221,7 +216,9 @@ export class DownloadProcessor {
     mirrorConfig?: { configFilePath: string; remoteName: string },
     isResume: boolean = false
   ): Promise<{ success: boolean; startExtraction: boolean; finalState?: DownloadItem }> {
-    console.log(`[DownProc] ${isResume ? 'Resuming' : 'Starting'} rclone copy download for ${item.releaseName}...`)
+    console.log(
+      `[DownProc] ${isResume ? 'Resuming' : 'Starting'} rclone copy download for ${item.releaseName}...`
+    )
 
     if (!this.vrpConfig?.baseUri || !this.vrpConfig?.password) {
       console.error('[DownProc] Missing server baseUri or password.')
@@ -277,7 +274,9 @@ export class DownloadProcessor {
               baselineBytes += f.size
             }
           }
-          console.log(`[DownProc] Resume baseline: ${this.formatBytes(baselineBytes)} already downloaded for ${item.releaseName}`)
+          console.log(
+            `[DownProc] Resume baseline: ${this.formatBytes(baselineBytes)} already downloaded for ${item.releaseName}`
+          )
         } catch {
           // Directory may not exist yet, ignore
         }
@@ -374,7 +373,6 @@ export class DownloadProcessor {
           '--retries',
           '5'
         ]
-
       }
 
       // Apply bandwidth limit if set
@@ -429,14 +427,14 @@ export class DownloadProcessor {
                 if (statsCount <= 3) {
                   console.log(
                     `[DownProc] Stats #${statsCount} for ${item.releaseName}: ` +
-                    `bytes=${stats.bytes}, totalBytes=${stats.totalBytes}, speed=${stats.speed}, ` +
-                    `eta=${stats.eta}, transferring=${Array.isArray(stats.transferring) ? stats.transferring.length : 0} entries`
+                      `bytes=${stats.bytes}, totalBytes=${stats.totalBytes}, speed=${stats.speed}, ` +
+                      `eta=${stats.eta}, transferring=${Array.isArray(stats.transferring) ? stats.transferring.length : 0} entries`
                   )
                   if (Array.isArray(stats.transferring) && stats.transferring.length > 0) {
                     const t = stats.transferring[0]
                     console.log(
                       `[DownProc]   First transfer: name=${t.name}, bytes=${t.bytes}, ` +
-                      `size=${t.size}, percentage=${t.percentage}, speed=${t.speed}`
+                        `size=${t.size}, percentage=${t.percentage}, speed=${t.speed}`
                     )
                   }
                 }
@@ -452,10 +450,7 @@ export class DownloadProcessor {
                   const effectiveTotal = stats.totalBytes + baselineBytes
                   const effectiveBytes = stats.bytes + baselineBytes
                   percentage = Math.round((effectiveBytes / effectiveTotal) * 100)
-                } else if (
-                  Array.isArray(stats.transferring) &&
-                  stats.transferring.length > 0
-                ) {
+                } else if (Array.isArray(stats.transferring) && stats.transferring.length > 0) {
                   // Use rclone's pre-calculated percentage per transfer
                   let weightedPct = 0
                   let totalWeight = 0
@@ -478,12 +473,16 @@ export class DownloadProcessor {
                     // Account for baseline: per-transfer % only covers remaining files
                     if (baselineBytes > 0 && manualSize > 0) {
                       const remainingBytes = (weightedPct / totalWeight / 100) * manualSize
-                      percentage = Math.round(((baselineBytes + remainingBytes) / (baselineBytes + manualSize)) * 100)
+                      percentage = Math.round(
+                        ((baselineBytes + remainingBytes) / (baselineBytes + manualSize)) * 100
+                      )
                     } else {
                       percentage = Math.round(weightedPct / totalWeight)
                     }
                   } else if (manualSize > 0) {
-                    percentage = Math.round(((manualBytes + baselineBytes) / (manualSize + baselineBytes)) * 100)
+                    percentage = Math.round(
+                      ((manualBytes + baselineBytes) / (manualSize + baselineBytes)) * 100
+                    )
                   }
                 }
                 // Never go below the paused progress on resume, cap at 99 (100 set on completion)
@@ -493,7 +492,7 @@ export class DownloadProcessor {
                 let speed = stats.speed || 0
                 if (speed === 0 && Array.isArray(stats.transferring)) {
                   for (const t of stats.transferring) {
-                    speed += (t.speed || 0)
+                    speed += t.speed || 0
                   }
                 }
 
@@ -520,7 +519,9 @@ export class DownloadProcessor {
           }
         })
       } else {
-        console.warn(`[DownProc] No rclone 'all' stream for ${item.releaseName} — progress tracking unavailable`)
+        console.warn(
+          `[DownProc] No rclone 'all' stream for ${item.releaseName} — progress tracking unavailable`
+        )
       }
 
       // Wait for rclone to finish
@@ -566,12 +567,7 @@ export class DownloadProcessor {
         console.error(
           `[DownProc] Download completion validation failed for ${item.releaseName}: ${completion.error}`
         )
-        this.updateItemStatus(
-          item.releaseName,
-          'Error',
-          finalItem.progress ?? 0,
-          completion.error
-        )
+        this.updateItemStatus(item.releaseName, 'Error', finalItem.progress ?? 0, completion.error)
         return {
           success: false,
           startExtraction: false,
@@ -589,7 +585,10 @@ export class DownloadProcessor {
       const currentItemState = this.queueManager.findItem(item.releaseName)
       const statusBeforeCatch = currentItemState?.status ?? 'Unknown'
 
-      console.error(`[DownProc] rclone copy download error for ${item.releaseName}:`, redactKey(String(error)))
+      console.error(
+        `[DownProc] rclone copy download error for ${item.releaseName}:`,
+        redactKey(String(error))
+      )
 
       if (this.activeDownloads.has(item.releaseName)) {
         this.activeDownloads.delete(item.releaseName)

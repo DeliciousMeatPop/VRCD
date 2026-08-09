@@ -21,7 +21,9 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
     try {
       localStorage.removeItem('avr-table-prefs-v1')
       localStorage.removeItem('avr-table-prefs-v2')
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     window.location.reload()
   }
 
@@ -29,35 +31,47 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
     if (!this.state.hasError) return this.props.children
 
     return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#050514',
-        gap: '20px',
-        fontFamily: 'var(--vrcd-font-mono)',
-        padding: '40px'
-      }}>
+      <div
+        style={{
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#050514',
+          gap: '20px',
+          fontFamily: 'var(--vrcd-font-mono)',
+          padding: '40px'
+        }}
+      >
         <div style={{ fontSize: '32px', color: 'var(--vrcd-neon)', letterSpacing: '0.1em' }}>
           // SYSTEM FAULT
         </div>
-        <div style={{
-          fontSize: '12px',
-          color: 'rgba(255, 68, 68, 0.9)',
-          background: 'rgba(255,68,68,0.06)',
-          border: '1px solid rgba(255,68,68,0.3)',
-          borderRadius: '6px',
-          padding: '16px 24px',
-          maxWidth: '600px',
-          wordBreak: 'break-word',
-          textAlign: 'center',
-          lineHeight: '1.6'
-        }}>
+        <div
+          style={{
+            fontSize: '12px',
+            color: 'rgba(255, 68, 68, 0.9)',
+            background: 'rgba(255,68,68,0.06)',
+            border: '1px solid rgba(255,68,68,0.3)',
+            borderRadius: '6px',
+            padding: '16px 24px',
+            maxWidth: '600px',
+            wordBreak: 'break-word',
+            textAlign: 'center',
+            lineHeight: '1.6'
+          }}
+        >
           {this.state.message || 'An unexpected error occurred.'}
         </div>
-        <div style={{ fontSize: '11px', color: 'rgba(var(--vrcd-neon-raw),0.5)', textAlign: 'center', maxWidth: '500px', lineHeight: '1.6' }}>
+        <div
+          style={{
+            fontSize: '11px',
+            color: 'rgba(var(--vrcd-neon-raw),0.5)',
+            textAlign: 'center',
+            maxWidth: '500px',
+            lineHeight: '1.6'
+          }}
+        >
           Saved preferences will be cleared to prevent this from happening again.
         </div>
         <button

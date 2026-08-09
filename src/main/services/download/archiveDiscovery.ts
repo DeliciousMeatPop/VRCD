@@ -165,11 +165,7 @@ function isTopLevel(path: string): boolean {
 /** Files that can contribute to resume progress without counting metadata or
  * unfinished transfers as completed bytes. */
 export function isCompletedDownloadFile(path: string, requireArchive: boolean): boolean {
-  if (
-    isAppleDoublePath(path) ||
-    isRclonePartialPath(path) ||
-    isTemporaryArchiveVolumePath(path)
-  ) {
+  if (isAppleDoublePath(path) || isRclonePartialPath(path) || isTemporaryArchiveVolumePath(path)) {
     return false
   }
   return requireArchive ? isTopLevel(path) && isCanonicalArchiveVolumePath(path) : true

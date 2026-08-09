@@ -65,7 +65,10 @@ function readIni(iniPath: string): PortableConfig | null {
       const eq = line.indexOf('=')
       if (eq < 0) continue
       const key = line.slice(0, eq).trim().toLowerCase()
-      const value = line.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '')
+      const value = line
+        .slice(eq + 1)
+        .trim()
+        .replace(/^['"]|['"]$/g, '')
       if (key === 'data' && value) return { data: resolve(value) }
     }
     return null

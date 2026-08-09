@@ -287,7 +287,9 @@ class DependencyService {
       timeoutId = setTimeout(() => {
         try {
           stream.destroy()
-        } catch { /* stream may already be closed */ }
+        } catch {
+          /* stream may already be closed */
+        }
         reject(
           new Error(
             `Extraction timed out after ${Math.round(timeoutMs / 1000)}s. ` +
@@ -602,16 +604,20 @@ class DependencyService {
       try {
         const result = execSync('which adb', { encoding: 'utf-8' }).trim()
         if (result && existsSync(result)) systemAdb = result
-      } catch { /* not in PATH */ }
+      } catch {
+        /* not in PATH */
+      }
       if (!systemAdb) {
         for (const candidate of ['/usr/bin/adb', '/usr/local/bin/adb', '/bin/adb']) {
-          if (existsSync(candidate)) { systemAdb = candidate; break }
+          if (existsSync(candidate)) {
+            systemAdb = candidate
+            break
+          }
         }
       }
       if (!systemAdb) {
         this.status.adb.downloading = false
-        this.status.adb.error =
-          'ARM64 Linux: adb not found. Install it first: sudo apt install adb'
+        this.status.adb.error = 'ARM64 Linux: adb not found. Install it first: sudo apt install adb'
         throw new Error(this.status.adb.error)
       }
       console.log(`[ARM64 Linux] Using system adb at ${systemAdb}`)

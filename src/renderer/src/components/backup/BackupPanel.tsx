@@ -1,10 +1,6 @@
 import React, { useState } from 'react'
 import { Button, Text, Spinner } from '@fluentui/react-components'
-import {
-  ArrowUploadRegular,
-  DeleteRegular,
-  ArrowClockwiseRegular
-} from '@fluentui/react-icons'
+import { ArrowUploadRegular, DeleteRegular, ArrowClockwiseRegular } from '@fluentui/react-icons'
 import { useAdb } from '@renderer/hooks/useAdb'
 import { getBackupBetaAgreed } from '@renderer/hooks/useExtrasSettings'
 import { BackupEntry, BackupVerification } from '@shared/types'
@@ -45,7 +41,14 @@ const BackupPanel: React.FC = () => {
   if (!agreed) {
     return (
       <div style={{ padding: '10px 6px' }}>
-        <Text style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(var(--vrcd-neon-raw),0.5)', lineHeight: 1.6 }}>
+        <Text
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 12,
+            color: 'rgba(var(--vrcd-neon-raw),0.5)',
+            lineHeight: 1.6
+          }}
+        >
           Save Backups are <strong style={{ color: '#ffaa00' }}>disabled</strong>. Enable{' '}
           <strong>&ldquo;Enable Save Backups (BETA)&rdquo;</strong> under{' '}
           <strong>{'// EXTRA SYSTEMS'}</strong> above to use this feature.
@@ -61,7 +64,10 @@ const BackupPanel: React.FC = () => {
     try {
       const res = await restore(b.id, selectedDevice)
       if (res.ok) {
-        setMessage({ kind: 'ok', text: `Restore pushed for ${b.appLabel}. Please verify it worked.` })
+        setMessage({
+          kind: 'ok',
+          text: `Restore pushed for ${b.appLabel}. Please verify it worked.`
+        })
         setVerifyBackup(b)
       } else {
         setMessage({ kind: 'err', text: res.error ?? 'Restore failed.' })
@@ -83,18 +89,26 @@ const BackupPanel: React.FC = () => {
   const changeAnswer = async (b: BackupEntry, result: BackupVerification): Promise<void> => {
     await setVerification(b.id, result)
     if (result === 'failed') {
-      setMessage({ kind: 'ok', text: 'Filing an anonymous report — a GitHub issue will open in your browser.' })
+      setMessage({
+        kind: 'ok',
+        text: 'Filing an anonymous report — a GitHub issue will open in your browser.'
+      })
       await reportFailure(b.id)
     }
   }
 
-  const answerBtn = (b: BackupEntry, result: BackupVerification, label: string): React.ReactNode => (
+  const answerBtn = (
+    b: BackupEntry,
+    result: BackupVerification,
+    label: string
+  ): React.ReactNode => (
     <button
       onClick={() => changeAnswer(b, result)}
       style={{
         background: b.verification === result ? 'rgba(var(--vrcd-neon-raw),0.12)' : 'transparent',
         border: `1px solid ${b.verification === result ? VERIFY_META[result].color : 'rgba(var(--vrcd-neon-raw),0.2)'}`,
-        color: b.verification === result ? VERIFY_META[result].color : 'rgba(var(--vrcd-neon-raw),0.5)',
+        color:
+          b.verification === result ? VERIFY_META[result].color : 'rgba(var(--vrcd-neon-raw),0.5)',
         fontFamily: 'monospace',
         fontSize: 10,
         padding: '2px 7px',
@@ -109,8 +123,16 @@ const BackupPanel: React.FC = () => {
   return (
     <div style={{ padding: '6px 4px 8px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.5)', lineHeight: 1.5 }}>
-          Back up a game&apos;s save from its details dialog. Manage and restore existing backups here.
+        <Text
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 11,
+            color: 'rgba(var(--vrcd-neon-raw),0.5)',
+            lineHeight: 1.5
+          }}
+        >
+          Back up a game&apos;s save from its details dialog. Manage and restore existing backups
+          here.
         </Text>
         <Button
           appearance="subtle"
@@ -124,13 +146,26 @@ const BackupPanel: React.FC = () => {
       </div>
 
       {message && (
-        <Text style={{ fontFamily: 'monospace', fontSize: 11, color: message.kind === 'ok' ? NEON : '#ff5555' }}>
+        <Text
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 11,
+            color: message.kind === 'ok' ? NEON : '#ff5555'
+          }}
+        >
           {message.text}
         </Text>
       )}
 
       {backups.length === 0 ? (
-        <Text style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(var(--vrcd-neon-raw),0.4)', padding: '8px 0' }}>
+        <Text
+          style={{
+            fontFamily: 'monospace',
+            fontSize: 12,
+            color: 'rgba(var(--vrcd-neon-raw),0.4)',
+            padding: '8px 0'
+          }}
+        >
           No backups yet.
         </Text>
       ) : (
@@ -150,20 +185,52 @@ const BackupPanel: React.FC = () => {
                   gap: 8
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: 8
+                  }}
+                >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: 13, color: NEON, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        color: NEON,
+                        fontWeight: 700,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
                       {b.appLabel}
                     </span>
-                    <span style={{ fontFamily: 'monospace', fontSize: 10, color: `var(--vrcd-purple)` }}>
+                    <span
+                      style={{ fontFamily: 'monospace', fontSize: 10, color: `var(--vrcd-purple)` }}
+                    >
                       {b.packageName}
                     </span>
-                    <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(var(--vrcd-neon-raw),0.5)' }}>
-                      {new Date(b.createdAt).toLocaleString()} · {b.fileCount} files · {formatBytes(b.totalBytes)}
+                    <span
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: 10,
+                        color: 'rgba(var(--vrcd-neon-raw),0.5)'
+                      }}
+                    >
+                      {new Date(b.createdAt).toLocaleString()} · {b.fileCount} files ·{' '}
+                      {formatBytes(b.totalBytes)}
                       {b.deviceModel ? ` · ${b.deviceModel}` : ''}
                     </span>
                     {b.profileApplied && (
-                      <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--vrcd-purple)', lineHeight: 1.5 }}>
+                      <span
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          color: 'var(--vrcd-purple)',
+                          lineHeight: 1.5
+                        }}
+                      >
                         ⚙ custom backup method{b.profileNotes ? ` — ${b.profileNotes}` : ''}
                       </span>
                     )}
@@ -207,7 +274,13 @@ const BackupPanel: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(var(--vrcd-neon-raw),0.45)' }}>
+                  <span
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: 10,
+                      color: 'rgba(var(--vrcd-neon-raw),0.45)'
+                    }}
+                  >
                     Did a restore work?
                   </span>
                   {answerBtn(b, 'worked', 'Yes')}

@@ -159,7 +159,11 @@ class BackupService {
       }))
 
     if (profile?.includeInternalData) {
-      roots.push({ remotePath: `/data/data/${packageName}`, localDir: 'internal', method: 'run-as' })
+      roots.push({
+        remotePath: `/data/data/${packageName}`,
+        localDir: 'internal',
+        method: 'run-as'
+      })
     }
     return roots
   }
@@ -225,7 +229,10 @@ class BackupService {
           // run-as internal capture (best-effort).
           const res = await adbService.pullInternalDataViaRunAs(deviceId, packageName, localDirAbs)
           if (!res.accessible) {
-            await this.log(id, `  Internal data NOT captured: ${res.reason ?? 'run-as unavailable'}`)
+            await this.log(
+              id,
+              `  Internal data NOT captured: ${res.reason ?? 'run-as unavailable'}`
+            )
           } else {
             await this.log(
               id,
@@ -348,7 +355,11 @@ class BackupService {
           // Internal data via run-as — best-effort, never fatal.
           if (!existsSync(localDirAbs)) continue
           await this.log(backupId, `Restoring internal data (run-as) → ${r.remotePath}`)
-          const ok = await adbService.pushInternalDataViaRunAs(deviceId, entry.packageName, localDirAbs)
+          const ok = await adbService.pushInternalDataViaRunAs(
+            deviceId,
+            entry.packageName,
+            localDirAbs
+          )
           await this.log(
             backupId,
             ok
@@ -401,7 +412,11 @@ class BackupService {
    * the maintainer can see WHAT was actually backed up (real save files vs. just
    * cache). Capped so a huge tree can't blow up the report.
    */
-  private async buildRootListing(backupId: string, root: BackupRoot, cap: number): Promise<string[]> {
+  private async buildRootListing(
+    backupId: string,
+    root: BackupRoot,
+    cap: number
+  ): Promise<string[]> {
     const rootAbs = join(this.backupDir(backupId), ...root.localDir.split('/'))
     const lines: string[] = []
     const walk = async (abs: string, rel: string): Promise<void> => {

@@ -114,12 +114,11 @@ export class ExtractionProcessor {
         console.log(`[ExtractProc] Starting extraction for nested archive: ${nestedArchivePath}.`)
 
         try {
-          await execa(sevenZipPath, [
-            'x', nestedArchivePath,
-            '-y',
-            `-o${baseExtractPath}`,
-            '-mmt=on'
-          ], { windowsHide: true })
+          await execa(
+            sevenZipPath,
+            ['x', nestedArchivePath, '-y', `-o${baseExtractPath}`, '-mmt=on'],
+            { windowsHide: true }
+          )
           console.log(`[ExtractProc] Nested extraction complete for ${archiveName}`)
 
           try {
@@ -244,9 +243,7 @@ export class ExtractionProcessor {
 
     const completion = validateDownloadCompletion(downloadedFiles, true)
     if (!completion.ok || !completion.archive) {
-      const error = completion.ok
-        ? 'No usable .7z.001 archive was found.'
-        : completion.error
+      const error = completion.ok ? 'No usable .7z.001 archive was found.' : completion.error
       console.error(`[ExtractProc] Archive validation failed for ${item.releaseName}: ${error}`)
       this.updateItemStatus(item.releaseName, 'Error', 100, error)
       return false
@@ -260,7 +257,12 @@ export class ExtractionProcessor {
     let decodedPassword = ''
     if (!this.vrpConfig?.password) {
       console.error(`[ExtractProc] Missing server password for extraction of ${item.releaseName}.`)
-      this.updateItemStatus(item.releaseName, 'Error', 100, 'Missing server password for extraction')
+      this.updateItemStatus(
+        item.releaseName,
+        'Error',
+        100,
+        'Missing server password for extraction'
+      )
       return false
     }
     try {
@@ -290,17 +292,18 @@ export class ExtractionProcessor {
     let stderrContent = ''
     let stdoutContent = ''
     try {
-      const proc = execa(sevenZipPath, [
-        'x', archivePath,
-        '-y',
-        `-o${downloadPath}`,
-        `-p${decodedPassword}`,
-        '-bsp1',
-        '-mmt=on'
-      ], { windowsHide: true, buffer: false })
+      const proc = execa(
+        sevenZipPath,
+        ['x', archivePath, '-y', `-o${downloadPath}`, `-p${decodedPassword}`, '-bsp1', '-mmt=on'],
+        { windowsHide: true, buffer: false }
+      )
 
       this.activeExtractions.set(item.releaseName, () => {
-        try { proc.kill('SIGTERM') } catch { /* noop */ }
+        try {
+          proc.kill('SIGTERM')
+        } catch {
+          /* noop */
+        }
       })
       console.log(`[ExtractProc] 7zip started for ${item.releaseName}`)
 
@@ -459,10 +462,13 @@ export class ExtractionProcessor {
       const statusBeforeCatch = currentItemState?.status ?? 'Unknown'
 
       // Handle intentional termination (SIGTERM / cancelled)
-      const isExecaLike = (err: unknown): err is { isCanceled?: boolean; exitCode?: number; signal?: string } =>
+      const isExecaLike = (
+        err: unknown
+      ): err is { isCanceled?: boolean; exitCode?: number; signal?: string } =>
         typeof err === 'object' && err !== null && 'exitCode' in err
       if (
-        (isExecaLike(error) && (error.isCanceled || error.exitCode === 143 || error.signal === 'SIGTERM')) ||
+        (isExecaLike(error) &&
+          (error.isCanceled || error.exitCode === 143 || error.signal === 'SIGTERM')) ||
         (error instanceof Error && /killed|SIGTERM|SIGKILL|exit code 14[37]/.test(error.message))
       ) {
         console.log(
@@ -500,9 +506,17 @@ export class ExtractionProcessor {
         // corrupt/incomplete encrypted data — keep the phrase (the diagnosis UI
         // keys off it) but make the raw message honest about the corruption case.
         errorMessage = 'Wrong password or corrupt archive — 7-Zip could not unpack the download'
-      } else if (combinedOutput.includes('data error') || combinedOutput.includes('crc failed') || combinedOutput.includes('crc error')) {
+      } else if (
+        combinedOutput.includes('data error') ||
+        combinedOutput.includes('crc failed') ||
+        combinedOutput.includes('crc error')
+      ) {
         errorMessage = 'Data/CRC error - archive may be corrupt'
-      } else if (combinedOutput.includes('no space left') || combinedOutput.includes('not enough space') || combinedOutput.includes('disk full')) {
+      } else if (
+        combinedOutput.includes('no space left') ||
+        combinedOutput.includes('not enough space') ||
+        combinedOutput.includes('disk full')
+      ) {
         errorMessage = 'Insufficient disk space during extraction'
       } else if (isExecaLike(error) && error.exitCode === 1) {
         const diagnosticOutput = (stderrContent || stdoutContent).trim()

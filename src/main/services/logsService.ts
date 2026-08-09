@@ -35,7 +35,12 @@ function isActualError(line: string): boolean {
   if (/\[error\]/i.test(line)) return true
 
   // Node.js syscall error codes that appear inline in messages
-  if (/\b(ENOENT|ECONNREFUSED|ETIMEDOUT|EACCES|EPERM|ENOTFOUND|ECONNRESET|EADDRINUSE|EISDIR|EEXIST)\b/.test(line)) return true
+  if (
+    /\b(ENOENT|ECONNREFUSED|ETIMEDOUT|EACCES|EPERM|ENOTFOUND|ECONNRESET|EADDRINUSE|EISDIR|EEXIST)\b/.test(
+      line
+    )
+  )
+    return true
 
   // JavaScript stack-trace lines: "   at functionName (file:line:col)"
   if (/^\s{2,}at\s+\S/.test(line)) return true
@@ -293,7 +298,12 @@ class LogsService implements LogsAPI {
       }
 
       if (result.status !== '200') {
-        console.warn('[LogsService] First upload attempt failed — status:', result.status, 'content:', (result as Record<string, unknown>).content ?? '')
+        console.warn(
+          '[LogsService] First upload attempt failed — status:',
+          result.status,
+          'content:',
+          (result as Record<string, unknown>).content ?? ''
+        )
         // If the desired slug was taken, retry without it to get a random one.
         // Refresh the CSRF token first — rentry.co invalidates the previous token
         // after a non-200 POST, so reusing it returns HTTP 400.
@@ -327,7 +337,9 @@ class LogsService implements LogsAPI {
           if (!retryResponse.ok) {
             const body = await retryResponse.text().catch(() => '(no body)')
             console.error('[LogsService] Retry response body:', body.slice(0, 500))
-            throw new Error(`Rentry API HTTP error: ${retryResponse.status} ${retryResponse.statusText}`)
+            throw new Error(
+              `Rentry API HTTP error: ${retryResponse.status} ${retryResponse.statusText}`
+            )
           }
 
           const retryResult = (await retryResponse.json()) as {
@@ -337,7 +349,12 @@ class LogsService implements LogsAPI {
           }
 
           if (retryResult.status !== '200') {
-            console.error('[LogsService] Retry also failed — status:', retryResult.status, 'content:', (retryResult as Record<string, unknown>).content ?? '')
+            console.error(
+              '[LogsService] Retry also failed — status:',
+              retryResult.status,
+              'content:',
+              (retryResult as Record<string, unknown>).content ?? ''
+            )
             throw new Error(`Rentry API returned status ${retryResult.status}`)
           }
 
