@@ -881,6 +881,48 @@ class AdbService extends EventEmitter implements AdbAPI {
     }
   }
 
+  /**
+   * List every file under a remote directory with its byte size, keyed by path
+   * relative to that directory (forward-slash separated).
+   *
+   * Used to verify an OBB push landed completely: a truncated or missing file
+   * here means the app will be missing resources at runtime and typically
+   * crashes on launch. Returns null when the size listing could not be produced
+   * (directory missing, or the device shell lacks the expected tools) so callers
+   * can distinguish "verified, mismatch found" from "could not verify" and avoid
+   * failing a good install just because verification was unavailable.
+   */
+  async getRemoteFileSizes(serial: string, remoteDir: string): Promise<Map<string, number> | null> {
+    const normalizedDir = remoteDir.replace(/\\/g, '/').replace(/\/+$/, '')
+    // `stat -c '%s|%n'` prints "<bytes>|<full-path>" per file. toybox (Quest's
+    // shell) supports both `find -exec` and `stat -c`, and batching with `+`
+    // keeps this to a single round-trip regardless of file count.
+    const output = await this.runShellCommand(
+      serial,
+      `find "${normalizedDir}" -type f -exec stat -c '%s|%n' {} +`
+    )
+    if (output === null) return null
+    const trimmed = output.trim()
+    if (trimmed === '') return new Map() // directory exists but is empty
+
+    const sizes = new Map<string, number>()
+    let parsedAny = false
+    for (const line of trimmed.split(/[\r\n]+/)) {
+      const sep = line.indexOf('|')
+      if (sep === -1) continue // skip error lines (e.g. "find: ...: not found")
+      const size = Number(line.slice(0, sep).trim())
+      const fullPath = line.slice(sep + 1).trim()
+      if (!Number.isFinite(size) || !fullPath.startsWith(normalizedDir)) continue
+      let rel = fullPath.slice(normalizedDir.length)
+      if (rel.startsWith('/')) rel = rel.slice(1)
+      sizes.set(rel, size)
+      parsedAny = true
+    }
+    // If the shell emitted only unparseable output (e.g. stat/find missing),
+    // report "could not verify" rather than a misleading empty listing.
+    return parsedAny ? sizes : null
+  }
+
   async pullFile(serial: string, remotePath: string, localPath: string): Promise<boolean> {
     if (!this.client) {
       throw new Error('[ADB Service] adb service not initialized!')

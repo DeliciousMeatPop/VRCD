@@ -14,7 +14,10 @@ const CREW: { name: string; desc?: string }[] = [
   { name: 'Maxine', desc: 'my VRP people' },
   { name: 'Winsomniac', desc: 'for always having time to test my shit and give good ideas' },
   { name: 'all my ARMGDDN Fam' },
-  { name: 'ALT, Decker, Pixeldrew, DankWestern', desc: 'my 3DFF guys who help more than i deserve' },
+  {
+    name: 'ALT, Decker, Pixeldrew, DankWestern',
+    desc: 'my 3DFF guys who help more than i deserve'
+  },
   { name: 'Pelle', desc: 'for checking in from the other side of the world' },
   { name: 'everyone i met on rin and over the years in this VR shit' }
 ]
@@ -25,8 +28,7 @@ const SEP_BWD = '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'
 const CreditsDialog: React.FC<CreditsDialogProps> = ({ open, onClose, variant = 'main' }) => {
   if (!open) return null
 
-  const lastLine =
-    variant === 'settings' ? 'I love you Mary.' : 'fuck you Mary.'
+  const lastLine = variant === 'settings' ? 'I love you Mary.' : 'fuck you Mary.'
   const lastLineClass =
     variant === 'settings' ? 'credits-last-line crd-love' : 'credits-last-line crd-fw'
 
@@ -55,9 +57,7 @@ const CreditsDialog: React.FC<CreditsDialogProps> = ({ open, onClose, variant = 
             {CREW.map((member, i) => (
               <div key={i} className="credits-crew-entry">
                 <span className="credits-name">{member.name}</span>
-                {member.desc && (
-                  <span className="credits-desc">// {member.desc}</span>
-                )}
+                {member.desc && <span className="credits-desc">// {member.desc}</span>}
               </div>
             ))}
           </div>

@@ -1,55 +1,121 @@
 /* ─── VR CyberDeck — Breach Sequence UI ─────────────────────────────────── */
 
 @keyframes radarSweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes ringPulse {
-  0%   { opacity: 0.6; transform: scale(1); }
-  50%  { opacity: 0.15; transform: scale(1.04); }
-  100% { opacity: 0.6; transform: scale(1); }
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.15;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
 }
 
 @keyframes ringPulse2 {
-  0%   { opacity: 0.4; transform: scale(1); }
-  50%  { opacity: 0.08; transform: scale(1.06); }
-  100% { opacity: 0.4; transform: scale(1); }
+  0% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.08;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
 }
 
 @keyframes scanlineDrift {
-  from { background-position: 0 0; }
-  to   { background-position: 0 40px; }
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 40px;
+  }
 }
 
 @keyframes breachFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes cursorBlink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes glitchShake {
-  0%   { transform: translateX(0); }
-  20%  { transform: translateX(-3px); }
-  40%  { transform: translateX(3px); }
-  60%  { transform: translateX(-2px); }
-  80%  { transform: translateX(2px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  40% {
+    transform: translateX(3px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 @keyframes targetLockPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(var(--vrcd-neon-raw),0.4), 0 0 20px rgba(var(--vrcd-neon-raw),0.15); }
-  70%  { box-shadow: 0 0 0 12px rgba(var(--vrcd-neon-raw),0), 0 0 20px rgba(var(--vrcd-neon-raw),0.15); }
-  100% { box-shadow: 0 0 0 0 rgba(var(--vrcd-neon-raw),0), 0 0 20px rgba(var(--vrcd-neon-raw),0.15); }
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(var(--vrcd-neon-raw), 0.4),
+      0 0 20px rgba(var(--vrcd-neon-raw), 0.15);
+  }
+  70% {
+    box-shadow:
+      0 0 0 12px rgba(var(--vrcd-neon-raw), 0),
+      0 0 20px rgba(var(--vrcd-neon-raw), 0.15);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(var(--vrcd-neon-raw), 0),
+      0 0 20px rgba(var(--vrcd-neon-raw), 0.15);
+  }
 }
 
 @keyframes statusTypeCursor {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* Radar container */
@@ -70,8 +136,8 @@
     0deg,
     transparent,
     transparent 2px,
-    rgba(0,0,0,0.18) 2px,
-    rgba(0,0,0,0.18) 4px
+    rgba(0, 0, 0, 0.18) 2px,
+    rgba(0, 0, 0, 0.18) 4px
   );
   background-size: 100% 4px;
   animation: scanlineDrift 0.8s linear infinite;
@@ -94,17 +160,21 @@
 /* Neon glow text */
 .breach-neon-green {
   color: var(--vrcd-neon);
-  text-shadow: 0 0 8px rgba(var(--vrcd-neon-raw),0.8), 0 0 20px rgba(var(--vrcd-neon-raw),0.4);
+  text-shadow:
+    0 0 8px rgba(var(--vrcd-neon-raw), 0.8),
+    0 0 20px rgba(var(--vrcd-neon-raw), 0.4);
 }
 .breach-neon-purple {
   color: #a855f7;
-  text-shadow: 0 0 8px rgba(168,85,247,0.8), 0 0 20px rgba(168,85,247,0.4);
+  text-shadow:
+    0 0 8px rgba(168, 85, 247, 0.8),
+    0 0 20px rgba(168, 85, 247, 0.4);
 }
 
 /* Neon input */
 .breach-input {
-  background: rgba(var(--vrcd-neon-raw),0.04) !important;
-  border: 1px solid rgba(var(--vrcd-neon-raw),0.35) !important;
+  background: rgba(var(--vrcd-neon-raw), 0.04) !important;
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.35) !important;
   color: var(--vrcd-neon) !important;
   font-family: var(--vrcd-font-mono) !important;
   font-size: 12px !important;
@@ -112,17 +182,17 @@
   outline: none !important;
 }
 .breach-input::placeholder {
-  color: rgba(var(--vrcd-neon-raw),0.3) !important;
+  color: rgba(var(--vrcd-neon-raw), 0.3) !important;
 }
 .breach-input:focus {
-  border-color: rgba(var(--vrcd-neon-raw),0.7) !important;
-  box-shadow: 0 0 8px rgba(var(--vrcd-neon-raw),0.15) !important;
+  border-color: rgba(var(--vrcd-neon-raw), 0.7) !important;
+  box-shadow: 0 0 8px rgba(var(--vrcd-neon-raw), 0.15) !important;
 }
 
 /* Neon button */
 .breach-btn {
   background: transparent;
-  border: 1px solid rgba(var(--vrcd-neon-raw),0.5);
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.5);
   color: var(--vrcd-neon);
   font-family: var(--vrcd-font-mono);
   font-size: 11px;
@@ -131,28 +201,32 @@
   padding: 7px 16px;
   border-radius: 4px;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(var(--vrcd-neon-raw),0.08);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 0 8px rgba(var(--vrcd-neon-raw), 0.08);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   white-space: nowrap;
 }
 .breach-btn:hover:not(:disabled) {
-  border-color: rgba(var(--vrcd-neon-raw),0.9);
-  box-shadow: 0 0 14px rgba(var(--vrcd-neon-raw),0.25);
+  border-color: rgba(var(--vrcd-neon-raw), 0.9);
+  box-shadow: 0 0 14px rgba(var(--vrcd-neon-raw), 0.25);
 }
 .breach-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 .breach-btn-purple {
-  border-color: rgba(168,85,247,0.5);
+  border-color: rgba(168, 85, 247, 0.5);
   color: #a855f7;
-  box-shadow: 0 0 8px rgba(168,85,247,0.08);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.08);
 }
 .breach-btn-purple:hover:not(:disabled) {
-  border-color: rgba(168,85,247,0.9);
-  box-shadow: 0 0 14px rgba(168,85,247,0.25);
+  border-color: rgba(168, 85, 247, 0.9);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.25);
 }
 .breach-btn-primary {
-  border-color: rgba(var(--vrcd-neon-raw),0.8);
-  box-shadow: 0 0 12px rgba(var(--vrcd-neon-raw),0.2), inset 0 0 12px rgba(var(--vrcd-neon-raw),0.04);
+  border-color: rgba(var(--vrcd-neon-raw), 0.8);
+  box-shadow:
+    0 0 12px rgba(var(--vrcd-neon-raw), 0.2),
+    inset 0 0 12px rgba(var(--vrcd-neon-raw), 0.04);
 }

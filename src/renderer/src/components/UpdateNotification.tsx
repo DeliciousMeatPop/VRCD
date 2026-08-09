@@ -19,7 +19,12 @@ import {
   TabValue
 } from '@fluentui/react-components'
 import { UpdateInfo, UpdateProgressInfo } from '@shared/types'
-import { ArrowDownloadRegular, CheckmarkCircleRegular, CodeRegular, DocumentTextRegular } from '@fluentui/react-icons'
+import {
+  ArrowDownloadRegular,
+  CheckmarkCircleRegular,
+  CodeRegular,
+  DocumentTextRegular
+} from '@fluentui/react-icons'
 import { isAutoUpdateDisabled } from '../hooks/useExtrasSettings'
 
 const useStyles = makeStyles({
@@ -269,8 +274,8 @@ export function UpdateNotification(): React.ReactElement | null {
       <div className={styles.updateContent}>
         <div className={styles.releaseInfo}>
           <Text size={500}>
-            Version{' '}
-            <span className={styles.highlightVersion}>{updateAvailable.version}</span> is available.
+            Version <span className={styles.highlightVersion}>{updateAvailable.version}</span> is
+            available.
           </Text>
 
           {updateAvailable.releaseDate && (
@@ -412,9 +417,13 @@ export function UpdateNotification(): React.ReactElement | null {
           <DialogTitle>
             <span style={{ marginRight: '8px' }}>
               {updateAvailable ? (
-                <ArrowDownloadRegular style={{ fontSize: '24px', color: tokens.colorBrandForeground1 }} />
+                <ArrowDownloadRegular
+                  style={{ fontSize: '24px', color: tokens.colorBrandForeground1 }}
+                />
               ) : updateError ? (
-                <Badge appearance="filled" color="danger">Error</Badge>
+                <Badge appearance="filled" color="danger">
+                  Error
+                </Badge>
               ) : null}
             </span>
             {dialogTitle}
@@ -425,8 +434,12 @@ export function UpdateNotification(): React.ReactElement | null {
           <DialogActions>
             {updateError ? (
               <>
-                <Button appearance="secondary" onClick={handleDismiss}>Dismiss</Button>
-                <Button appearance="primary" onClick={handleCheckForUpdates}>Try Again</Button>
+                <Button appearance="secondary" onClick={handleDismiss}>
+                  Dismiss
+                </Button>
+                <Button appearance="primary" onClick={handleCheckForUpdates}>
+                  Try Again
+                </Button>
               </>
             ) : updateAvailable ? (
               <>
@@ -452,7 +465,9 @@ export function UpdateNotification(): React.ReactElement | null {
                 ) : null}
               </>
             ) : (
-              <Button appearance="secondary" onClick={handleDismiss}>Close</Button>
+              <Button appearance="secondary" onClick={handleDismiss}>
+                Close
+              </Button>
             )}
           </DialogActions>
         </DialogBody>

@@ -300,7 +300,9 @@ export const AdbProvider: React.FC<AdbProviderProps> = ({ children }) => {
   useEffect(() => {
     if (!isConnected || !selectedDevice) return
     const id = setInterval(() => {
-      refreshDevices().catch(() => { /* swallow; UI keeps last-known values */ })
+      refreshDevices().catch(() => {
+        /* swallow; UI keeps last-known values */
+      })
     }, 60_000)
     return () => clearInterval(id)
   }, [isConnected, selectedDevice])
@@ -693,7 +695,22 @@ export const AdbProvider: React.FC<AdbProviderProps> = ({ children }) => {
       pingDevice
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [devices, selectedDevice, isConnected, isLoading, error, packages, loadingPackages, userName, loadingUserName, selectedDeviceDetails, loadPackages, getUserName, setUserName, pingDevice]
+    [
+      devices,
+      selectedDevice,
+      isConnected,
+      isLoading,
+      error,
+      packages,
+      loadingPackages,
+      userName,
+      loadingUserName,
+      selectedDeviceDetails,
+      loadPackages,
+      getUserName,
+      setUserName,
+      pingDevice
+    ]
   )
 
   // if (!isInitialLoadComplete) {

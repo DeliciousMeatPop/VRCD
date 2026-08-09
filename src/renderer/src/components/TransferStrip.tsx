@@ -150,11 +150,7 @@ const TransferStrip: React.FC = () => {
       }}
     >
       <span
-        style={{
-          color: 'rgba(var(--vrcd-neon-raw),0.45)',
-          letterSpacing: '0.14em',
-          flexShrink: 0
-        }}
+        style={{ color: 'rgba(var(--vrcd-neon-raw),0.45)', letterSpacing: '0.14em', flexShrink: 0 }}
       >
         {'// TRANSFER_BUS'}
       </span>

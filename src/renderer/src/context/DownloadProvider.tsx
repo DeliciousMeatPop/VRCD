@@ -1,6 +1,11 @@
 import React, { ReactNode, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { DownloadContext, DownloadContextType } from './DownloadContext'
-import { DownloadItem, GameInfo, ExistingDownloadAction } from '@shared/types'
+import {
+  DownloadItem,
+  DownloadStorageStatus,
+  GameInfo,
+  ExistingDownloadAction
+} from '@shared/types'
 import { playSound } from '../hooks/useSoundEffects'
 
 interface DownloadProviderProps {
@@ -16,6 +21,12 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
   const [queue, setQueue] = useState<DownloadItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [storageStatus, setStorageStatus] = useState<DownloadStorageStatus>({
+    path: '',
+    state: 'checking',
+    error: null,
+    code: null
+  })
   const [pendingPrompt, setPendingPrompt] = useState<PendingPrompt | null>(null)
   const [rememberChoice, setRememberChoice] = useState<boolean>(false)
   // Prevent double-resolving the prompt promise if the user clicks twice
@@ -25,10 +36,12 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
     let isMounted = true
     setIsLoading(true)
 
-    window.api.downloads
-      .getQueue()
-      .then((initialQueue) => {
-        if (isMounted) setQueue(initialQueue)
+    Promise.all([window.api.downloads.getQueue(), window.api.downloads.getStorageStatus()])
+      .then(([initialQueue, initialStorageStatus]) => {
+        if (isMounted) {
+          setQueue(initialQueue)
+          setStorageStatus(initialStorageStatus)
+        }
       })
       .catch((err) => {
         console.error('Error fetching initial download queue:', err)
@@ -60,10 +73,15 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       setQueue(updatedQueue)
       setError(null)
     })
+    const removeStorageListener = window.api.downloads.onStorageStatusChanged((status) => {
+      setStorageStatus(status)
+      if (status.state === 'available') setError(null)
+    })
 
     return () => {
       isMounted = false
       removeUpdateListener()
+      removeStorageListener()
     }
   }, [])
 
@@ -72,6 +90,10 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
     try {
       const result = await window.api.downloads.addToQueue(game)
       if (result === 'added' || result === 'imported') return true
+      if (result === 'storage-unavailable') {
+        setError('The configured download location is unavailable. Downloads are paused.')
+        return false
+      }
       if (result === 'duplicate') {
         console.warn(
           `Context: Failed to add ${game.releaseName} to queue (likely already present).`
@@ -91,6 +113,12 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
     }
   }, [])
 
+  const retryStorage = useCallback(async (): Promise<DownloadStorageStatus> => {
+    const status = await window.api.downloads.retryStorage()
+    setStorageStatus(status)
+    return status
+  }, [])
+
   const settleResolveExisting = useCallback(
     async (action: 'reinstall' | 'redownload') => {
       const prompt = pendingPrompt
@@ -103,6 +131,9 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
           await window.api.settings.setExistingDownloadAction(settingValue)
         }
         const result = await window.api.downloads.addToQueueResolveExisting(prompt.game, action)
+        if (result === 'storage-unavailable') {
+          setError('The configured download location is unavailable. Downloads are paused.')
+        }
         prompt.resolve(result === 'added' || result === 'imported')
       } catch (err) {
         console.error('Error resolving existing-download prompt:', err)
@@ -226,6 +257,8 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       queue,
       isLoading,
       error,
+      storageStatus,
+      retryStorage,
       addToQueue,
       removeFromQueue,
       removeFromQueueOnly,
@@ -242,6 +275,8 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       queue,
       isLoading,
       error,
+      storageStatus,
+      retryStorage,
       addToQueue,
       removeFromQueue,
       removeFromQueueOnly,

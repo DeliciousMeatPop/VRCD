@@ -1,5 +1,3 @@
-
-
 .games-header {
   display: flex;
   justify-content: space-between;
@@ -97,7 +95,6 @@
   flex-grow: 1; /* Allow list to grow */
 }
 
-
 .game-info {
   display: flex;
   flex-direction: column;
@@ -146,7 +143,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(var(--vrcd-neon-raw),0.2);
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.2);
   background-color: #050514;
 }
 
@@ -163,7 +160,7 @@
   overflow-x: auto;
   flex-grow: 1;
   margin-top: 8px;
-  border: 1px solid rgba(var(--vrcd-neon-raw),0.2);
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.2);
   border-radius: 4px;
   position: relative;
   background-color: #050514;
@@ -204,7 +201,7 @@
 .games-table th {
   font-weight: 600;
   color: var(--vrcd-neon);
-  border-bottom: 1px solid rgba(var(--vrcd-neon-raw),0.3);
+  border-bottom: 1px solid rgba(var(--vrcd-neon-raw), 0.3);
   background-color: #050514;
 }
 
@@ -230,7 +227,7 @@
 
 .game-package-sub {
   font-size: 11px;
-  color: rgba(var(--vrcd-purple-raw),0.85);
+  color: rgba(var(--vrcd-purple-raw), 0.85);
   font-family: var(--vrcd-font-mono);
   margin-top: 2px;
   white-space: nowrap;
@@ -287,7 +284,10 @@
   border: 1px solid rgba(var(--vrcd-neon-raw), 0.22);
   border-radius: 10px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
 }
 
 .filter-buttons button:hover {
@@ -330,7 +330,7 @@
 .row-not-installed:hover td,
 .row-installed:hover td,
 .row-update-available:hover td {
-  background-color: rgba(var(--vrcd-neon-raw),0.12) !important;
+  background-color: rgba(var(--vrcd-neon-raw), 0.12) !important;
   cursor: pointer;
 }
 
@@ -392,19 +392,39 @@
   background-color: var(--row-even-color, #050514);
 }
 .table-wrapper.alternating-rows tr.row-odd td {
-  background-color: var(--row-odd-color, rgba(var(--vrcd-neon-raw),0.06));
+  background-color: var(--row-odd-color, rgba(var(--vrcd-neon-raw), 0.06));
 }
 /* Hover always wins over stripe colour */
 .table-wrapper.alternating-rows tr.row-even:hover td,
 .table-wrapper.alternating-rows tr.row-odd:hover td {
-  background-color: rgba(var(--vrcd-neon-raw),0.12);
+  background-color: rgba(var(--vrcd-neon-raw), 0.12);
 }
 
 /* ── Card grid view ────────────────────────────────────────────── */
+/* The size slider sets --card-cols (the desired cards per row). The track size
+   is the exact width that many columns need, so auto-fill lands on that count
+   at any window width. max() keeps a card from dropping below --card-min, so
+   narrow windows quietly fall back to fewer columns instead of unreadable
+   slivers. Driving the count this way — rather than sweeping a min-width — is
+   what stops the top half of the slider from being a dead zone: a linear
+   min-width maps to columns reciprocally, so its steps bunch up at the small
+   end and leave the large end with nothing left to change. */
 .games-card-grid {
+  --card-cols: 7;
+  --card-gap: 12px;
+  --card-min: 140px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--card-min-w, 200px), 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      max(
+        var(--card-min),
+        calc((100% - (var(--card-cols) - 1) * var(--card-gap)) / var(--card-cols))
+      ),
+      1fr
+    )
+  );
+  gap: var(--card-gap);
   padding: 12px;
   overflow-y: auto;
   flex: 1;
@@ -419,13 +439,18 @@
   cursor: pointer;
   background-color: #050514;
   border: 1px solid rgba(var(--vrcd-neon-raw), 0.3);
-  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s;
   min-height: 220px;
 }
 
 .game-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 14px rgba(var(--vrcd-neon-raw), 0.25), 0 0 4px rgba(var(--vrcd-purple-raw), 0.2);
+  box-shadow:
+    0 0 14px rgba(var(--vrcd-neon-raw), 0.25),
+    0 0 4px rgba(var(--vrcd-purple-raw), 0.2);
   border-color: rgba(var(--vrcd-neon-raw), 0.65);
 }
 
@@ -447,13 +472,81 @@
 .game-card-badge {
   position: absolute;
   top: 6px;
-  right: 6px;
+  left: 6px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
   padding: 2px 7px;
   border-radius: 10px;
   pointer-events: none;
+}
+
+.game-card-star {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  min-width: 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: rgba(var(--vrcd-neon-raw), 0.75);
+  background: rgba(5, 5, 20, 0.82);
+  border: 1px solid rgba(var(--vrcd-neon-raw), 0.35);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.game-card:hover .game-card-star,
+.game-card:focus-within .game-card-star,
+.game-card-star:focus-visible,
+.game-card-star.is-starred {
+  opacity: 1;
+}
+
+.game-card-star:hover,
+.game-card-star:focus-visible,
+.game-card-star.is-starred {
+  color: var(--vrcd-neon);
+  background: rgba(5, 5, 20, 0.95);
+  border-color: rgba(var(--vrcd-neon-raw), 0.75);
+  box-shadow: 0 0 9px rgba(var(--vrcd-neon-raw), 0.3);
+}
+
+.game-card-star:disabled {
+  opacity: 0;
+  cursor: not-allowed;
+}
+
+.game-card:hover .game-card-star:disabled,
+.game-card:focus-within .game-card-star:disabled {
+  opacity: 0.35;
+}
+
+.game-row-star {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.games-table tbody tr:hover .game-row-star,
+.game-row-star:focus-visible,
+.game-row-star.is-starred {
+  opacity: 1;
+}
+
+.game-row-star:disabled {
+  opacity: 0;
+}
+
+.games-table tbody tr:hover .game-row-star:disabled {
+  opacity: 0.3;
 }
 
 .game-card-badge.installed {
@@ -594,10 +687,14 @@
     inset 0 0 30px rgba(var(--vrcd-purple-raw), 0.06);
   /* clipped, non-rectangular sci-fi panel */
   clip-path: polygon(
-    0 14px, 14px 0,
-    calc(100% - 14px) 0, 100% 14px,
-    100% calc(100% - 14px), calc(100% - 14px) 100%,
-    14px 100%, 0 calc(100% - 14px)
+    0 14px,
+    14px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0 calc(100% - 14px)
   );
 }
 
@@ -678,12 +775,19 @@
   color: var(--vrcd-neon);
   padding: 26px 20px;
   cursor: default;
-  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
   clip-path: polygon(
-    0 18px, 18px 0,
-    calc(100% - 18px) 0, 100% 18px,
-    100% calc(100% - 18px), calc(100% - 18px) 100%,
-    18px 100%, 0 calc(100% - 18px)
+    0 18px,
+    18px 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% calc(100% - 18px),
+    calc(100% - 18px) 100%,
+    18px 100%,
+    0 calc(100% - 18px)
   );
   background: rgba(var(--vrcd-neon-raw), 0.03);
 }
@@ -694,10 +798,14 @@
   pointer-events: none;
   border: 1.5px dashed rgba(var(--vrcd-neon-raw), 0.45);
   clip-path: polygon(
-    0 14px, 14px 0,
-    calc(100% - 14px) 0, 100% 14px,
-    100% calc(100% - 14px), calc(100% - 14px) 100%,
-    14px 100%, 0 calc(100% - 14px)
+    0 14px,
+    14px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0 calc(100% - 14px)
   );
   transition: border-color 0.15s ease;
 }
@@ -722,8 +830,13 @@
   animation: dz-bounce 0.7s ease-in-out infinite;
 }
 @keyframes dz-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(4px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
 }
 .sideloader-dropzone .dz-title {
   font-family: var(--vrcd-font-mono, monospace);
@@ -791,12 +904,18 @@
     inset 0 -2px 6px rgba(0, 0, 0, 0.45);
   /* angled corners → non-rectangular */
   clip-path: polygon(
-    10px 0, 100% 0,
-    100% calc(100% - 10px), calc(100% - 10px) 100%,
-    0 100%, 0 10px
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%,
+    0 10px
   );
-  transition: color 0.14s ease, box-shadow 0.14s ease,
-    transform 0.1s ease, background 0.14s ease;
+  transition:
+    color 0.14s ease,
+    box-shadow 0.14s ease,
+    transform 0.1s ease,
+    background 0.14s ease;
 }
 .cyber-deck-btn > span {
   white-space: nowrap;

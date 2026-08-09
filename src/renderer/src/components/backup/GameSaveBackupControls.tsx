@@ -1,10 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Button, Text, Spinner } from '@fluentui/react-components'
-import {
-  SaveRegular,
-  ArrowUploadRegular,
-  HistoryRegular
-} from '@fluentui/react-icons'
+import { SaveRegular, ArrowUploadRegular, HistoryRegular } from '@fluentui/react-icons'
 import { useAdb } from '@renderer/hooks/useAdb'
 import { getBackupBetaAgreed } from '@renderer/hooks/useExtrasSettings'
 import { BackupVerification } from '@shared/types'
@@ -52,10 +48,21 @@ const GameSaveBackupControls: React.FC<GameSaveBackupControlsProps> = ({
           marginTop: 4
         }}
       >
-        <div style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.1em', color: 'rgba(var(--vrcd-neon-raw),0.6)', marginBottom: 6 }}>
-          {'// SAVE BACKUP '}<span style={{ color: '#ffaa00' }}>[BETA]</span>
+        <div
+          style={{
+            fontSize: 11,
+            fontFamily: 'monospace',
+            letterSpacing: '0.1em',
+            color: 'rgba(var(--vrcd-neon-raw),0.6)',
+            marginBottom: 6
+          }}
+        >
+          {'// SAVE BACKUP '}
+          <span style={{ color: '#ffaa00' }}>[BETA]</span>
         </div>
-        <Text style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.4)' }}>
+        <Text
+          style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.4)' }}
+        >
           Disabled. Enable Save Backups in Settings → Extra Options to use this.
         </Text>
       </div>
@@ -99,9 +106,24 @@ const GameSaveBackupControls: React.FC<GameSaveBackupControlsProps> = ({
   const canAct = isConnected && !!selectedDevice && !busy
 
   return (
-    <div style={{ borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.12)', paddingTop: 12, marginTop: 4 }}>
-      <div style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.1em', color: 'rgba(var(--vrcd-neon-raw),0.6)', marginBottom: 8 }}>
-        {'// SAVE BACKUP '}<span style={{ color: '#ffaa00' }}>[BETA]</span>
+    <div
+      style={{
+        borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.12)',
+        paddingTop: 12,
+        marginTop: 4
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontFamily: 'monospace',
+          letterSpacing: '0.1em',
+          color: 'rgba(var(--vrcd-neon-raw),0.6)',
+          marginBottom: 8
+        }}
+      >
+        {'// SAVE BACKUP '}
+        <span style={{ color: '#ffaa00' }}>[BETA]</span>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -122,7 +144,16 @@ const GameSaveBackupControls: React.FC<GameSaveBackupControlsProps> = ({
           Restore save
         </Button>
         {latestForPackage && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'monospace', fontSize: 10, color: 'rgba(var(--vrcd-neon-raw),0.5)' }}>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontFamily: 'monospace',
+              fontSize: 10,
+              color: 'rgba(var(--vrcd-neon-raw),0.5)'
+            }}
+          >
             <HistoryRegular fontSize={12} />
             last: {new Date(latestForPackage.createdAt).toLocaleString()}
           </span>
@@ -130,12 +161,28 @@ const GameSaveBackupControls: React.FC<GameSaveBackupControlsProps> = ({
       </div>
 
       {!isInstalled && (
-        <Text style={{ display: 'block', marginTop: 6, fontFamily: 'monospace', fontSize: 10, color: 'rgba(var(--vrcd-neon-raw),0.4)' }}>
+        <Text
+          style={{
+            display: 'block',
+            marginTop: 6,
+            fontFamily: 'monospace',
+            fontSize: 10,
+            color: 'rgba(var(--vrcd-neon-raw),0.4)'
+          }}
+        >
           Install the app first to back up its save data.
         </Text>
       )}
       {!isConnected && (
-        <Text style={{ display: 'block', marginTop: 6, fontFamily: 'monospace', fontSize: 10, color: 'rgba(var(--vrcd-neon-raw),0.4)' }}>
+        <Text
+          style={{
+            display: 'block',
+            marginTop: 6,
+            fontFamily: 'monospace',
+            fontSize: 10,
+            color: 'rgba(var(--vrcd-neon-raw),0.4)'
+          }}
+        >
           Connect a headset to back up or restore.
         </Text>
       )}

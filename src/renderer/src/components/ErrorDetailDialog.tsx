@@ -1,11 +1,5 @@
 import React from 'react'
-import {
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  Button,
-  Text
-} from '@fluentui/react-components'
+import { Dialog, DialogSurface, DialogBody, Button, Text } from '@fluentui/react-components'
 import { CopyRegular } from '@fluentui/react-icons'
 
 const NEON = 'var(--vrcd-neon)'
@@ -39,7 +33,10 @@ interface ErrorDiagnosis {
  * Match a raw error string to a friendly explanation. The list is checked in
  * order; first match wins, so put more specific patterns first.
  */
-const DIAGNOSES: Array<{ test: RegExp; build: (m: RegExpMatchArray, phase: ErrorPhase) => ErrorDiagnosis }> = [
+const DIAGNOSES: Array<{
+  test: RegExp
+  build: (m: RegExpMatchArray, phase: ErrorPhase) => ErrorDiagnosis
+}> = [
   // Device storage (install phase)
   {
     test: /INSTALL_FAILED_INSUFFICIENT_STORAGE|insufficient_storage/i,
@@ -369,9 +366,11 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
       return
     }
     // Fall back to the global API if it's wired up.
-    const api = (window as unknown as {
-      api?: { logs?: { openLogFile?: () => Promise<void> } }
-    }).api
+    const api = (
+      window as unknown as {
+        api?: { logs?: { openLogFile?: () => Promise<void> } }
+      }
+    ).api
     api?.logs?.openLogFile?.()
   }
 
@@ -396,13 +395,22 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
         <button
           onClick={onClose}
           style={{
-            position: 'absolute', top: 10, right: 12, zIndex: 10,
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'rgba(var(--vrcd-neon-raw),0.6)', fontSize: 18, lineHeight: 1,
+            position: 'absolute',
+            top: 10,
+            right: 12,
+            zIndex: 10,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'rgba(var(--vrcd-neon-raw),0.6)',
+            fontSize: 18,
+            lineHeight: 1,
             padding: '2px 6px'
           }}
           aria-label="Close"
-        >✕</button>
+        >
+          ✕
+        </button>
 
         <DialogBody
           style={{
@@ -415,14 +423,22 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: 11, fontFamily: 'monospace', color: RED, letterSpacing: '0.12em' }}>
+            <div
+              style={{ fontSize: 11, fontFamily: 'monospace', color: RED, letterSpacing: '0.12em' }}
+            >
               {`// ${phase === 'install' ? 'INSTALL ERROR' : 'DOWNLOAD ERROR'}`}
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, color: NEON, fontFamily: 'monospace' }}>
               {diag.title}
             </div>
             {contextLabel && (
-              <div style={{ fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.55)', fontFamily: 'monospace' }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'rgba(var(--vrcd-neon-raw),0.55)',
+                  fontFamily: 'monospace'
+                }}
+              >
                 {contextLabel}
               </div>
             )}
@@ -430,16 +446,38 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
 
           <div style={{ height: 1, background: 'rgba(var(--vrcd-neon-raw),0.15)' }} />
 
-          <Text style={{ fontFamily: 'monospace', fontSize: 13, color: 'rgba(var(--vrcd-neon-raw),0.85)', lineHeight: 1.5 }}>
+          <Text
+            style={{
+              fontFamily: 'monospace',
+              fontSize: 13,
+              color: 'rgba(var(--vrcd-neon-raw),0.85)',
+              lineHeight: 1.5
+            }}
+          >
             {diag.summary}
           </Text>
 
           {diag.suggestions.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(var(--vrcd-neon-raw),0.6)', letterSpacing: '0.1em' }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                  letterSpacing: '0.1em'
+                }}
+              >
                 {'// TRY'}
               </div>
-              <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}
+              >
                 {diag.suggestions.map((s, i) => (
                   <li
                     key={i}
@@ -459,10 +497,25 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
 
           {diag.links && diag.links.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(var(--vrcd-neon-raw),0.6)', letterSpacing: '0.1em' }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                  letterSpacing: '0.1em'
+                }}
+              >
                 {'// MORE INFO'}
               </div>
-              <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 18,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}
+              >
                 {diag.links.map((link, i) => (
                   <li key={i} style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: 1.45 }}>
                     <a
@@ -480,7 +533,14 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'rgba(var(--vrcd-neon-raw),0.6)', letterSpacing: '0.1em' }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontFamily: 'monospace',
+                color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                letterSpacing: '0.1em'
+              }}
+            >
               {'// RAW MESSAGE'}
             </div>
             <div
@@ -506,7 +566,10 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
             {onRetry && (
               <Button
                 appearance="primary"
-                onClick={() => { onRetry(); onClose() }}
+                onClick={() => {
+                  onRetry()
+                  onClose()
+                }}
               >
                 Retry
               </Button>
@@ -517,7 +580,9 @@ const ErrorDetailDialog: React.FC<ErrorDetailDialogProps> = ({
             <Button appearance="subtle" onClick={handleOpenLog}>
               Open log file
             </Button>
-            <Button appearance="subtle" onClick={onClose}>Close</Button>
+            <Button appearance="subtle" onClick={onClose}>
+              Close
+            </Button>
           </div>
         </DialogBody>
       </DialogSurface>

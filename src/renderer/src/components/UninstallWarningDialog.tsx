@@ -67,7 +67,9 @@ const UninstallWarningDialog: React.FC<UninstallWarningDialogProps> = ({
         >
           Uninstalling <strong>{appName}</strong> will remove the app from the headset
           <br />
-          <strong style={{ color: '#ff5555' }}>and erase its save data, progress, and settings.</strong>
+          <strong style={{ color: '#ff5555' }}>
+            and erase its save data, progress, and settings.
+          </strong>
           <br />
           <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '11px' }}>
             This cannot be undone.
@@ -97,9 +99,15 @@ const UninstallWarningDialog: React.FC<UninstallWarningDialogProps> = ({
           />
           <div style={{ lineHeight: 1.5 }}>
             Also delete downloaded game files
-            <div style={{ fontSize: '10px', color: 'rgba(var(--vrcd-neon-raw),0.45)', marginTop: '2px' }}>
-              Only deletes files from your current download folder.
-              Games in other folders or previous download locations will not be affected.
+            <div
+              style={{
+                fontSize: '10px',
+                color: 'rgba(var(--vrcd-neon-raw),0.45)',
+                marginTop: '2px'
+              }}
+            >
+              Only deletes files from your current download folder. Games in other folders or
+              previous download locations will not be affected.
             </div>
           </div>
         </label>

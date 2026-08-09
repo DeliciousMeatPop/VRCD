@@ -39,7 +39,11 @@ import { useGames } from '../hooks/useGames'
 import { useLogs } from '../hooks/useLogs'
 import { useLanguage } from '../hooks/useLanguage'
 import { useAdb } from '../hooks/useAdb'
-import { useExtrasSettings, FONT_FAMILY_OPTIONS, FontFamilyChoice } from '../hooks/useExtrasSettings'
+import {
+  useExtrasSettings,
+  FONT_FAMILY_OPTIONS,
+  FontFamilyChoice
+} from '../hooks/useExtrasSettings'
 import BackupBetaWarningDialog from './backup/BackupBetaWarningDialog'
 import BackupPanel from './backup/BackupPanel'
 import { useSoundEffects, SOUND_NAMES } from '../hooks/useSoundEffects'
@@ -325,7 +329,10 @@ const LogUploadSettings: React.FC = () => {
       <div className={styles.cardContent}>
         <Text>{t('logUploadDesc')}</Text>
 
-        <div className={styles.formRow} style={{ gap: tokens.spacingHorizontalS, flexWrap: 'wrap' }}>
+        <div
+          className={styles.formRow}
+          style={{ gap: tokens.spacingHorizontalS, flexWrap: 'wrap' }}
+        >
           <Button
             onClick={() => openLogFolder()}
             appearance="secondary"
@@ -364,11 +371,19 @@ const LogUploadSettings: React.FC = () => {
               {/* Rentry share code — prominently displayed, auto-copied on upload */}
               {slug && (
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: tokens.spacingVerticalXS
+                  }}
                 >
                   <Text weight="semibold">{t('rentryCode')}</Text>
                   <div
-                    style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: tokens.spacingHorizontalS
+                    }}
                   >
                     <Input
                       value={slug}
@@ -380,7 +395,12 @@ const LogUploadSettings: React.FC = () => {
                         fontWeight: 'bold'
                       }}
                     />
-                    <Button onClick={handleCopySlug} size="small" appearance="primary" icon={<CopyRegular />}>
+                    <Button
+                      onClick={handleCopySlug}
+                      size="small"
+                      appearance="primary"
+                      icon={<CopyRegular />}
+                    >
                       {t('copyCode')}
                     </Button>
                   </div>
@@ -402,7 +422,12 @@ const LogUploadSettings: React.FC = () => {
                     readOnly
                     style={{ flexGrow: 1, fontFamily: 'monospace', fontSize: '12px' }}
                   />
-                  <Button onClick={handleCopyUrl} size="small" appearance="secondary" icon={<CopyRegular />}>
+                  <Button
+                    onClick={handleCopyUrl}
+                    size="small"
+                    appearance="secondary"
+                    icon={<CopyRegular />}
+                  >
                     {t('copyUrl')}
                   </Button>
                 </div>
@@ -456,12 +481,19 @@ const ResetAppDataSettings: React.FC = () => {
           </Button>
         </div>
         {status === 'done' && (
-          <Text className={styles.success} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <CheckmarkCircleRegular />{t('resetAppDataSuccess')}
+          <Text
+            className={styles.success}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <CheckmarkCircleRegular />
+            {t('resetAppDataSuccess')}
           </Text>
         )}
         {status === 'error' && (
-          <Text className={styles.error}>{t('resetAppDataError')}{errorMsg ? `: ${errorMsg}` : ''}</Text>
+          <Text className={styles.error}>
+            {t('resetAppDataError')}
+            {errorMsg ? `: ${errorMsg}` : ''}
+          </Text>
         )}
       </div>
     </Card>
@@ -495,14 +527,39 @@ interface ToggleRowProps {
 }
 
 const ToggleRow: React.FC<ToggleRowProps> = ({ label, description, checked, onChange, purple }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 0', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.06)' }}>
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      padding: '8px 0',
+      borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.06)'
+    }}
+  >
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
       <div style={purple ? switchVarsPurple : switchVars}>
         <Switch checked={checked} onChange={(_, d) => onChange(d.checked)} />
       </div>
-      <span style={{ color: purple ? 'var(--vrcd-purple)' : 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px', letterSpacing: '0.04em' }}>{label}</span>
+      <span
+        style={{
+          color: purple ? 'var(--vrcd-purple)' : 'var(--vrcd-neon)',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          letterSpacing: '0.04em'
+        }}
+      >
+        {label}
+      </span>
     </div>
-    <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.38)', fontFamily: 'monospace', fontSize: '11px', lineHeight: 1.5, paddingLeft: '52px' }}>
+    <span
+      style={{
+        color: 'rgba(var(--vrcd-neon-raw),0.38)',
+        fontFamily: 'monospace',
+        fontSize: '11px',
+        lineHeight: 1.5,
+        paddingLeft: '52px'
+      }}
+    >
       {description}
     </span>
   </div>
@@ -510,55 +567,96 @@ const ToggleRow: React.FC<ToggleRowProps> = ({ label, description, checked, onCh
 
 const ExtraSystemsSettings: React.FC = () => {
   const {
-    showIntro, setShowIntro,
-    showBreach, setShowBreach,
-    showMatrixShell, setShowMatrixShell,
-    disableAllExtras, setDisableAllExtras,
-    disableAutoUpdate, setDisableAutoUpdate,
-    fontScale, setFontScale,
-    deleteOnRemove, setDeleteOnRemove,
-    disableSideloading, setDisableSideloading,
-    colorblindMode, setColorblindMode,
-    accentColor, setAccentColor,
-    fontFamily, setFontFamily,
-    skipUninstallWarning, setSkipUninstallWarning,
-    backupBetaAgreed, setBackupBetaAgreed
+    showIntro,
+    setShowIntro,
+    showBreach,
+    setShowBreach,
+    showMatrixShell,
+    setShowMatrixShell,
+    disableAllExtras,
+    setDisableAllExtras,
+    disableAutoUpdate,
+    setDisableAutoUpdate,
+    fontScale,
+    setFontScale,
+    deleteOnRemove,
+    setDeleteOnRemove,
+    disableSideloading,
+    setDisableSideloading,
+    colorblindMode,
+    setColorblindMode,
+    accentColor,
+    setAccentColor,
+    fontFamily,
+    setFontFamily,
+    skipUninstallWarning,
+    setSkipUninstallWarning,
+    backupBetaAgreed,
+    setBackupBetaAgreed
   } = useExtrasSettings()
 
   const [backupBetaWarnOpen, setBackupBetaWarnOpen] = useState(false)
 
-  const { enabled: soundEnabled, volume: soundVolume, loaded: soundLoaded, perName: soundPerName, setEnabled: setSoundEnabled, setVolume: setSoundVolume, setPerName: setSoundPerName, play: playSfx } = useSoundEffects()
+  const {
+    enabled: soundEnabled,
+    volume: soundVolume,
+    loaded: soundLoaded,
+    perName: soundPerName,
+    setEnabled: setSoundEnabled,
+    setVolume: setSoundVolume,
+    setPerName: setSoundPerName,
+    play: playSfx
+  } = useSoundEffects()
   const anySoundLoaded = SOUND_NAMES.some((n) => soundLoaded[n])
 
   const [maxConcurrent, setMaxConcurrentState] = useState<number>(3)
-  const [existingDlAction, setExistingDlActionState] = useState<'ask' | 'reinstall' | 'redownload'>('ask')
+  const [existingDlAction, setExistingDlActionState] = useState<'ask' | 'reinstall' | 'redownload'>(
+    'ask'
+  )
   useEffect(() => {
-    window.api.settings.getExistingDownloadAction().then(setExistingDlActionState).catch(() => {/* ignore */})
+    window.api.settings
+      .getExistingDownloadAction()
+      .then(setExistingDlActionState)
+      .catch(() => {
+        /* ignore */
+      })
   }, [])
   const handleSetExistingDlAction = (v: 'ask' | 'reinstall' | 'redownload'): void => {
     setExistingDlActionState(v)
-    window.api.settings.setExistingDownloadAction(v).catch(() => {/* ignore */})
+    window.api.settings.setExistingDownloadAction(v).catch(() => {
+      /* ignore */
+    })
   }
   useEffect(() => {
-    window.api.settings.getMaxConcurrentDownloads().then(setMaxConcurrentState).catch(() => {/* ignore */})
+    window.api.settings
+      .getMaxConcurrentDownloads()
+      .then(setMaxConcurrentState)
+      .catch(() => {
+        /* ignore */
+      })
   }, [])
   const handleSetMaxConcurrent = (n: number): void => {
     setMaxConcurrentState(n)
-    window.api.settings.setMaxConcurrentDownloads(n).catch(() => {/* ignore */})
+    window.api.settings.setMaxConcurrentDownloads(n).catch(() => {
+      /* ignore */
+    })
   }
 
   const neonOptionBtn = (active: boolean) => ({
     background: active ? 'rgba(var(--vrcd-neon-raw),0.12)' : 'transparent',
     border: `1px solid ${active ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.25)'}`,
     color: active ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.5)',
-    fontFamily: 'monospace', fontSize: '11px', padding: '4px 10px',
-    borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.06em',
+    fontFamily: 'monospace',
+    fontSize: '11px',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    letterSpacing: '0.06em',
     boxShadow: active ? '0 0 8px rgba(var(--vrcd-neon-raw),0.2)' : 'none'
   })
 
   return (
     <div style={{ padding: '4px 4px 8px', display: 'flex', flexDirection: 'column', gap: '0' }}>
-
       {/* Master kill-switch */}
       <ToggleRow
         purple
@@ -569,7 +667,14 @@ const ExtraSystemsSettings: React.FC = () => {
       />
 
       {/* Individual toggles */}
-      <div style={{ opacity: disableAllExtras ? 0.35 : 1, pointerEvents: disableAllExtras ? 'none' : 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div
+        style={{
+          opacity: disableAllExtras ? 0.35 : 1,
+          pointerEvents: disableAllExtras ? 'none' : 'auto',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
         <ToggleRow
           label="Show intro animation on launch"
           description="Hacker-console boot sequence shown each time the app opens. ~10 seconds."
@@ -644,8 +749,24 @@ const ExtraSystemsSettings: React.FC = () => {
       />
 
       {/* Accent color */}
-      <div style={{ padding: '10px 0 4px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)', marginTop: '6px' }}>
-        <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          padding: '10px 0 4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)',
+          marginTop: '6px'
+        }}
+      >
+        <span
+          style={{
+            color: 'var(--vrcd-neon)',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            letterSpacing: '0.04em'
+          }}
+        >
           Accent Color
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -653,28 +774,74 @@ const ExtraSystemsSettings: React.FC = () => {
             type="color"
             value={accentColor ?? '#39ff14'}
             onChange={(e) => setAccentColor(e.target.value)}
-            style={{ width: '36px', height: '28px', padding: '2px', border: '1px solid rgba(var(--vrcd-neon-raw),0.4)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}
+            style={{
+              width: '36px',
+              height: '28px',
+              padding: '2px',
+              border: '1px solid rgba(var(--vrcd-neon-raw),0.4)',
+              borderRadius: '4px',
+              background: 'transparent',
+              cursor: 'pointer'
+            }}
           />
-          <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.7)', fontFamily: 'monospace', fontSize: '11px' }}>
+          <span
+            style={{
+              color: 'rgba(var(--vrcd-neon-raw),0.7)',
+              fontFamily: 'monospace',
+              fontSize: '11px'
+            }}
+          >
             {accentColor ?? '#39ff14 (default)'}
           </span>
           {accentColor && (
             <button
               onClick={() => setAccentColor(null)}
-              style={{ background: 'transparent', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace', fontSize: '10px', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.06em' }}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(var(--vrcd-neon-raw),0.3)',
+                color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                fontFamily: 'monospace',
+                fontSize: '10px',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                letterSpacing: '0.06em'
+              }}
             >
               reset
             </button>
           )}
         </div>
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.35)', fontFamily: 'monospace', fontSize: '11px' }}>
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.35)',
+            fontFamily: 'monospace',
+            fontSize: '11px'
+          }}
+        >
           Changes the neon accent color across the whole UI. Takes effect immediately.
         </span>
       </div>
 
       {/* Font family */}
-      <div style={{ padding: '10px 0 4px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)', marginTop: '6px' }}>
-        <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'var(--vrcd-font-mono)', fontSize: '12px', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          padding: '10px 0 4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)',
+          marginTop: '6px'
+        }}
+      >
+        <span
+          style={{
+            color: 'var(--vrcd-neon)',
+            fontFamily: 'var(--vrcd-font-mono)',
+            fontSize: '12px',
+            letterSpacing: '0.04em'
+          }}
+        >
           Font
         </span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -711,21 +878,65 @@ const ExtraSystemsSettings: React.FC = () => {
             )
           })}
         </div>
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.35)', fontFamily: 'monospace', fontSize: '11px' }}>
-          Switch the monospace font used across the app. Pick something easier to read if Courier New is hard on your eyes.
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.35)',
+            fontFamily: 'monospace',
+            fontSize: '11px'
+          }}
+        >
+          Switch the monospace font used across the app. Pick something easier to read if Courier
+          New is hard on your eyes.
         </span>
       </div>
 
       {/* Sound effects */}
-      <div style={{ padding: '10px 0 4px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)', marginTop: '6px' }}>
-        <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'var(--vrcd-font-mono)', fontSize: '12px', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          padding: '10px 0 4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)',
+          marginTop: '6px'
+        }}
+      >
+        <span
+          style={{
+            color: 'var(--vrcd-neon)',
+            fontFamily: 'var(--vrcd-font-mono)',
+            fontSize: '12px',
+            letterSpacing: '0.04em'
+          }}
+        >
           Sound Effects
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-          <Switch checked={soundEnabled} onChange={(_, d) => setSoundEnabled(!!d.checked)} label={soundEnabled ? 'ON' : 'OFF'} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '200px' }}>
-            <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace', fontSize: '11px', minWidth: '50px' }}>VOLUME</span>
+          <Switch
+            checked={soundEnabled}
+            onChange={(_, d) => setSoundEnabled(!!d.checked)}
+            label={soundEnabled ? 'ON' : 'OFF'}
+          />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              flex: 1,
+              minWidth: '200px'
+            }}
+          >
+            <span
+              style={{
+                color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                minWidth: '50px'
+              }}
+            >
+              VOLUME
+            </span>
             <input
               type="range"
               min={0}
@@ -736,21 +947,61 @@ const ExtraSystemsSettings: React.FC = () => {
               disabled={!soundEnabled}
               style={{ flex: 1, accentColor: 'var(--vrcd-neon)' }}
             />
-            <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.7)', fontFamily: 'monospace', fontSize: '11px', minWidth: '36px', textAlign: 'right' }}>
+            <span
+              style={{
+                color: 'rgba(var(--vrcd-neon-raw),0.7)',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                minWidth: '36px',
+                textAlign: 'right'
+              }}
+            >
               {Math.round(soundVolume * 100)}%
             </span>
           </div>
           <button
             onClick={() => playSfx('click')}
             disabled={!soundEnabled || !soundLoaded.click}
-            style={{ background: 'transparent', border: '1px solid rgba(var(--vrcd-neon-raw),0.4)', color: 'var(--vrcd-neon)', fontFamily: 'var(--vrcd-font-mono)', fontSize: '11px', padding: '4px 12px', borderRadius: '4px', cursor: !soundEnabled || !soundLoaded.click ? 'not-allowed' : 'pointer', opacity: !soundEnabled || !soundLoaded.click ? 0.4 : 1, letterSpacing: '0.06em' }}
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(var(--vrcd-neon-raw),0.4)',
+              color: 'var(--vrcd-neon)',
+              fontFamily: 'var(--vrcd-font-mono)',
+              fontSize: '11px',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              cursor: !soundEnabled || !soundLoaded.click ? 'not-allowed' : 'pointer',
+              opacity: !soundEnabled || !soundLoaded.click ? 0.4 : 1,
+              letterSpacing: '0.06em'
+            }}
           >
             TEST
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', padding: '8px 12px', background: 'rgba(var(--vrcd-neon-raw),0.04)', border: '1px solid rgba(var(--vrcd-neon-raw),0.15)', borderRadius: '4px', fontFamily: 'monospace', fontSize: '11px' }}>
-          <div style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', letterSpacing: '0.1em', marginBottom: '4px' }}>// LOADED FILES</div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            marginTop: '4px',
+            padding: '8px 12px',
+            background: 'rgba(var(--vrcd-neon-raw),0.04)',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.15)',
+            borderRadius: '4px',
+            fontFamily: 'monospace',
+            fontSize: '11px'
+          }}
+        >
+          <div
+            style={{
+              color: 'rgba(var(--vrcd-neon-raw),0.55)',
+              letterSpacing: '0.1em',
+              marginBottom: '4px'
+            }}
+          >
+            // LOADED FILES
+          </div>
           {SOUND_NAMES.map((name) => {
             const isLoaded = !!soundLoaded[name]
             const isEnabled = soundPerName[name] !== false
@@ -761,24 +1012,58 @@ const ExtraSystemsSettings: React.FC = () => {
                   onClick={() => setSoundPerName(name, !isEnabled)}
                   title={isEnabled ? `Disable ${name}` : `Enable ${name}`}
                   style={{
-                    width: '32px', height: '16px', borderRadius: '8px', border: 'none', cursor: !soundEnabled || !isLoaded ? 'not-allowed' : 'pointer',
-                    background: isEnabled && soundEnabled && isLoaded ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.2)',
+                    width: '32px',
+                    height: '16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    cursor: !soundEnabled || !isLoaded ? 'not-allowed' : 'pointer',
+                    background:
+                      isEnabled && soundEnabled && isLoaded
+                        ? 'var(--vrcd-neon)'
+                        : 'rgba(var(--vrcd-neon-raw),0.2)',
                     opacity: !soundEnabled ? 0.4 : 1,
-                    flexShrink: 0, transition: 'background 0.2s',
+                    flexShrink: 0,
+                    transition: 'background 0.2s',
                     position: 'relative'
                   }}
                 >
-                  <span style={{
-                    position: 'absolute', top: '2px',
-                    left: isEnabled && soundEnabled && isLoaded ? '18px' : '2px',
-                    width: '12px', height: '12px', borderRadius: '50%',
-                    background: '#000', transition: 'left 0.2s', display: 'block'
-                  }} />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: isEnabled && soundEnabled && isLoaded ? '18px' : '2px',
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      background: '#000',
+                      transition: 'left 0.2s',
+                      display: 'block'
+                    }}
+                  />
                 </button>
-                <span style={{ flex: 1, color: isLoaded ? (isEnabled ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.4)') : 'rgba(255,68,68,0.7)' }}>
+                <span
+                  style={{
+                    flex: 1,
+                    color: isLoaded
+                      ? isEnabled
+                        ? 'var(--vrcd-neon)'
+                        : 'rgba(var(--vrcd-neon-raw),0.4)'
+                      : 'rgba(255,68,68,0.7)'
+                  }}
+                >
                   {name}.{`{wav,mp3,ogg}`}
                 </span>
-                <span style={{ color: isLoaded ? (isEnabled ? 'rgba(var(--vrcd-neon-raw),0.6)' : 'rgba(var(--vrcd-neon-raw),0.3)') : 'rgba(255,68,68,0.5)', minWidth: '70px', textAlign: 'right' }}>
+                <span
+                  style={{
+                    color: isLoaded
+                      ? isEnabled
+                        ? 'rgba(var(--vrcd-neon-raw),0.6)'
+                        : 'rgba(var(--vrcd-neon-raw),0.3)'
+                      : 'rgba(255,68,68,0.5)',
+                    minWidth: '70px',
+                    textAlign: 'right'
+                  }}
+                >
                   {isLoaded ? (isEnabled ? '✓ enabled' : '— disabled') : '— missing'}
                 </span>
               </div>
@@ -786,62 +1071,154 @@ const ExtraSystemsSettings: React.FC = () => {
           })}
         </div>
 
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.45)', fontFamily: 'monospace', fontSize: '11px', lineHeight: 1.5 }}>
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.45)',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            lineHeight: 1.5
+          }}
+        >
           {anySoundLoaded
             ? 'Sounds play on button clicks (click), the boot intro typing (type), and the ADB shell matrix load (matrix).'
             : 'No sound files loaded. Drop click.wav, type.wav, or matrix.wav into one of these folders to enable:'}
         </span>
-        <ul style={{ margin: 0, paddingLeft: '20px', color: 'rgba(var(--vrcd-neon-raw),0.55)', fontFamily: 'monospace', fontSize: '11px', lineHeight: 1.6 }}>
-          <li>your user-data folder → <code style={{ color: 'var(--vrcd-neon)' }}>sounds/</code> (no rebuild needed)</li>
-          <li>repo → <code style={{ color: 'var(--vrcd-neon)' }}>resources/sounds/</code> (bundled into the build)</li>
+        <ul
+          style={{
+            margin: 0,
+            paddingLeft: '20px',
+            color: 'rgba(var(--vrcd-neon-raw),0.55)',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            lineHeight: 1.6
+          }}
+        >
+          <li>
+            your user-data folder → <code style={{ color: 'var(--vrcd-neon)' }}>sounds/</code> (no
+            rebuild needed)
+          </li>
+          <li>
+            repo → <code style={{ color: 'var(--vrcd-neon)' }}>resources/sounds/</code> (bundled
+            into the build)
+          </li>
         </ul>
       </div>
 
       {/* Deletion behavior */}
-      <div style={{ padding: '10px 0 4px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)', marginTop: '6px' }}>
-        <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          padding: '10px 0 4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)',
+          marginTop: '6px'
+        }}
+      >
+        <span
+          style={{
+            color: 'var(--vrcd-neon)',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            letterSpacing: '0.04em'
+          }}
+        >
           Transfer List — Remove Behavior
         </span>
         <div style={{ display: 'flex', gap: '6px' }}>
           {(['ask', 'keep', 'delete'] as const).map((v) => (
-            <button key={v} onClick={() => setDeleteOnRemove(v)} style={neonOptionBtn(deleteOnRemove === v)}>
+            <button
+              key={v}
+              onClick={() => setDeleteOnRemove(v)}
+              style={neonOptionBtn(deleteOnRemove === v)}
+            >
               {v === 'ask' ? 'Ask each time' : v === 'keep' ? 'Keep files' : 'Delete files'}
             </button>
           ))}
         </div>
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.35)', fontFamily: 'monospace', fontSize: '11px' }}>
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.35)',
+            fontFamily: 'monospace',
+            fontSize: '11px'
+          }}
+        >
           When removing a completed/errored item from the transfer list.
         </span>
       </div>
 
       {/* Concurrent downloads */}
-      <div style={{ padding: '10px 0 4px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)', marginTop: '6px' }}>
-        <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          padding: '10px 0 4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)',
+          marginTop: '6px'
+        }}
+      >
+        <span
+          style={{
+            color: 'var(--vrcd-neon)',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            letterSpacing: '0.04em'
+          }}
+        >
           Concurrent Downloads — {maxConcurrent} at a time
         </span>
         <div style={{ display: 'flex', gap: '6px' }}>
           {[1, 2, 3, 4, 5, 6].map((n) => (
-            <button key={n} onClick={() => handleSetMaxConcurrent(n)} style={neonOptionBtn(maxConcurrent === n)}>
+            <button
+              key={n}
+              onClick={() => handleSetMaxConcurrent(n)}
+              style={neonOptionBtn(maxConcurrent === n)}
+            >
               {n}
             </button>
           ))}
         </div>
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.35)', fontFamily: 'monospace', fontSize: '11px' }}>
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.35)',
+            fontFamily: 'monospace',
+            fontSize: '11px'
+          }}
+        >
           Number of games that download simultaneously. Takes effect on next queue item.
         </span>
       </div>
 
       {/* When download already exists on disk */}
-      <div style={{ padding: '10px 0 4px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)', marginTop: '6px' }}>
-        <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'var(--vrcd-font-mono)', fontSize: '12px', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          padding: '10px 0 4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)',
+          marginTop: '6px'
+        }}
+      >
+        <span
+          style={{
+            color: 'var(--vrcd-neon)',
+            fontFamily: 'var(--vrcd-font-mono)',
+            fontSize: '12px',
+            letterSpacing: '0.04em'
+          }}
+        >
           When download already exists on disk
         </span>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {([
-            { v: 'ask', label: 'ASK ME' },
-            { v: 'reinstall', label: 'INSTALL FROM EXISTING' },
-            { v: 'redownload', label: 'RE-DOWNLOAD' }
-          ] as const).map((opt) => (
+          {(
+            [
+              { v: 'ask', label: 'ASK ME' },
+              { v: 'reinstall', label: 'INSTALL FROM EXISTING' },
+              { v: 'redownload', label: 'RE-DOWNLOAD' }
+            ] as const
+          ).map((opt) => (
             <button
               key={opt.v}
               onClick={() => handleSetExistingDlAction(opt.v)}
@@ -851,32 +1228,74 @@ const ExtraSystemsSettings: React.FC = () => {
             </button>
           ))}
         </div>
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.35)', fontFamily: 'monospace', fontSize: '11px', lineHeight: 1.5 }}>
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.35)',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            lineHeight: 1.5
+          }}
+        >
           When you click Download for a game whose folder already exists in your downloads path
-          (from a previous run, another tool, or a cleared queue): <strong>Ask me</strong> shows
-          a prompt; <strong>Install from existing</strong> imports the folder as Completed and
-          skips straight to install; <strong>Re-download</strong> wipes the folder first and
-          fetches a fresh copy.
+          (from a previous run, another tool, or a cleared queue): <strong>Ask me</strong> shows a
+          prompt; <strong>Install from existing</strong> imports the folder as Completed and skips
+          straight to install; <strong>Re-download</strong> wipes the folder first and fetches a
+          fresh copy.
         </span>
       </div>
 
       {/* UI Zoom / Font Scale */}
-      <div style={{ padding: '10px 0 4px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)', marginTop: '6px' }}>
-        <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px', letterSpacing: '0.04em' }}>
+      <div
+        style={{
+          padding: '10px 0 4px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.1)',
+          marginTop: '6px'
+        }}
+      >
+        <span
+          style={{
+            color: 'var(--vrcd-neon)',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            letterSpacing: '0.04em'
+          }}
+        >
           UI Zoom — {Math.round(fontScale * 100)}%
         </span>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {([0.75, 0.875, 1, 1.25, 1.5, 2] as const).map((v) => (
-            <button key={v} onClick={() => setFontScale(v)} style={neonOptionBtn(Math.abs(fontScale - v) < 0.01)}>
-              {v === 0.75 ? '75%' : v === 0.875 ? '87.5%' : v === 1 ? '100% — default' : v === 1.25 ? '125%' : v === 1.5 ? '150%' : '200%'}
+            <button
+              key={v}
+              onClick={() => setFontScale(v)}
+              style={neonOptionBtn(Math.abs(fontScale - v) < 0.01)}
+            >
+              {v === 0.75
+                ? '75%'
+                : v === 0.875
+                  ? '87.5%'
+                  : v === 1
+                    ? '100% — default'
+                    : v === 1.25
+                      ? '125%'
+                      : v === 1.5
+                        ? '150%'
+                        : '200%'}
             </button>
           ))}
         </div>
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.35)', fontFamily: 'monospace', fontSize: '11px' }}>
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.35)',
+            fontFamily: 'monospace',
+            fontSize: '11px'
+          }}
+        >
           Scales the entire UI via Electron zoom. Takes effect immediately.
         </span>
       </div>
-
     </div>
   )
 }
@@ -911,7 +1330,14 @@ const MpUsernameSettings: React.FC = () => {
       <div className={styles.cardContent}>
         <Text>Your display name in VR multiplayer games.</Text>
         {!isConnected && (
-          <Text size={200} style={{ color: tokens.colorNeutralForeground3, display: 'block', marginTop: tokens.spacingVerticalXS }}>
+          <Text
+            size={200}
+            style={{
+              color: tokens.colorNeutralForeground3,
+              display: 'block',
+              marginTop: tokens.spacingVerticalXS
+            }}
+          >
             Connect a device to change your username.
           </Text>
         )}
@@ -929,13 +1355,31 @@ const MpUsernameSettings: React.FC = () => {
                   if (e.key === 'Escape') setIsEditing(false)
                 }}
               />
-              <Button appearance="primary" size="medium" onClick={handleSave} disabled={loadingUserName || !editValue.trim()}>
+              <Button
+                appearance="primary"
+                size="medium"
+                onClick={handleSave}
+                disabled={loadingUserName || !editValue.trim()}
+              >
                 {loadingUserName ? <Spinner size="tiny" /> : 'Save'}
               </Button>
-              <Button appearance="subtle" size="medium" onClick={() => setIsEditing(false)} disabled={loadingUserName}>Cancel</Button>
+              <Button
+                appearance="subtle"
+                size="medium"
+                onClick={() => setIsEditing(false)}
+                disabled={loadingUserName}
+              >
+                Cancel
+              </Button>
             </>
           ) : (
-            <Button appearance="outline" size="medium" icon={<EditRegular />} onClick={handleEdit} disabled={!isConnected}>
+            <Button
+              appearance="outline"
+              size="medium"
+              icon={<EditRegular />}
+              onClick={handleEdit}
+              disabled={!isConnected}
+            >
               {userName || 'Click to set username'}
             </Button>
           )}
@@ -958,38 +1402,67 @@ interface SectionHeaderProps {
   onToggle: (key: string) => void
 }
 
-const SectionHeader: React.FC<SectionHeaderProps> = ({ label, sectionKey, openSections, onToggle }) => (
+const SectionHeader: React.FC<SectionHeaderProps> = ({
+  label,
+  sectionKey,
+  openSections,
+  onToggle
+}) => (
   <button
     onClick={() => onToggle(sectionKey)}
     style={{
-      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: 'transparent', border: 'none', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)',
-      padding: '8px 4px', cursor: 'pointer', color: 'rgba(var(--vrcd-neon-raw),0.8)',
-      fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase',
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      background: 'transparent',
+      border: 'none',
+      borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)',
+      padding: '8px 4px',
+      cursor: 'pointer',
+      color: 'rgba(var(--vrcd-neon-raw),0.8)',
+      fontFamily: 'monospace',
+      fontSize: '11px',
+      letterSpacing: '0.14em',
+      textTransform: 'uppercase',
       marginBottom: openSections[sectionKey] ? '8px' : '0'
     }}
   >
     <span>{label}</span>
-    {openSections[sectionKey] ? <ChevronUpRegular style={{ fontSize: '14px' }} /> : <ChevronDownRegular style={{ fontSize: '14px' }} />}
+    {openSections[sectionKey] ? (
+      <ChevronUpRegular style={{ fontSize: '14px' }} />
+    ) : (
+      <ChevronDownRegular style={{ fontSize: '14px' }} />
+    )}
   </button>
 )
 
 // ─── Matrix Identity Settings ─────────────────────────────────────────────────
 const USERNAME_PREFS_KEY = 'vr-matrix-usernames'
-interface UsernamePref { mode: 'random+custom' | 'only-custom'; ratio: number; custom: string[] }
+interface UsernamePref {
+  mode: 'random+custom' | 'only-custom'
+  ratio: number
+  custom: string[]
+}
 
 const MatrixIdentitySettings: React.FC = () => {
   const [prefs, setPrefsState] = useState<UsernamePref>(() => {
     try {
       const raw = localStorage.getItem(USERNAME_PREFS_KEY)
       if (raw) return { mode: 'random+custom', ratio: 2, custom: [], ...JSON.parse(raw) }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return { mode: 'random+custom', ratio: 2, custom: [] }
   })
   const [newEntry, setNewEntry] = useState('')
 
   const save = (next: UsernamePref): void => {
-    try { localStorage.setItem(USERNAME_PREFS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+    try {
+      localStorage.setItem(USERNAME_PREFS_KEY, JSON.stringify(next))
+    } catch {
+      /* ignore */
+    }
     setPrefsState(next)
   }
 
@@ -1004,7 +1477,16 @@ const MatrixIdentitySettings: React.FC = () => {
     save({ ...prefs, custom: prefs.custom.filter((c) => c !== name) })
 
   const S = { fontFamily: 'monospace', fontSize: '12px' } as const
-  const inputStyle: React.CSSProperties = { background: 'rgba(var(--vrcd-neon-raw),0.04)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px', padding: '4px 8px', borderRadius: '4px', outline: 'none' }
+  const inputStyle: React.CSSProperties = {
+    background: 'rgba(var(--vrcd-neon-raw),0.04)',
+    border: '1px solid rgba(var(--vrcd-neon-raw),0.3)',
+    color: 'var(--vrcd-neon)',
+    fontFamily: 'monospace',
+    fontSize: '12px',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    outline: 'none'
+  }
 
   const RATIO_OPTIONS = [
     { label: '1:1 — no preference', value: 1 },
@@ -1018,7 +1500,8 @@ const MatrixIdentitySettings: React.FC = () => {
     <div style={{ padding: '12px 4px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <span style={{ ...S, color: 'rgba(var(--vrcd-neon-raw),0.5)', lineHeight: 1.6 }}>
         Controls which username appears in the ADB Shell Matrix intro animation.{'\n'}
-        Edit <span style={{ color: 'var(--vrcd-neon)' }}>g33kyu$3rn4m3$.json</span> in the app resources to customise the random pool.
+        Edit <span style={{ color: 'var(--vrcd-neon)' }}>g33kyu$3rn4m3$.json</span> in the app
+        resources to customise the random pool.
       </span>
 
       {/* Mode toggle */}
@@ -1026,8 +1509,18 @@ const MatrixIdentitySettings: React.FC = () => {
         <span style={{ ...S, color: 'rgba(var(--vrcd-neon-raw),0.7)' }}>Username source</span>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {(['random+custom', 'only-custom'] as const).map((m) => (
-            <button key={m} onClick={() => save({ ...prefs, mode: m })}
-              style={{ ...inputStyle, cursor: 'pointer', background: prefs.mode === m ? 'rgba(var(--vrcd-neon-raw),0.12)' : 'transparent', borderColor: prefs.mode === m ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.3)', color: prefs.mode === m ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.5)' }}>
+            <button
+              key={m}
+              onClick={() => save({ ...prefs, mode: m })}
+              style={{
+                ...inputStyle,
+                cursor: 'pointer',
+                background: prefs.mode === m ? 'rgba(var(--vrcd-neon-raw),0.12)' : 'transparent',
+                borderColor:
+                  prefs.mode === m ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.3)',
+                color: prefs.mode === m ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.5)'
+              }}
+            >
               {m === 'random+custom' ? 'Random + Custom' : 'Custom Only'}
             </button>
           ))}
@@ -1037,11 +1530,22 @@ const MatrixIdentitySettings: React.FC = () => {
       {/* Ratio (only shown in random+custom mode when custom list has entries) */}
       {prefs.mode === 'random+custom' && prefs.custom.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <span style={{ ...S, color: 'rgba(var(--vrcd-neon-raw),0.7)' }}>Custom preference ratio</span>
-          <select value={prefs.ratio} onChange={(e) => save({ ...prefs, ratio: Number(e.target.value) })}
-            style={{ ...inputStyle, cursor: 'pointer' }}>
+          <span style={{ ...S, color: 'rgba(var(--vrcd-neon-raw),0.7)' }}>
+            Custom preference ratio
+          </span>
+          <select
+            value={prefs.ratio}
+            onChange={(e) => save({ ...prefs, ratio: Number(e.target.value) })}
+            style={{ ...inputStyle, cursor: 'pointer' }}
+          >
             {RATIO_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value} style={{ background: '#050514', color: 'var(--vrcd-neon)' }}>{o.label}</option>
+              <option
+                key={o.value}
+                value={o.value}
+                style={{ background: '#050514', color: 'var(--vrcd-neon)' }}
+              >
+                {o.label}
+              </option>
             ))}
           </select>
         </div>
@@ -1051,23 +1555,60 @@ const MatrixIdentitySettings: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <span style={{ ...S, color: 'rgba(var(--vrcd-neon-raw),0.7)' }}>Custom usernames</span>
         <div style={{ display: 'flex', gap: '6px' }}>
-          <input value={newEntry} onChange={(e) => setNewEntry(e.target.value)}
+          <input
+            value={newEntry}
+            onChange={(e) => setNewEntry(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addEntry()}
-            placeholder="add username..." style={{ ...inputStyle, flex: 1 }} />
-          <button onClick={addEntry} style={{ ...inputStyle, cursor: 'pointer', padding: '4px 12px' }}>+</button>
+            placeholder="add username..."
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <button
+            onClick={addEntry}
+            style={{ ...inputStyle, cursor: 'pointer', padding: '4px 12px' }}
+          >
+            +
+          </button>
         </div>
         {prefs.custom.length > 0 && (
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
             {prefs.custom.map((name) => (
-              <span key={name} style={{ ...S, background: 'rgba(var(--vrcd-neon-raw),0.06)', border: '1px solid rgba(var(--vrcd-neon-raw),0.25)', color: 'var(--vrcd-neon)', padding: '2px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                key={name}
+                style={{
+                  ...S,
+                  background: 'rgba(var(--vrcd-neon-raw),0.06)',
+                  border: '1px solid rgba(var(--vrcd-neon-raw),0.25)',
+                  color: 'var(--vrcd-neon)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
                 {name}
-                <button onClick={() => removeEntry(name)} style={{ background: 'none', border: 'none', color: 'rgba(var(--vrcd-purple-raw),0.8)', cursor: 'pointer', fontSize: '11px', padding: 0, lineHeight: 1 }}>✕</button>
+                <button
+                  onClick={() => removeEntry(name)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(var(--vrcd-purple-raw),0.8)',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    padding: 0,
+                    lineHeight: 1
+                  }}
+                >
+                  ✕
+                </button>
               </span>
             ))}
           </div>
         )}
         {prefs.custom.length === 0 && (
-          <span style={{ ...S, color: 'rgba(var(--vrcd-neon-raw),0.3)', fontStyle: 'italic' }}>no custom usernames yet</span>
+          <span style={{ ...S, color: 'rgba(var(--vrcd-neon-raw),0.3)', fontStyle: 'italic' }}>
+            no custom usernames yet
+          </span>
         )}
       </div>
     </div>
@@ -1089,7 +1630,11 @@ const Settings: React.FC = () => {
   const [editedDownloadPath, setEditedDownloadPath] = useState(downloadPath)
   const [isCreditsOpen, setIsCreditsOpen] = useState(false)
   const [hideAdultContent, setHideAdultContentLocal] = useState<boolean>(() => {
-    try { return localStorage.getItem('vrcyberdeck:hideAdult') !== 'false' } catch { return true }
+    try {
+      return localStorage.getItem('vrcyberdeck:hideAdult') !== 'false'
+    } catch {
+      return true
+    }
   })
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     intro: true,
@@ -1102,9 +1647,10 @@ const Settings: React.FC = () => {
     matrixId: false,
     resetData: false
   })
-  const toggleSection = useCallback((key: string): void =>
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
-  , [])
+  const toggleSection = useCallback(
+    (key: string): void => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] })),
+    []
+  )
 
   // New state for speed input values
   const [downloadSpeedInput, setDownloadSpeedInput] = useState(
@@ -1127,8 +1673,13 @@ const Settings: React.FC = () => {
   useEffect(() => {
     let mounted = true
     const p = window.api.app?.getVersion?.()
-    if (p) p.then((v) => { if (mounted) setAppVersion(v) }).catch(() => {})
-    return () => { mounted = false }
+    if (p)
+      p.then((v) => {
+        if (mounted) setAppVersion(v)
+      }).catch(() => {})
+    return () => {
+      mounted = false
+    }
   }, [])
 
   // Update local state when the context values change
@@ -1397,214 +1948,330 @@ const Settings: React.FC = () => {
   const { t } = useLanguage()
 
   return (
-    <div className={styles.root} style={{
-      '--colorNeutralForeground1': 'var(--vrcd-neon)',
-      '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.7)',
-      '--colorNeutralForeground3': 'rgba(var(--vrcd-neon-raw),0.45)',
-      '--colorNeutralForeground4': 'rgba(var(--vrcd-neon-raw),0.3)',
-      '--colorNeutralBackground1': '#050514',
-      '--colorNeutralBackground1Hover': 'rgba(var(--vrcd-neon-raw),0.06)',
-      '--colorNeutralBackground2': 'rgba(var(--vrcd-neon-raw),0.04)',
-      '--colorNeutralBackground3': 'rgba(var(--vrcd-neon-raw),0.08)',
-      '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.25)',
-      '--colorNeutralStroke2': 'rgba(var(--vrcd-neon-raw),0.15)',
-      '--colorNeutralStrokeAccessible': 'rgba(var(--vrcd-neon-raw),0.5)',
-      '--colorBrandBackground': 'var(--vrcd-neon)',
-      '--colorBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)',
-      '--colorBrandBackgroundPressed': 'rgba(var(--vrcd-neon-raw),0.6)',
-      '--colorCompoundBrandBackground': 'var(--vrcd-neon)',
-      '--colorCompoundBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)',
-      '--colorBrandForeground1': 'var(--vrcd-neon)',
-      '--colorBrandStroke1': 'var(--vrcd-neon)',
-      '--colorBrandStroke2': 'rgba(var(--vrcd-neon-raw),0.5)',
-      '--colorNeutralForegroundOnBrand': '#050514',
-    } as React.CSSProperties}>
+    <div
+      className={styles.root}
+      style={
+        {
+          '--colorNeutralForeground1': 'var(--vrcd-neon)',
+          '--colorNeutralForeground2': 'rgba(var(--vrcd-neon-raw),0.7)',
+          '--colorNeutralForeground3': 'rgba(var(--vrcd-neon-raw),0.45)',
+          '--colorNeutralForeground4': 'rgba(var(--vrcd-neon-raw),0.3)',
+          '--colorNeutralBackground1': '#050514',
+          '--colorNeutralBackground1Hover': 'rgba(var(--vrcd-neon-raw),0.06)',
+          '--colorNeutralBackground2': 'rgba(var(--vrcd-neon-raw),0.04)',
+          '--colorNeutralBackground3': 'rgba(var(--vrcd-neon-raw),0.08)',
+          '--colorNeutralStroke1': 'rgba(var(--vrcd-neon-raw),0.25)',
+          '--colorNeutralStroke2': 'rgba(var(--vrcd-neon-raw),0.15)',
+          '--colorNeutralStrokeAccessible': 'rgba(var(--vrcd-neon-raw),0.5)',
+          '--colorBrandBackground': 'var(--vrcd-neon)',
+          '--colorBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)',
+          '--colorBrandBackgroundPressed': 'rgba(var(--vrcd-neon-raw),0.6)',
+          '--colorCompoundBrandBackground': 'var(--vrcd-neon)',
+          '--colorCompoundBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)',
+          '--colorBrandForeground1': 'var(--vrcd-neon)',
+          '--colorBrandStroke1': 'var(--vrcd-neon)',
+          '--colorBrandStroke2': 'rgba(var(--vrcd-neon-raw),0.5)',
+          '--colorNeutralForegroundOnBrand': '#050514'
+        } as React.CSSProperties
+      }
+    >
       <div className={styles.contentContainer}>
         <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM }}>
-          <span style={{ fontSize: '28px', fontWeight: 800, fontFamily: 'var(--vrcd-font-mono)', letterSpacing: '0.04em' }}>
-            <span style={{ color: 'var(--vrcd-purple)', textShadow: '0 0 12px rgba(var(--vrcd-purple-raw),0.6)' }}>VR</span>
-            {' '}
-            <span style={{ color: 'var(--vrcd-neon)', textShadow: '0 0 12px rgba(var(--vrcd-neon-raw),0.5)' }}>CyberDeck</span>
-            {' '}
-            <span style={{ color: 'var(--vrcd-purple)', textShadow: '0 0 12px rgba(var(--vrcd-purple-raw),0.6)' }}>Hacks</span>
+          <span
+            style={{
+              fontSize: '28px',
+              fontWeight: 800,
+              fontFamily: 'var(--vrcd-font-mono)',
+              letterSpacing: '0.04em'
+            }}
+          >
+            <span
+              style={{
+                color: 'var(--vrcd-purple)',
+                textShadow: '0 0 12px rgba(var(--vrcd-purple-raw),0.6)'
+              }}
+            >
+              VR
+            </span>{' '}
+            <span
+              style={{
+                color: 'var(--vrcd-neon)',
+                textShadow: '0 0 12px rgba(var(--vrcd-neon-raw),0.5)'
+              }}
+            >
+              CyberDeck
+            </span>{' '}
+            <span
+              style={{
+                color: 'var(--vrcd-purple)',
+                textShadow: '0 0 12px rgba(var(--vrcd-purple-raw),0.6)'
+              }}
+            >
+              Hacks
+            </span>
           </span>
           {isLoading && <Spinner size="large" label={t('loadingSettings')} />}
         </div>
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontFamily: 'monospace', fontSize: '12px', marginBottom: '8px', display: 'block' }}>
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.55)',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            marginBottom: '8px',
+            display: 'block'
+          }}
+        >
           {t('configurePreferences')}
           {appVersion && ` • Version ${appVersion}`}
         </span>
 
         <div>
-          <SectionHeader label="// EXTRA SYSTEMS" sectionKey="intro" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// EXTRA SYSTEMS"
+            sectionKey="intro"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.intro && <ExtraSystemsSettings />}
         </div>
 
         <div>
-          <SectionHeader label="// SAVE BACKUPS [BETA]" sectionKey="backups" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// SAVE BACKUPS [BETA]"
+            sectionKey="backups"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.backups && <BackupPanel />}
         </div>
 
         <div>
-          <SectionHeader label="// MP USERNAME" sectionKey="username" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// MP USERNAME"
+            sectionKey="username"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.username && <MpUsernameSettings />}
         </div>
 
         <div>
-          <SectionHeader label="// LOG UPLOAD" sectionKey="logs" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// LOG UPLOAD"
+            sectionKey="logs"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.logs && <LogUploadSettings />}
         </div>
 
-        <SectionHeader label="// DOWNLOAD + SPEED" sectionKey="download" openSections={openSections} onToggle={toggleSection} />
-        {openSections.download && <Card className={styles.card}>
-          <CardHeader description={<Subtitle1>{t('downloadSettings')}</Subtitle1>} />
-          <div className={styles.cardContent}>
-            <Text>{t('downloadSettingsDesc')}</Text>
+        <SectionHeader
+          label="// DOWNLOAD + SPEED"
+          sectionKey="download"
+          openSections={openSections}
+          onToggle={toggleSection}
+        />
+        {openSections.download && (
+          <Card className={styles.card}>
+            <CardHeader description={<Subtitle1>{t('downloadSettings')}</Subtitle1>} />
+            <div className={styles.cardContent}>
+              <Text>{t('downloadSettingsDesc')}</Text>
 
-            <div className={styles.formRow}>
-              <Input
-                className={styles.input}
-                value={editedDownloadPath}
-                onChange={(_, data) => setEditedDownloadPath(data.value)}
-                placeholder={t('downloadPath')}
-                contentAfter={
-                  <Button
-                    icon={<FolderOpenRegular />}
-                    onClick={handleSelectFolder}
-                    aria-label={t('browseFolders')}
-                  />
-                }
-                size="large"
-              />
-              <button onClick={handleSaveDownloadPath} style={neonBtn}>{t('savePath')}</button>
-            </div>
-
-            <div className={styles.speedLimitSection}>
-              <Text>{t('unlimitedHint')}</Text>
-
-              <div className={styles.speedFormRow}>
-                <div className={styles.speedControl}>
-                  <Text>{t('downloadSpeedLimit')}</Text>
-                  <div className={styles.speedInputGroup}>
-                    <Input
-                      className={styles.speedInput}
-                      value={downloadSpeedInput}
-                      onChange={(_, data) => handleDownloadInputChange(data.value)}
-                      placeholder={t('unlimited')}
+              <div className={styles.formRow}>
+                <Input
+                  className={styles.input}
+                  value={editedDownloadPath}
+                  onChange={(_, data) => setEditedDownloadPath(data.value)}
+                  placeholder={t('downloadPath')}
+                  contentAfter={
+                    <Button
+                      icon={<FolderOpenRegular />}
+                      onClick={handleSelectFolder}
+                      aria-label={t('browseFolders')}
                     />
-                    <Dropdown
-                      className={styles.unitDropdown}
-                      value={SPEED_UNITS.find((u) => u.value === downloadSpeedUnit)?.label}
-                      aria-label="Download Speed Limit Unit"
-                      selectedOptions={[downloadSpeedUnit]}
-                      onOptionSelect={(_, data) => {
-                        if (data.optionValue) {
-                          handleDownloadUnitChange(data.optionValue)
-                        }
-                      }}
-                      mountNode={document.getElementById('portal')}
-                    >
-                      {SPEED_UNITS.map((unit) => (
-                        <Option key={unit.value} value={unit.value} text={unit.label}>
-                          {unit.label}
-                        </Option>
-                      ))}
-                    </Dropdown>
+                  }
+                  size="large"
+                />
+                <button onClick={handleSaveDownloadPath} style={neonBtn}>
+                  {t('savePath')}
+                </button>
+              </div>
+
+              <div className={styles.speedLimitSection}>
+                <Text>{t('unlimitedHint')}</Text>
+
+                <div className={styles.speedFormRow}>
+                  <div className={styles.speedControl}>
+                    <Text>{t('downloadSpeedLimit')}</Text>
+                    <div className={styles.speedInputGroup}>
+                      <Input
+                        className={styles.speedInput}
+                        value={downloadSpeedInput}
+                        onChange={(_, data) => handleDownloadInputChange(data.value)}
+                        placeholder={t('unlimited')}
+                      />
+                      <Dropdown
+                        className={styles.unitDropdown}
+                        value={SPEED_UNITS.find((u) => u.value === downloadSpeedUnit)?.label}
+                        aria-label="Download Speed Limit Unit"
+                        selectedOptions={[downloadSpeedUnit]}
+                        onOptionSelect={(_, data) => {
+                          if (data.optionValue) {
+                            handleDownloadUnitChange(data.optionValue)
+                          }
+                        }}
+                        mountNode={document.getElementById('portal')}
+                      >
+                        {SPEED_UNITS.map((unit) => (
+                          <Option key={unit.value} value={unit.value} text={unit.label}>
+                            {unit.label}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </div>
+                    <Text className={styles.hint}>
+                      <InfoRegular />
+                      {t('unlimitedHint')}
+                    </Text>
                   </div>
-                  <Text className={styles.hint}>
-                    <InfoRegular />
-                    {t('unlimitedHint')}
-                  </Text>
+
+                  <div className={styles.speedControl}>
+                    <Text>{t('uploadSpeedLimit')}</Text>
+                    <div className={styles.speedInputGroup}>
+                      <Input
+                        className={styles.speedInput}
+                        value={uploadSpeedInput}
+                        onChange={(_, data) => handleUploadInputChange(data.value)}
+                        placeholder={t('unlimited')}
+                      />
+                      <Dropdown
+                        className={styles.unitDropdown}
+                        value={SPEED_UNITS.find((u) => u.value === uploadSpeedUnit)?.label}
+                        selectedOptions={[uploadSpeedUnit]}
+                        onOptionSelect={(_, data) => {
+                          if (data.optionValue) {
+                            handleUploadUnitChange(data.optionValue)
+                          }
+                        }}
+                        mountNode={document.getElementById('portal')}
+                      >
+                        {SPEED_UNITS.map((unit) => (
+                          <Option key={unit.value} value={unit.value} text={unit.label}>
+                            {unit.label}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </div>
+                    <Text className={styles.hint}>
+                      <InfoRegular />
+                      {t('unlimitedHint')}
+                    </Text>
+                  </div>
                 </div>
 
-                <div className={styles.speedControl}>
-                  <Text>{t('uploadSpeedLimit')}</Text>
-                  <div className={styles.speedInputGroup}>
-                    <Input
-                      className={styles.speedInput}
-                      value={uploadSpeedInput}
-                      onChange={(_, data) => handleUploadInputChange(data.value)}
-                      placeholder={t('unlimited')}
-                    />
-                    <Dropdown
-                      className={styles.unitDropdown}
-                      value={SPEED_UNITS.find((u) => u.value === uploadSpeedUnit)?.label}
-                      selectedOptions={[uploadSpeedUnit]}
-                      onOptionSelect={(_, data) => {
-                        if (data.optionValue) {
-                          handleUploadUnitChange(data.optionValue)
-                        }
-                      }}
-                      mountNode={document.getElementById('portal')}
-                    >
-                      {SPEED_UNITS.map((unit) => (
-                        <Option key={unit.value} value={unit.value} text={unit.label}>
-                          {unit.label}
-                        </Option>
-                      ))}
-                    </Dropdown>
-                  </div>
-                  <Text className={styles.hint}>
-                    <InfoRegular />
-                    {t('unlimitedHint')}
-                  </Text>
+                <div
+                  className={styles.formRow}
+                  style={{ justifyContent: 'flex-end', marginTop: tokens.spacingVerticalM }}
+                >
+                  <button onClick={handleSaveSpeedLimits} style={neonBtn}>
+                    {t('saveSpeedLimits')}
+                  </button>
                 </div>
               </div>
 
-              <div
-                className={styles.formRow}
-                style={{ justifyContent: 'flex-end', marginTop: tokens.spacingVerticalM }}
-              >
-                <button onClick={handleSaveSpeedLimits} style={neonBtn}>{t('saveSpeedLimits')}</button>
-              </div>
+              {(error || localError) && <Text className={styles.error}>{error || localError}</Text>}
+
+              {saveSuccess && (
+                <Text className={styles.success}>
+                  <CheckmarkCircleRegular />
+                  {t('settingsSaved')}
+                </Text>
+              )}
             </div>
-
-            {(error || localError) && <Text className={styles.error}>{error || localError}</Text>}
-
-            {saveSuccess && (
-              <Text className={styles.success}>
-                <CheckmarkCircleRegular />
-                {t('settingsSaved')}
-              </Text>
-            )}
-          </div>
-        </Card>}
+          </Card>
+        )}
 
         <div>
-          <SectionHeader label="// BLACKLIST" sectionKey="blacklist" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// BLACKLIST"
+            sectionKey="blacklist"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.blacklist && <BlacklistSettings />}
         </div>
 
         <div>
-          <SectionHeader label="// CONTENT FILTER" sectionKey="content" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// CONTENT FILTER"
+            sectionKey="content"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.content && (
-            <div style={{ padding: '12px 4px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div
+              style={{ padding: '12px 4px', display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ '--colorBrandBackground': 'var(--vrcd-neon)', '--colorBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)', '--colorBrandBackgroundPressed': 'rgba(var(--vrcd-neon-raw),0.6)', '--colorCompoundBrandBackground': 'var(--vrcd-neon)', '--colorCompoundBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)' } as React.CSSProperties}>
+                <div
+                  style={
+                    {
+                      '--colorBrandBackground': 'var(--vrcd-neon)',
+                      '--colorBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)',
+                      '--colorBrandBackgroundPressed': 'rgba(var(--vrcd-neon-raw),0.6)',
+                      '--colorCompoundBrandBackground': 'var(--vrcd-neon)',
+                      '--colorCompoundBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)'
+                    } as React.CSSProperties
+                  }
+                >
                   <Switch
                     checked={hideAdultContent}
                     onChange={(_, d) => {
                       setHideAdultContentLocal(d.checked)
-                      try { localStorage.setItem('vrcyberdeck:hideAdult', String(d.checked)) } catch { }
+                      try {
+                        localStorage.setItem('vrcyberdeck:hideAdult', String(d.checked))
+                      } catch {}
                     }}
                   />
                 </div>
-                <span style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px' }}>Hide adult / explicit content</span>
+                <span
+                  style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', fontSize: '12px' }}
+                >
+                  Hide adult / explicit content
+                </span>
               </div>
-              <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.45)', fontFamily: 'monospace', fontSize: '11px', lineHeight: 1.5 }}>
-                Filters explicit-tagged titles from the library. Requires a game refresh to take effect.
+              <span
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.45)',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  lineHeight: 1.5
+                }}
+              >
+                Filters explicit-tagged titles from the library. Requires a game refresh to take
+                effect.
               </span>
             </div>
           )}
         </div>
 
         <div>
-          <SectionHeader label="// MATRIX IDENTITIES" sectionKey="matrixId" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// MATRIX IDENTITIES"
+            sectionKey="matrixId"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.matrixId && <MatrixIdentitySettings />}
         </div>
 
         <div>
-          <SectionHeader label="// RESET APP DATA" sectionKey="resetData" openSections={openSections} onToggle={toggleSection} />
+          <SectionHeader
+            label="// RESET APP DATA"
+            sectionKey="resetData"
+            openSections={openSections}
+            onToggle={toggleSection}
+          />
           {openSections.resetData && <ResetAppDataSettings />}
         </div>
 

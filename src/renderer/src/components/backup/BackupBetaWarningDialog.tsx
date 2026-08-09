@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Dialog, DialogSurface, DialogBody, Button, Text, Checkbox } from '@fluentui/react-components'
+import {
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  Button,
+  Text,
+  Checkbox
+} from '@fluentui/react-components'
 import { WarningRegular } from '@fluentui/react-icons'
 
 const NEON = 'var(--vrcd-neon)'
@@ -46,7 +53,9 @@ const BackupBetaWarningDialog: React.FC<BackupBetaWarningDialogProps> = ({
           padding: 0
         }}
       >
-        <DialogBody style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <DialogBody
+          style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
           <div
             style={{
               display: 'flex',
@@ -63,15 +72,24 @@ const BackupBetaWarningDialog: React.FC<BackupBetaWarningDialogProps> = ({
             SAVE BACKUPS — EXPERIMENTAL BETA
           </div>
 
-          <Text style={{ color: 'rgba(var(--vrcd-neon-raw),0.85)', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.7 }}>
+          <Text
+            style={{
+              color: 'rgba(var(--vrcd-neon-raw),0.85)',
+              fontFamily: 'monospace',
+              fontSize: 12,
+              lineHeight: 1.7
+            }}
+          >
             This is an <strong style={{ color: '#ffaa00' }}>experimental BETA</strong> feature.
             While I&apos;m doing everything I can to make sure it doesn&apos;t happen, it is{' '}
-            <strong style={{ color: '#ffaa00' }}>POSSIBLE that you could lose your save data</strong>.
-            Back up anything you truly can&apos;t afford to lose by other means too.
+            <strong style={{ color: '#ffaa00' }}>
+              POSSIBLE that you could lose your save data
+            </strong>
+            . Back up anything you truly can&apos;t afford to lose by other means too.
             <br />
             <br />
-            By enabling this feature you accept that risk. You can turn it back off at any time
-            from Settings → Extra Options.
+            By enabling this feature you accept that risk. You can turn it back off at any time from
+            Settings → Extra Options.
           </Text>
 
           <Checkbox

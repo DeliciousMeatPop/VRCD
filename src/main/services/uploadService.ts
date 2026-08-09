@@ -424,9 +424,7 @@ class UploadService extends EventEmitter {
     return { packageName, versionCode }
   }
 
-  private async getApkInfo(
-    apkPath: string
-  ): Promise<{ packageName: string; versionCode: number }> {
+  private async getApkInfo(apkPath: string): Promise<{ packageName: string; versionCode: number }> {
     const sevenZipPath = dependencyService.get7zPath()
     const tmpDir = join(this.uploadsBasePath, `apk_parse_${Date.now()}`)
     try {
@@ -566,9 +564,7 @@ class UploadService extends EventEmitter {
     }
   }
 
-  public async addLocalItemsToQueue(
-    paths: string[]
-  ): Promise<{ errors: LocalUploadError[] }> {
+  public async addLocalItemsToQueue(paths: string[]): Promise<{ errors: LocalUploadError[] }> {
     const errors: LocalUploadError[] = []
 
     // Validate all items first - refuse to add anything if any fail
@@ -650,7 +646,9 @@ class UploadService extends EventEmitter {
       }
 
       this.uploadQueue.push(newItem)
-      console.log(`[UploadService] Added local item "${displayName}" (${pkgName} v${versionCode}) to upload queue.`)
+      console.log(
+        `[UploadService] Added local item "${displayName}" (${pkgName} v${versionCode}) to upload queue.`
+      )
     }
 
     this.emitQueueUpdated()

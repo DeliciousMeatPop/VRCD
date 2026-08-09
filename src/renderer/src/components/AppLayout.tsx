@@ -46,6 +46,7 @@ import { useLanguage } from '@renderer/hooks/useLanguage'
 import CreditsDialog from './CreditsDialog'
 import HackerConsole from './HackerConsole'
 import TransferStrip from './TransferStrip'
+import DownloadStorageWarning from './DownloadStorageWarning'
 import { ErrorBoundary } from './ErrorBoundary'
 import { playSound } from '../hooks/useSoundEffects'
 import '../assets/credits-dialog.css'
@@ -71,7 +72,8 @@ const useStyles = makeStyles({
     backgroundImage:
       'linear-gradient(rgba(var(--vrcd-neon-raw), 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--vrcd-neon-raw), 0.03) 1px, transparent 1px)',
     backgroundSize: '40px 40px',
-    boxShadow: '0 1px 24px 0 rgba(var(--vrcd-neon-raw), 0.06), inset 0 -1px 0 rgba(var(--vrcd-purple-raw), 0.12)',
+    boxShadow:
+      '0 1px 24px 0 rgba(var(--vrcd-neon-raw), 0.06), inset 0 -1px 0 rgba(var(--vrcd-purple-raw), 0.12)',
     height: '88px',
     flexShrink: 0
   },
@@ -134,12 +136,14 @@ const useStyles = makeStyles({
   },
   titleVR: {
     color: 'var(--vrcd-purple)',
-    textShadow: '0 0 18px rgba(var(--vrcd-purple-raw), 0.9), 0 0 40px rgba(var(--vrcd-purple-raw), 0.4)',
+    textShadow:
+      '0 0 18px rgba(var(--vrcd-purple-raw), 0.9), 0 0 40px rgba(var(--vrcd-purple-raw), 0.4)',
     fontFamily: 'var(--vrcd-font-mono)'
   },
   titleCyberdeck: {
     color: 'var(--vrcd-neon)',
-    textShadow: '0 0 18px rgba(var(--vrcd-neon-raw), 0.8), 0 0 40px rgba(var(--vrcd-neon-raw), 0.3)',
+    textShadow:
+      '0 0 18px rgba(var(--vrcd-neon-raw), 0.8), 0 0 40px rgba(var(--vrcd-neon-raw), 0.3)',
     fontFamily: 'var(--vrcd-font-mono)',
     letterSpacing: '0.08em'
   },
@@ -294,7 +298,13 @@ const MainContent: React.FC<MainContentProps> = ({
     if (currentView === AppView.DEVICE_LIST) {
       return <DeviceList onConnected={onDeviceConnected} onSkip={onSkipConnection} />
     }
-    return <GamesView onBackToDevices={onBackToDeviceList} onTransfers={onTransfers} onSettings={onSettings} />
+    return (
+      <GamesView
+        onBackToDevices={onBackToDeviceList}
+        onTransfers={onTransfers}
+        onSettings={onSettings}
+      />
+    )
   }
 
   if (!dependenciesReady) {
@@ -341,14 +351,14 @@ const MainContent: React.FC<MainContentProps> = ({
                   </li>
                   <li style={{ marginBottom: tokens.spacingVerticalXS }}>
                     <Text>
-                      <strong>ISP or network blocking GitHub</strong> — your ISP or router may
-                      be temporarily blocking raw.githubusercontent.com.
+                      <strong>ISP or network blocking GitHub</strong> — your ISP or router may be
+                      temporarily blocking raw.githubusercontent.com.
                     </Text>
                   </li>
                   <li style={{ marginBottom: tokens.spacingVerticalXS }}>
                     <Text>
-                      <strong>Corporate or school network policy</strong> — managed networks
-                      often block GitHub or software download URLs.
+                      <strong>Corporate or school network policy</strong> — managed networks often
+                      block GitHub or software download URLs.
                     </Text>
                   </li>
                 </ul>
@@ -398,7 +408,13 @@ const MainContent: React.FC<MainContentProps> = ({
           <Text weight="semibold" style={{ color: tokens.colorPaletteRedForeground1 }}>
             Dependency Setup Failed{failedDeps}
           </Text>
-          <Text style={{ color: tokens.colorNeutralForeground3, fontSize: '12px', fontFamily: 'monospace' }}>
+          <Text
+            style={{
+              color: tokens.colorNeutralForeground3,
+              fontSize: '12px',
+              fontFamily: 'monospace'
+            }}
+          >
             {dependencyError}
           </Text>
 
@@ -412,8 +428,8 @@ const MainContent: React.FC<MainContentProps> = ({
                   <Text>
                     <strong>Antivirus / Windows Defender quarantined rclone</strong> — rclone
                     commonly triggers false positives. Open Windows Security → Protection History
-                    and restore the quarantined file, then add an exclusion for the app data
-                    folder (%APPDATA%\vr-cyberdeck\bin).
+                    and restore the quarantined file, then add an exclusion for the app data folder
+                    (%APPDATA%\vr-cyberdeck\bin).
                   </Text>
                 </li>
                 <li style={{ marginBottom: tokens.spacingVerticalXS }}>
@@ -444,8 +460,8 @@ const MainContent: React.FC<MainContentProps> = ({
                 Reliable workaround on macOS:
               </Text>
               <Text style={{ marginTop: tokens.spacingVerticalXS }}>
-                If setup keeps failing while unpacking rclone/adb, install the two helper
-                binaries yourself. The app uses them directly once they&apos;re in its{' '}
+                If setup keeps failing while unpacking rclone/adb, install the two helper binaries
+                yourself. The app uses them directly once they&apos;re in its{' '}
                 <span style={{ fontFamily: 'monospace' }}>bin</span> folder and skips the
                 download/unpack step entirely. Open <strong>Terminal</strong> and run:
               </Text>
@@ -477,8 +493,8 @@ const MainContent: React.FC<MainContentProps> = ({
               </pre>
               <Text style={{ marginTop: tokens.spacingVerticalXS }}>
                 Then quit and reopen the app. (If you have Homebrew, `brew install rclone
-                android-platform-tools` and copying those binaries into the same folder works
-                too — but rclone must be v1.72.1.)
+                android-platform-tools` and copying those binaries into the same folder works too —
+                but rclone must be v1.72.1.)
               </Text>
               <Text weight="semibold" style={{ marginTop: tokens.spacingVerticalM }}>
                 If that isn&apos;t it, also worth checking:
@@ -486,8 +502,8 @@ const MainContent: React.FC<MainContentProps> = ({
               <ul style={{ textAlign: 'left', marginTop: tokens.spacingVerticalS }}>
                 <li style={{ marginBottom: tokens.spacingVerticalXS }}>
                   <Text>
-                    <strong>Gatekeeper quarantine.</strong> If you ran the app straight from
-                    the mounted .dmg, move it to <strong>Applications</strong> first, then run{' '}
+                    <strong>Gatekeeper quarantine.</strong> If you ran the app straight from the
+                    mounted .dmg, move it to <strong>Applications</strong> first, then run{' '}
                     <span style={{ fontFamily: 'monospace' }}>
                       xattr -cr &quot;/Applications/VR CyberDeck.app&quot;
                     </span>{' '}
@@ -573,12 +589,15 @@ const AppLayout: React.FC = () => {
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false)
   const mountNodeRef = useRef<HTMLDivElement>(null)
   const styles = useStyles()
-  const { queue: downloadQueue } = useDownload()
+  const { queue: downloadQueue, storageStatus } = useDownload()
   const { queue: uploadQueue } = useUpload()
   const { t } = useLanguage()
 
   useEffect(() => {
-    window.api.app.getVersion().then(setAppVersion).catch(() => {})
+    window.api.app
+      .getVersion()
+      .then(setAppVersion)
+      .catch(() => {})
   }, [])
 
   // Global "click sound" — fires whenever the user clicks any button-like
@@ -602,14 +621,16 @@ const AppLayout: React.FC = () => {
   }, [])
 
   const hasActiveTransfers = useMemo(() => {
-    const activeDownload = downloadQueue.some((i) =>
-      ['Queued', 'Downloading', 'Extracting', 'Installing'].includes(i.status)
+    const activeDownload = downloadQueue.some(
+      (i) =>
+        ['Downloading', 'Extracting', 'Installing'].includes(i.status) ||
+        (i.status === 'Queued' && storageStatus.state === 'available')
     )
     const activeUpload = uploadQueue.some((i) =>
       ['Queued', 'Preparing', 'Uploading'].includes(i.status)
     )
     return activeDownload || activeUpload
-  }, [downloadQueue, uploadQueue])
+  }, [downloadQueue, storageStatus.state, uploadQueue])
 
   // Keep a ref so the close-requested listener always sees the latest value
   // without needing to resubscribe (which would race with main-process events).
@@ -673,13 +694,22 @@ const AppLayout: React.FC = () => {
                       <span className={styles.titleMain}>
                         <span className={styles.titleVR}>VR</span>
                         <span className={styles.titleCyberdeck}>
-                          <span className="title-glitch-wrap" data-text="CYBERDECK">CYBERDECK</span>
+                          <span className="title-glitch-wrap" data-text="CYBERDECK">
+                            CYBERDECK
+                          </span>
                         </span>
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span className={styles.titleSub}>OPERATE. DEPLOY. CONTROL.</span>
                         {appVersion && (
-                          <span style={{ fontSize: '9px', fontFamily: 'monospace', color: 'rgba(var(--vrcd-purple-raw),0.6)', letterSpacing: '0.1em' }}>
+                          <span
+                            style={{
+                              fontSize: '9px',
+                              fontFamily: 'monospace',
+                              color: 'rgba(var(--vrcd-purple-raw),0.6)',
+                              letterSpacing: '0.1em'
+                            }}
+                          >
                             v{appVersion}
                           </span>
                         )}
@@ -701,14 +731,43 @@ const AppLayout: React.FC = () => {
 
                 {/* Right: Dark mode toggle (decorative joke) */}
                 <div className={styles.headerRight}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }} onClick={() => setIsDarkModeJokeOpen(true)}>
-                    <span style={{ fontSize: '9px', fontFamily: 'monospace', letterSpacing: '0.12em', color: 'rgba(var(--vrcd-neon-raw), 0.6)', textTransform: 'uppercase' }}>Dark Mode</span>
-                    <div style={{ '--colorBrandBackground': 'var(--vrcd-neon)', '--colorBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)', '--colorBrandBackgroundPressed': 'rgba(var(--vrcd-neon-raw),0.6)', '--colorCompoundBrandBackground': 'var(--vrcd-neon)', '--colorCompoundBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)', pointerEvents: 'none' } as React.CSSProperties}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setIsDarkModeJokeOpen(true)}
+                  >
+                    <span
+                      style={{
+                        fontSize: '9px',
+                        fontFamily: 'monospace',
+                        letterSpacing: '0.12em',
+                        color: 'rgba(var(--vrcd-neon-raw), 0.6)',
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      Dark Mode
+                    </span>
+                    <div
+                      style={
+                        {
+                          '--colorBrandBackground': 'var(--vrcd-neon)',
+                          '--colorBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)',
+                          '--colorBrandBackgroundPressed': 'rgba(var(--vrcd-neon-raw),0.6)',
+                          '--colorCompoundBrandBackground': 'var(--vrcd-neon)',
+                          '--colorCompoundBrandBackgroundHover': 'rgba(var(--vrcd-neon-raw),0.8)',
+                          pointerEvents: 'none'
+                        } as React.CSSProperties
+                      }
+                    >
                       <Switch checked={true} readOnly />
                     </div>
                   </div>
                 </div>
-
               </div>
 
               {/* Dark mode joke dialog — custom overlay for guaranteed viewport centering */}
@@ -737,44 +796,172 @@ const AppLayout: React.FC = () => {
                       fontFamily: 'monospace',
                       borderRadius: '8px',
                       padding: '24px 28px 28px',
-                      boxShadow: '0 0 50px rgba(var(--vrcd-neon-raw),0.08), 0 0 80px rgba(var(--vrcd-purple-raw),0.06)'
+                      boxShadow:
+                        '0 0 50px rgba(var(--vrcd-neon-raw),0.08), 0 0 80px rgba(var(--vrcd-purple-raw),0.06)'
                     }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', textAlign: 'center' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '14px',
+                        textAlign: 'center'
+                      }}
+                    >
                       {/* Neon crying-laughing face */}
-                      <svg width="200" height="200" viewBox="0 0 200 200" style={{ overflow: 'visible', filter: 'drop-shadow(0 0 14px var(--vrcd-neon)) drop-shadow(0 0 40px rgba(var(--vrcd-neon-raw),0.55)) drop-shadow(0 0 70px rgba(var(--vrcd-neon-raw),0.2))' }}>
+                      <svg
+                        width="200"
+                        height="200"
+                        viewBox="0 0 200 200"
+                        style={{
+                          overflow: 'visible',
+                          filter:
+                            'drop-shadow(0 0 14px var(--vrcd-neon)) drop-shadow(0 0 40px rgba(var(--vrcd-neon-raw),0.55)) drop-shadow(0 0 70px rgba(var(--vrcd-neon-raw),0.2))'
+                        }}
+                      >
                         <defs>
                           <filter id="jk-g" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="4" result="b"/>
-                            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            <feGaussianBlur stdDeviation="4" result="b" />
+                            <feMerge>
+                              <feMergeNode in="b" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
                           </filter>
                           <filter id="jk-pg" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="5" result="b"/>
-                            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            <feGaussianBlur stdDeviation="5" result="b" />
+                            <feMerge>
+                              <feMergeNode in="b" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
                           </filter>
                         </defs>
-                        <circle cx="100" cy="100" r="88" fill="#010108"/>
-                        <circle cx="100" cy="100" r="88" fill="none" stroke="var(--vrcd-neon)" strokeWidth="5" filter="url(#jk-g)"/>
-                        <path d="M 58,80 Q 72,68 86,80" fill="none" stroke="var(--vrcd-neon)" strokeWidth="4" strokeLinecap="round" filter="url(#jk-g)"/>
-                        <path d="M 114,80 Q 128,68 142,80" fill="none" stroke="var(--vrcd-neon)" strokeWidth="4" strokeLinecap="round" filter="url(#jk-g)"/>
-                        <path d="M 52,124 Q 100,175 148,124" fill="none" stroke="var(--vrcd-neon)" strokeWidth="4.5" strokeLinecap="round" filter="url(#jk-g)"/>
-                        <path d="M 64,87 Q 52,108 58,128" fill="none" stroke="var(--vrcd-purple)" strokeWidth="3.5" strokeLinecap="round" filter="url(#jk-pg)"/>
-                        <ellipse cx="57" cy="132" rx="5.5" ry="8" fill="var(--vrcd-purple)" filter="url(#jk-pg)"/>
-                        <path d="M 136,87 Q 148,108 142,128" fill="none" stroke="var(--vrcd-purple)" strokeWidth="3.5" strokeLinecap="round" filter="url(#jk-pg)"/>
-                        <ellipse cx="143" cy="132" rx="5.5" ry="8" fill="var(--vrcd-purple)" filter="url(#jk-pg)"/>
+                        <circle cx="100" cy="100" r="88" fill="#010108" />
+                        <circle
+                          cx="100"
+                          cy="100"
+                          r="88"
+                          fill="none"
+                          stroke="var(--vrcd-neon)"
+                          strokeWidth="5"
+                          filter="url(#jk-g)"
+                        />
+                        <path
+                          d="M 58,80 Q 72,68 86,80"
+                          fill="none"
+                          stroke="var(--vrcd-neon)"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          filter="url(#jk-g)"
+                        />
+                        <path
+                          d="M 114,80 Q 128,68 142,80"
+                          fill="none"
+                          stroke="var(--vrcd-neon)"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          filter="url(#jk-g)"
+                        />
+                        <path
+                          d="M 52,124 Q 100,175 148,124"
+                          fill="none"
+                          stroke="var(--vrcd-neon)"
+                          strokeWidth="4.5"
+                          strokeLinecap="round"
+                          filter="url(#jk-g)"
+                        />
+                        <path
+                          d="M 64,87 Q 52,108 58,128"
+                          fill="none"
+                          stroke="var(--vrcd-purple)"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          filter="url(#jk-pg)"
+                        />
+                        <ellipse
+                          cx="57"
+                          cy="132"
+                          rx="5.5"
+                          ry="8"
+                          fill="var(--vrcd-purple)"
+                          filter="url(#jk-pg)"
+                        />
+                        <path
+                          d="M 136,87 Q 148,108 142,128"
+                          fill="none"
+                          stroke="var(--vrcd-purple)"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          filter="url(#jk-pg)"
+                        />
+                        <ellipse
+                          cx="143"
+                          cy="132"
+                          rx="5.5"
+                          ry="8"
+                          fill="var(--vrcd-purple)"
+                          filter="url(#jk-pg)"
+                        />
                       </svg>
 
-                      <div style={{ fontSize: '52px', color: 'var(--vrcd-neon)', letterSpacing: '0.2em', fontWeight: 900, fontFamily: 'var(--vrcd-font-mono)', textShadow: '0 0 10px var(--vrcd-neon), 0 0 30px rgba(var(--vrcd-neon-raw),0.7), 0 0 60px rgba(var(--vrcd-neon-raw),0.3)', lineHeight: 1 }}>LMAO</div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <div style={{ flex: 1, height: '1px', background: 'rgba(var(--vrcd-purple-raw),0.6)', boxShadow: '0 0 6px rgba(var(--vrcd-purple-raw),0.4)' }}/>
-                        <span style={{ color: 'var(--vrcd-purple)', fontSize: '12px', margin: '0 10px', textShadow: '0 0 8px rgba(var(--vrcd-purple-raw),0.9)', filter: 'drop-shadow(0 0 4px var(--vrcd-purple))' }}>◆</span>
-                        <div style={{ flex: 1, height: '1px', background: 'rgba(var(--vrcd-purple-raw),0.6)', boxShadow: '0 0 6px rgba(var(--vrcd-purple-raw),0.4)' }}/>
+                      <div
+                        style={{
+                          fontSize: '52px',
+                          color: 'var(--vrcd-neon)',
+                          letterSpacing: '0.2em',
+                          fontWeight: 900,
+                          fontFamily: 'var(--vrcd-font-mono)',
+                          textShadow:
+                            '0 0 10px var(--vrcd-neon), 0 0 30px rgba(var(--vrcd-neon-raw),0.7), 0 0 60px rgba(var(--vrcd-neon-raw),0.3)',
+                          lineHeight: 1
+                        }}
+                      >
+                        LMAO
                       </div>
 
-                      <div style={{ fontSize: '15px', color: 'var(--vrcd-neon)', lineHeight: 2, fontFamily: 'var(--vrcd-font-mono)', textShadow: '0 0 6px rgba(var(--vrcd-neon-raw),0.35)' }}>
-                        This is just for looks.<br />
-                        Do people actually USE<br />
+                      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: '1px',
+                            background: 'rgba(var(--vrcd-purple-raw),0.6)',
+                            boxShadow: '0 0 6px rgba(var(--vrcd-purple-raw),0.4)'
+                          }}
+                        />
+                        <span
+                          style={{
+                            color: 'var(--vrcd-purple)',
+                            fontSize: '12px',
+                            margin: '0 10px',
+                            textShadow: '0 0 8px rgba(var(--vrcd-purple-raw),0.9)',
+                            filter: 'drop-shadow(0 0 4px var(--vrcd-purple))'
+                          }}
+                        >
+                          ◆
+                        </span>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: '1px',
+                            background: 'rgba(var(--vrcd-purple-raw),0.6)',
+                            boxShadow: '0 0 6px rgba(var(--vrcd-purple-raw),0.4)'
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          color: 'var(--vrcd-neon)',
+                          lineHeight: 2,
+                          fontFamily: 'var(--vrcd-font-mono)',
+                          textShadow: '0 0 6px rgba(var(--vrcd-neon-raw),0.35)'
+                        }}
+                      >
+                        This is just for looks.
+                        <br />
+                        Do people actually USE
+                        <br />
                         light mode?
                       </div>
 
@@ -792,7 +979,8 @@ const AppLayout: React.FC = () => {
                           borderRadius: '8px',
                           cursor: 'pointer',
                           fontStyle: 'italic',
-                          boxShadow: '0 0 14px rgba(var(--vrcd-neon-raw),0.15), inset 0 0 14px rgba(var(--vrcd-neon-raw),0.04)',
+                          boxShadow:
+                            '0 0 14px rgba(var(--vrcd-neon-raw),0.15), inset 0 0 14px rgba(var(--vrcd-neon-raw),0.04)',
                           whiteSpace: 'nowrap'
                         }}
                       >
@@ -806,6 +994,8 @@ const AppLayout: React.FC = () => {
               <div className={styles.transferStrip}>
                 <TransferStrip />
               </div>
+
+              <DownloadStorageWarning onOpenSettings={() => setIsSettingsOpen(true)} />
 
               <div className={styles.mainContent} id="mainContent">
                 <MainContent
@@ -828,10 +1018,28 @@ const AppLayout: React.FC = () => {
                 open={isTransfersOpen}
                 onOpenChange={(_, { open }) => setIsTransfersOpen(open)}
                 position="end"
-                style={{ width: '700px', background: '#050514', borderLeft: '1px solid rgba(var(--vrcd-neon-raw),0.25)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.2)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' } as React.CSSProperties}
+                style={
+                  {
+                    width: '700px',
+                    background: '#050514',
+                    borderLeft: '1px solid rgba(var(--vrcd-neon-raw),0.25)',
+                    ['--colorNeutralBackground1' as string]: '#050514',
+                    ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+                    ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+                    ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.2)',
+                    ['--colorBrandBackground' as string]: 'var(--vrcd-neon)',
+                    ['--colorNeutralForegroundOnBrand' as string]: '#050514'
+                  } as React.CSSProperties
+                }
                 mountNode={mountNodeRef.current}
               >
-                <DrawerHeader style={{ background: '#050514', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)', padding: '12px 20px' }}>
+                <DrawerHeader
+                  style={{
+                    background: '#050514',
+                    borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)',
+                    padding: '12px 20px'
+                  }}
+                >
                   <DrawerHeaderTitle
                     action={
                       <Button
@@ -842,28 +1050,62 @@ const AppLayout: React.FC = () => {
                         style={{ color: 'var(--vrcd-neon)' }}
                       />
                     }
-                    style={{ color: 'var(--vrcd-neon)', fontFamily: 'monospace', letterSpacing: '0.08em' }}
+                    style={{
+                      color: 'var(--vrcd-neon)',
+                      fontFamily: 'monospace',
+                      letterSpacing: '0.08em'
+                    }}
                   >
                     Transfers
                   </DrawerHeaderTitle>
                 </DrawerHeader>
-                <DrawerBody style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, background: '#050514' }}>
+                <DrawerBody
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    padding: 0,
+                    background: '#050514'
+                  }}
+                >
                   <TabList
                     selectedValue={transfersTab}
                     onTabSelect={(_, d) => {
                       const tab = d.value as 'downloads' | 'uploads'
                       setTransfersTab(tab)
-                      try { localStorage.setItem('vrcyberdeck:transfersTab', tab) } catch { /* ignore */ }
+                      try {
+                        localStorage.setItem('vrcyberdeck:transfersTab', tab)
+                      } catch {
+                        /* ignore */
+                      }
                     }}
-                    style={{ padding: '0 16px', borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)', flexShrink: 0 }}
+                    style={{
+                      padding: '0 16px',
+                      borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)',
+                      flexShrink: 0
+                    }}
                   >
-                    <Tab value="downloads" icon={<DownloadIcon />}>{t('downloads')}</Tab>
+                    <Tab value="downloads" icon={<DownloadIcon />}>
+                      {t('downloads')}
+                    </Tab>
                     <Tab value="uploads" icon={<UploadIcon />}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {t('uploads')}
-                        {uploadQueue.filter((i) => i.status === 'Queued' || i.status === 'Preparing' || i.status === 'Uploading').length > 0 && (
+                        {uploadQueue.filter(
+                          (i) =>
+                            i.status === 'Queued' ||
+                            i.status === 'Preparing' ||
+                            i.status === 'Uploading'
+                        ).length > 0 && (
                           <CounterBadge
-                            count={uploadQueue.filter((i) => i.status === 'Queued' || i.status === 'Preparing' || i.status === 'Uploading').length}
+                            count={
+                              uploadQueue.filter(
+                                (i) =>
+                                  i.status === 'Queued' ||
+                                  i.status === 'Preparing' ||
+                                  i.status === 'Uploading'
+                              ).length
+                            }
                             size="small"
                             color="brand"
                           />
@@ -1028,7 +1270,13 @@ const AppLayout: React.FC = () => {
                       icon={<CloseIcon />}
                       aria-label={t('close')}
                       onClick={() => setIsSettingsOpen(false)}
-                      style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, color: 'var(--vrcd-neon)' }}
+                      style={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        zIndex: 10,
+                        color: 'var(--vrcd-neon)'
+                      }}
                     />
                     <Settings />
                   </div>
@@ -1052,11 +1300,7 @@ const AppLayout: React.FC = () => {
           </GameDialogProvider>
         </GamesProvider>
       </AdbProvider>
-      <CreditsDialog
-        open={isCreditsOpen}
-        onClose={() => setIsCreditsOpen(false)}
-        variant="main"
-      />
+      <CreditsDialog open={isCreditsOpen} onClose={() => setIsCreditsOpen(false)} variant="main" />
     </FluentProvider>
   )
 }

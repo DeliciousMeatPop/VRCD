@@ -249,8 +249,19 @@ export class InstallationProcessor {
                 const localPathAbsolute = join(item.downloadPath!, localPathRelative)
                 if (existsSync(localPathAbsolute)) {
                   console.log(`[InstallProc]   Pushing ${localPathAbsolute} to ${devicePath}`)
-                  await this.adbService.pushFileOrFolder(deviceId, localPathAbsolute, devicePath)
-                  commandSuccess = true
+                  // pushFileOrFolder returns false on failure rather than
+                  // throwing — check it so an incomplete resource push (e.g. an
+                  // OBB) fails the install instead of being reported as success.
+                  const pushed = await this.adbService.pushFileOrFolder(
+                    deviceId,
+                    localPathAbsolute,
+                    devicePath
+                  )
+                  if (pushed) {
+                    commandSuccess = true
+                  } else {
+                    errorMessage = `Failed to push ${localPathAbsolute} to ${devicePath}`
+                  }
                 } else {
                   errorMessage = `Local file/folder not found for push: ${localPathAbsolute}`
                 }
@@ -285,11 +296,14 @@ export class InstallationProcessor {
             errorMessage = execError instanceof Error ? execError.message : String(execError)
           }
           console.error(`[InstallProc] Error executing '${command}': ${errorMessage}`)
-          if (adbCommand === 'install') overallSuccess = false
+          // A failed 'push' means a resource file (e.g. an OBB) never made it to
+          // the device — treat it as critical alongside 'install' so the app is
+          // not reported as successfully installed while missing resources.
+          if (adbCommand === 'install' || adbCommand === 'push') overallSuccess = false
         }
         if (!commandSuccess) {
           console.error(`[InstallProc] Command failed: '${command}'. Reason: ${errorMessage}`)
-          if (adbCommand === 'install') overallSuccess = false
+          if (adbCommand === 'install' || adbCommand === 'push') overallSuccess = false
         }
         if (!overallSuccess) {
           console.error(`[InstallProc] Critical command failed. Aborting script execution.`)
@@ -418,6 +432,24 @@ export class InstallationProcessor {
             )
           }
 
+          // Clear any existing OBB directory for this package before pushing the
+          // new files. OBB filenames can include a version number (e.g. Bonelab's
+          // main.<versionCode>.com.StressLevelZero.BONELAB.obb), so pushing an
+          // update creates a new filename alongside the old one instead of
+          // overwriting it. Without this cleanup the device accumulates stale
+          // OBBs from previous versions and bloats the app's OBB folder.
+          console.log(
+            `[InstallProc Standard] Clearing existing OBB directory ${deviceObbTargetPath} before push...`
+          )
+          try {
+            await this.adbService.runShellCommand(deviceId, `rm -rf "${deviceObbTargetPath}"`)
+          } catch (clearError) {
+            console.warn(
+              `[InstallProc Standard] Could not clear existing OBB directory (may not exist):`,
+              clearError
+            )
+          }
+
           // Calculate total size of OBB files and track progress
           const filesInfo = await this.getDirectoryFilesInfo(obbPath)
           if (filesInfo.length === 0) {
@@ -450,8 +482,21 @@ export class InstallationProcessor {
                 `[InstallProc Standard] Pushing file ${i + 1}/${filesInfo.length}: ${filePath} (${size} bytes)`
               )
 
-              // Push the file — parent dir already ensured above
-              await this.adbService.pushFileOrFolder(deviceId, filePath, remoteFilePath, true)
+              // Push the file — parent dir already ensured above.
+              // pushFileOrFolder returns false (rather than throwing) on a
+              // failed transfer. Ignoring it would let a missing/incomplete
+              // OBB file be reported as a successful install, which surfaces
+              // later as a game crashing on a missing resource — throw so the
+              // outer catch marks the install as failed.
+              const pushed = await this.adbService.pushFileOrFolder(
+                deviceId,
+                filePath,
+                remoteFilePath,
+                true
+              )
+              if (!pushed) {
+                throw new Error(`Failed to push OBB file ${relativePath}`)
+              }
 
               // Update progress
               transferredSize += size
@@ -462,6 +507,44 @@ export class InstallationProcessor {
               this.updateItemStatus(item.releaseName, 'Installing', 50 + progressPercentage / 2)
             }
             console.log(`[InstallProc Standard] Successfully pushed all OBB files.`)
+
+            // Verify the OBB landed completely on the device. A push can report
+            // success at the stream level yet leave a file missing or truncated
+            // (interrupted transfer, full device storage). The game then crashes
+            // at launch on the missing/partial resource. Read the on-device file
+            // sizes back and compare them against what we pushed. This is cheap
+            // (a single shell command) so it runs on every install.
+            this.updateItemStatus(item.releaseName, 'Installing', 100)
+            const remoteSizes = await this.adbService.getRemoteFileSizes(
+              deviceId,
+              deviceObbTargetPath
+            )
+            if (remoteSizes === null) {
+              console.warn(
+                `[InstallProc Standard] Could not read back OBB file sizes from device; skipping OBB verification for ${item.releaseName}.`
+              )
+            } else {
+              const mismatches: string[] = []
+              for (const { path: verifyPath, size: expectedSize } of filesInfo) {
+                const rel = verifyPath.substring(obbPath.length + 1).replace(/\\/g, '/')
+                const actualSize = remoteSizes.get(rel)
+                if (actualSize === undefined) {
+                  mismatches.push(`${rel} (missing on device)`)
+                } else if (actualSize !== expectedSize) {
+                  mismatches.push(`${rel} (expected ${expectedSize} bytes, found ${actualSize})`)
+                }
+              }
+              if (mismatches.length > 0) {
+                const detail = mismatches.slice(0, 5).join('; ')
+                const more = mismatches.length > 5 ? ` (+${mismatches.length - 5} more)` : ''
+                throw new Error(
+                  `OBB verification failed after push: ${mismatches.length} file(s) incomplete or missing: ${detail}${more}`
+                )
+              }
+              console.log(
+                `[InstallProc Standard] Verified ${filesInfo.length} OBB file(s) on device match expected sizes.`
+              )
+            }
           }
 
           console.log(`[InstallProc Standard] Successfully pushed OBB folder.`)

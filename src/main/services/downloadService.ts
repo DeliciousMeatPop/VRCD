@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { promises as fs, existsSync } from 'fs'
 import { join, basename } from 'path'
 import { execFile } from 'child_process'
@@ -18,10 +18,12 @@ import {
   GameInfo,
   DownloadItem,
   DownloadStatus,
-  AddToQueueResult
+  AddToQueueResult,
+  DownloadStorageStatus
 } from '@shared/types'
 import settingsService from './settingsService'
 import { typedWebContentsSend } from '@shared/ipc-utils'
+import { inspectDownloadStorage } from './download/storageAvailability'
 
 interface VrpConfig {
   baseUri?: string
@@ -41,6 +43,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
   private appSelectedDevice: string | null = null
   private appIsConnected: boolean = false
   private sideloadingDisabled: boolean = false
+  private storageStatus: DownloadStorageStatus
 
   constructor() {
     super()
@@ -49,6 +52,12 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       this.setDownloadPath(path)
     })
     this.downloadsPath = downloadPath
+    this.storageStatus = {
+      path: downloadPath,
+      state: 'checking',
+      error: null,
+      code: null
+    }
 
     this.queueManager = new QueueManager()
     this.adbService = adbService
@@ -63,7 +72,58 @@ class DownloadService extends EventEmitter implements DownloadAPI {
   }
 
   setDownloadPath(path: string): void {
+    const previousPath = this.downloadsPath
     this.downloadsPath = path
+    if (this.isInitialized && previousPath !== path) {
+      const changed = this.queueManager.updateAllItems((item) => item.status === 'Queued', {
+        downloadPath: path
+      })
+      if (changed) this.emitUpdate()
+    }
+    void this.refreshStorageStatus(true)
+  }
+
+  public getStorageStatus(): Promise<DownloadStorageStatus> {
+    return Promise.resolve({ ...this.storageStatus })
+  }
+
+  public retryStorage(): Promise<DownloadStorageStatus> {
+    return this.refreshStorageStatus(false)
+  }
+
+  private emitStorageStatus(): void {
+    const mainWindow = BrowserWindow.getAllWindows()[0]
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      typedWebContentsSend.send(mainWindow, 'download:storage-status-changed', {
+        ...this.storageStatus
+      })
+    }
+  }
+
+  private async refreshStorageStatus(allowCreate: boolean): Promise<DownloadStorageStatus> {
+    const path = this.downloadsPath
+    this.storageStatus = { path, state: 'checking', error: null, code: null }
+    this.emitStorageStatus()
+
+    const status = await inspectDownloadStorage(path, { allowCreate })
+    // Ignore a stale check if the user selected another path while it ran.
+    if (this.downloadsPath !== path) return { ...this.storageStatus }
+
+    this.storageStatus = status
+    this.emitStorageStatus()
+
+    if (status.state === 'available') {
+      console.log(`[DownloadService] Download location available: ${path}`)
+      if (this.isInitialized) this.processQueue()
+    } else {
+      console.warn(
+        `[DownloadService] Download location unavailable: ${path}`,
+        status.code ?? '',
+        status.error ?? ''
+      )
+    }
+
+    return { ...status }
   }
 
   setAppConnectionState(selectedDevice: string | null, isConnected: boolean): void {
@@ -112,7 +172,6 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     this.downloadProcessor.setVrpConfig(vrpConfig)
     this.extractionProcessor.setVrpConfig(vrpConfig)
 
-    await fs.mkdir(this.downloadsPath, { recursive: true })
     await this.queueManager.loadQueue()
 
     const changed = this.queueManager.updateAllItems(
@@ -134,10 +193,15 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       )
     }
 
+    const defaultPath = join(app.getPath('userData'), 'downloads')
+    await this.refreshStorageStatus(this.downloadsPath === defaultPath)
+
     this.isInitialized = true
-    console.log('DownloadService initialized.')
+    console.log(
+      `DownloadService initialized${this.storageStatus.state === 'available' ? '.' : ' with downloads paused.'}`
+    )
     this.emitUpdate()
-    this.processQueue()
+    if (this.storageStatus.state === 'available') this.processQueue()
   }
 
   /**
@@ -194,6 +258,10 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       console.error(`Cannot add game ${game.name} to queue: Missing releaseName.`)
       return Promise.resolve('duplicate')
     }
+    if (this.storageStatus.state !== 'available') {
+      console.warn(`Cannot add ${game.releaseName}: download location is unavailable.`)
+      return Promise.resolve('storage-unavailable')
+    }
 
     return this.addToQueueInternal(game)
   }
@@ -207,6 +275,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     action: 'reinstall' | 'redownload'
   ): Promise<AddToQueueResult> {
     if (!this.isInitialized || !game.releaseName) return 'duplicate'
+    if (this.storageStatus.state !== 'available') return 'storage-unavailable'
     if (action === 'reinstall') {
       this.importExistingAsCompleted(game)
       return 'imported'
@@ -260,6 +329,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     game: GameInfo,
     opts: { skipOnDiskCheck?: boolean } = {}
   ): Promise<AddToQueueResult> {
+    if (this.storageStatus.state !== 'available') return 'storage-unavailable'
     const existing = this.queueManager.findItem(game.releaseName)
 
     if (existing) {
@@ -393,6 +463,10 @@ class DownloadService extends EventEmitter implements DownloadAPI {
   }
 
   private async processQueue(): Promise<void> {
+    if (this.storageStatus.state !== 'available') {
+      console.log('[Service ProcessQueue] Downloads paused: configured location is unavailable')
+      return
+    }
     const maxConcurrent = settingsService.getMaxConcurrentDownloads()
     // Launch as many concurrent pipelines as allowed
     while (this.activeCount < maxConcurrent) {
@@ -1001,10 +1075,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     return this.inferPackageNameFromFolder(folderPath)
   }
 
-  public async scanDownloadFolder(): Promise<{
-    added: number
-    pruned: number
-  }> {
+  public async scanDownloadFolder(): Promise<{ added: number; pruned: number }> {
+    if (this.storageStatus.state !== 'available') {
+      console.warn('[Service scanDownloadFolder] Skipped: download location is unavailable')
+      return { added: 0, pruned: 0 }
+    }
     let subdirs: string[] = []
     try {
       const dirents = await fs.readdir(this.downloadsPath, {

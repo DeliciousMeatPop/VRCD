@@ -6,13 +6,14 @@ import dependencyService from '../dependencyService'
 import { DownloadItem, DownloadStatus } from '@shared/types'
 import mirrorService from '../mirrorService'
 import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
+import { parseReleaseManifest, RELEASE_MANIFEST_FILENAME } from './releaseManifest'
+import { type DownloadedFile, validateDownloadCompletion } from './archiveDiscovery'
 
 // Type for VRP config - reuse or import
 interface VrpConfig {
   baseUri?: string
   password?: string
 }
-
 export class ExtractionProcessor {
   private activeExtractions: Map<string, () => void> = new Map() // Store cancel functions
   private queueManager: QueueManager
@@ -114,12 +115,11 @@ export class ExtractionProcessor {
         console.log(`[ExtractProc] Starting extraction for nested archive: ${nestedArchivePath}.`)
 
         try {
-          await execa(sevenZipPath, [
-            'x', nestedArchivePath,
-            '-y',
-            `-o${baseExtractPath}`,
-            '-mmt=on'
-          ], { windowsHide: true })
+          await execa(
+            sevenZipPath,
+            ['x', nestedArchivePath, '-y', `-o${baseExtractPath}`, '-mmt=on'],
+            { windowsHide: true }
+          )
           console.log(`[ExtractProc] Nested extraction complete for ${archiveName}`)
 
           try {
@@ -156,87 +156,6 @@ export class ExtractionProcessor {
         err
       )
     }
-  }
-
-  /**
-   * Validate that every part of a multi-volume 7z archive is present and fully
-   * downloaded before handing off to 7-Zip. A missing, empty, or truncated
-   * volume makes 7-Zip fail with a vague "wrong password" / fatal error that is
-   * impossible to diagnose after the fact, so catch the common
-   * corrupt/incomplete-download case here with a clear, actionable message.
-   *
-   * Returns an error string when the archive is incomplete, or null when the
-   * volumes look intact (extraction should proceed). Intentionally conservative:
-   * it only flags cases we are confident are broken so it never blocks a valid
-   * extraction.
-   */
-  private async validateArchiveVolumes(
-    files: string[],
-    downloadPath: string,
-    archivePart1: string
-  ): Promise<string | null> {
-    // Shared base name, e.g. "<hash>.7z.001" -> "<hash>"
-    const prefix = archivePart1.replace(/\.7z\.\d+$/, '')
-    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const partRe = new RegExp(`^${escaped}\\.7z\\.(\\d+)$`)
-    const partialRe = new RegExp(`^${escaped}\\.7z\\.\\d+\\.partial$`, 'i')
-    const pad = (n: number): string => String(n).padStart(3, '0')
-
-    // A leftover .partial means rclone never finished that volume.
-    const leftoverPartial = files.find((f) => partialRe.test(f))
-    if (leftoverPartial) {
-      return `Incomplete download — ${leftoverPartial} did not finish downloading (.partial file present). Delete Files and Retry.`
-    }
-
-    // Collect the numbered volumes that are present on disk.
-    const partNums = new Map<number, string>()
-    for (const f of files) {
-      const m = f.match(partRe)
-      if (m) partNums.set(parseInt(m[1], 10), f)
-    }
-    if (partNums.size === 0) return null // .001 existed; nothing more we can assert
-
-    const maxNum = Math.max(...partNums.keys())
-
-    // Every volume from 001..max must be present (no gaps in the sequence).
-    const missing: number[] = []
-    for (let n = 1; n <= maxNum; n++) {
-      if (!partNums.has(n)) missing.push(n)
-    }
-    if (missing.length > 0) {
-      return `Incomplete download — missing archive volume(s) ${missing
-        .map((n) => `.7z.${pad(n)}`)
-        .join(', ')} of ${maxNum}. Delete Files and Retry.`
-    }
-
-    // Size sanity: in a multi-volume 7z every volume except the last is the same
-    // (full) size; the last is >0 and no larger than that. An empty volume, or a
-    // short non-final volume, means the download was truncated.
-    const sizes = new Map<number, number>()
-    for (const [n, name] of partNums) {
-      try {
-        const st = await fs.stat(join(downloadPath, name))
-        sizes.set(n, st.size)
-      } catch {
-        return `Incomplete download — archive volume ${prefix}.7z.${pad(n)} could not be read. Delete Files and Retry.`
-      }
-    }
-    for (const [n, size] of sizes) {
-      if (size === 0) {
-        return `Incomplete download — archive volume ${prefix}.7z.${pad(n)} is empty (0 bytes). Delete Files and Retry.`
-      }
-    }
-    if (maxNum >= 2) {
-      const fullSize = Math.max(...sizes.values())
-      for (let n = 1; n < maxNum; n++) {
-        const size = sizes.get(n) ?? 0
-        if (size < fullSize) {
-          return `Incomplete download — archive volume ${prefix}.7z.${pad(n)} is truncated (${size} of ${fullSize} bytes). Delete Files and Retry.`
-        }
-      }
-    }
-
-    return null
   }
 
   // Returns true on success, false on failure
@@ -285,9 +204,17 @@ export class ExtractionProcessor {
       )
     }
 
-    let files: string[]
+    let downloadedFiles: DownloadedFile[]
     try {
-      files = await fs.readdir(downloadPath)
+      const entries = await fs.readdir(downloadPath, { withFileTypes: true })
+      downloadedFiles = await Promise.all(
+        entries
+          .filter((entry) => entry.isFile())
+          .map(async (entry) => ({
+            relativePath: entry.name,
+            size: (await fs.stat(join(downloadPath, entry.name))).size
+          }))
+      )
     } catch (readDirError: unknown) {
       let errorMsg = 'Cannot read download dir'
       if (readDirError instanceof Error)
@@ -302,6 +229,12 @@ export class ExtractionProcessor {
       this.updateItemStatus(item.releaseName, 'Extracting', 100, undefined, undefined, undefined, 0)
       await this.extractNestedArchives(downloadPath, item.releaseName)
 
+      const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      if (!manifestCheck.ok) {
+        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
+        return false
+      }
+
       // Update final status to Completed
       this.updateItemStatus(
         item.releaseName,
@@ -315,23 +248,15 @@ export class ExtractionProcessor {
       return true
     }
 
-    const archivePart1 = files.find((f) => f.endsWith('.7z.001'))
-    if (!archivePart1) {
-      console.error(`[ExtractProc] .7z.001 not found in ${downloadPath} for ${item.releaseName}.`)
-      this.updateItemStatus(item.releaseName, 'Error', 100, `.7z.001 not found in ${downloadPath}`)
+    const completion = validateDownloadCompletion(downloadedFiles, true)
+    if (!completion.ok || !completion.archive) {
+      const error = completion.ok ? 'No usable .7z.001 archive was found.' : completion.error
+      console.error(`[ExtractProc] Archive validation failed for ${item.releaseName}: ${error}`)
+      this.updateItemStatus(item.releaseName, 'Error', 100, error)
       return false
     }
+    const archivePart1 = completion.archive.archivePart1
     const archivePath = join(downloadPath, archivePart1)
-
-    // Make sure every archive volume is present and fully downloaded before
-    // invoking 7-Zip, so an incomplete download surfaces as a clear message
-    // instead of a misleading "wrong password" extraction failure.
-    const volumeError = await this.validateArchiveVolumes(files, downloadPath, archivePart1)
-    if (volumeError) {
-      console.error(`[ExtractProc] Volume validation failed for ${item.releaseName}: ${volumeError}`)
-      this.updateItemStatus(item.releaseName, 'Error', 100, volumeError)
-      return false
-    }
 
     // Update status via internal method
     this.updateItemStatus(item.releaseName, 'Extracting', 100, undefined, undefined, undefined, 0)
@@ -339,7 +264,12 @@ export class ExtractionProcessor {
     let decodedPassword = ''
     if (!this.vrpConfig?.password) {
       console.error(`[ExtractProc] Missing server password for extraction of ${item.releaseName}.`)
-      this.updateItemStatus(item.releaseName, 'Error', 100, 'Missing server password for extraction')
+      this.updateItemStatus(
+        item.releaseName,
+        'Error',
+        100,
+        'Missing server password for extraction'
+      )
       return false
     }
     try {
@@ -369,17 +299,18 @@ export class ExtractionProcessor {
     let stderrContent = ''
     let stdoutContent = ''
     try {
-      const proc = execa(sevenZipPath, [
-        'x', archivePath,
-        '-y',
-        `-o${downloadPath}`,
-        `-p${decodedPassword}`,
-        '-bsp1',
-        '-mmt=on'
-      ], { windowsHide: true, buffer: false })
+      const proc = execa(
+        sevenZipPath,
+        ['x', archivePath, '-y', `-o${downloadPath}`, `-p${decodedPassword}`, '-bsp1', '-mmt=on'],
+        { windowsHide: true, buffer: false }
+      )
 
       this.activeExtractions.set(item.releaseName, () => {
-        try { proc.kill('SIGTERM') } catch { /* noop */ }
+        try {
+          proc.kill('SIGTERM')
+        } catch {
+          /* noop */
+        }
       })
       console.log(`[ExtractProc] 7zip started for ${item.releaseName}`)
 
@@ -522,6 +453,12 @@ export class ExtractionProcessor {
 
       await this.extractNestedArchives(downloadPath, item.releaseName)
 
+      const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      if (!manifestCheck.ok) {
+        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
+        return false
+      }
+
       // Update final status to Completed
       this.updateItemStatus(
         item.releaseName,
@@ -538,10 +475,13 @@ export class ExtractionProcessor {
       const statusBeforeCatch = currentItemState?.status ?? 'Unknown'
 
       // Handle intentional termination (SIGTERM / cancelled)
-      const isExecaLike = (err: unknown): err is { isCanceled?: boolean; exitCode?: number; signal?: string } =>
+      const isExecaLike = (
+        err: unknown
+      ): err is { isCanceled?: boolean; exitCode?: number; signal?: string } =>
         typeof err === 'object' && err !== null && 'exitCode' in err
       if (
-        (isExecaLike(error) && (error.isCanceled || error.exitCode === 143 || error.signal === 'SIGTERM')) ||
+        (isExecaLike(error) &&
+          (error.isCanceled || error.exitCode === 143 || error.signal === 'SIGTERM')) ||
         (error instanceof Error && /killed|SIGTERM|SIGKILL|exit code 14[37]/.test(error.message))
       ) {
         console.log(
@@ -579,9 +519,17 @@ export class ExtractionProcessor {
         // corrupt/incomplete encrypted data — keep the phrase (the diagnosis UI
         // keys off it) but make the raw message honest about the corruption case.
         errorMessage = 'Wrong password or corrupt archive — 7-Zip could not unpack the download'
-      } else if (combinedOutput.includes('data error') || combinedOutput.includes('crc failed') || combinedOutput.includes('crc error')) {
+      } else if (
+        combinedOutput.includes('data error') ||
+        combinedOutput.includes('crc failed') ||
+        combinedOutput.includes('crc error')
+      ) {
         errorMessage = 'Data/CRC error - archive may be corrupt'
-      } else if (combinedOutput.includes('no space left') || combinedOutput.includes('not enough space') || combinedOutput.includes('disk full')) {
+      } else if (
+        combinedOutput.includes('no space left') ||
+        combinedOutput.includes('not enough space') ||
+        combinedOutput.includes('disk full')
+      ) {
         errorMessage = 'Insufficient disk space during extraction'
       } else if (isExecaLike(error) && error.exitCode === 1) {
         const diagnosticOutput = (stderrContent || stdoutContent).trim()
@@ -619,6 +567,79 @@ export class ExtractionProcessor {
       }
       return false // Indicate failure
     }
+  }
+
+  /**
+   * Verify the extracted files against the release's `release.manifest`, which
+   * lists the exact byte size of every file in the release. A missing or
+   * size-mismatched file means the extraction is incomplete or corrupt and the
+   * game would launch with missing/partial resources (a common cause of
+   * crashes), so it fails the item.
+   *
+   * The check is authoritative (exact byte sizes, no user input needed) but only
+   * runs when the manifest is present and parseable — older releases without a
+   * manifest, or an unreadable one, are skipped so this never blocks an
+   * otherwise-good install. Only files listed in the manifest are checked; extra
+   * files in the folder (including release.manifest itself) are ignored.
+   */
+  private async verifyAgainstReleaseManifest(
+    downloadPath: string,
+    releaseName: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    const manifestPath = join(downloadPath, RELEASE_MANIFEST_FILENAME)
+    if (!existsSync(manifestPath)) {
+      console.log(
+        `[ExtractProc] No ${RELEASE_MANIFEST_FILENAME} for ${releaseName}; skipping manifest verification.`
+      )
+      return { ok: true }
+    }
+
+    let files: ReturnType<typeof parseReleaseManifest>['files']
+    try {
+      const text = await fs.readFile(manifestPath, 'utf-8')
+      files = parseReleaseManifest(text).files
+    } catch (err) {
+      console.warn(
+        `[ExtractProc] Could not read/parse ${RELEASE_MANIFEST_FILENAME} for ${releaseName}; skipping verification.`,
+        err
+      )
+      return { ok: true }
+    }
+
+    if (files.length === 0) {
+      console.warn(
+        `[ExtractProc] ${RELEASE_MANIFEST_FILENAME} for ${releaseName} listed no files; skipping verification.`
+      )
+      return { ok: true }
+    }
+
+    const mismatches: string[] = []
+    for (const entry of files) {
+      const localPath = join(downloadPath, ...entry.path.split('/'))
+      try {
+        const stat = await fs.stat(localPath)
+        if (!stat.isFile()) {
+          mismatches.push(`${entry.path} (not a file)`)
+        } else if (stat.size !== entry.size) {
+          mismatches.push(`${entry.path} (expected ${entry.size} B, found ${stat.size} B)`)
+        }
+      } catch {
+        mismatches.push(`${entry.path} (missing)`)
+      }
+    }
+
+    if (mismatches.length > 0) {
+      const detail = mismatches.slice(0, 8).join('; ')
+      const more = mismatches.length > 8 ? ` (+${mismatches.length - 8} more)` : ''
+      const error = `Extracted files do not match ${RELEASE_MANIFEST_FILENAME}: ${mismatches.length} problem(s): ${detail}${more}`
+      console.error(`[ExtractProc] ${error} (${releaseName})`)
+      return { ok: false, error: error.substring(0, 500) }
+    }
+
+    console.log(
+      `[ExtractProc] Verified ${files.length} extracted file(s) against ${RELEASE_MANIFEST_FILENAME} for ${releaseName}.`
+    )
+    return { ok: true }
   }
 
   // Method to check if extraction is active

@@ -21,24 +21,11 @@ export class QueueManager {
         const data = await fs.readFile(this.queuePath, 'utf-8')
         const loadedQueue: DownloadItem[] = JSON.parse(data)
 
-        // Filter out items where the download path no longer exists
-        const validQueue = loadedQueue.filter((item) => {
-          if (item.downloadPath && !existsSync(item.downloadPath)) {
-            console.warn(
-              `Download directory "${item.downloadPath}" for "${item.releaseName}" not found. Removing item from queue.`
-            )
-            return false // Exclude this item
-          }
-          return true // Keep this item
-        })
-
-        this.queue = validQueue
-
-        // If items were removed, save the cleaned queue
-        if (this.queue.length !== loadedQueue.length) {
-          console.log('Saving cleaned download queue after removing items with missing paths.')
-          await this.saveQueue() // Save immediately after cleaning
-        }
+        // Do not prune entries merely because their paths are currently absent.
+        // A configured download location may live on a removable drive that is
+        // disconnected during startup. Explicit remove/rescan actions are the
+        // safe places to decide that an entry should be deleted.
+        this.queue = loadedQueue
 
         console.log(`Loaded ${this.queue.length} download items from queue file.`)
       } else {

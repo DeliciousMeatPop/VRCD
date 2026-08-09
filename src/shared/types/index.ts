@@ -174,6 +174,13 @@ export interface DownloadProgress {
   progress: number
 }
 
+export interface DownloadStorageStatus {
+  path: string
+  state: 'checking' | 'available' | 'unavailable'
+  error: string | null
+  code: string | null
+}
+
 // Update types
 export interface CommitInfo {
   sha: string
@@ -300,9 +307,13 @@ export type AddToQueueResult =
    * must show a prompt and follow up with addToQueueResolveExisting.
    */
   | 'needs-prompt'
+  /** The configured download location is currently unavailable. */
+  | 'storage-unavailable'
 
 export interface DownloadAPI {
   getQueue: () => Promise<DownloadItem[]>
+  getStorageStatus: () => Promise<DownloadStorageStatus>
+  retryStorage: () => Promise<DownloadStorageStatus>
   addToQueue: (game: GameInfo) => Promise<AddToQueueResult>
   addToQueueResolveExisting: (
     game: GameInfo,
@@ -326,6 +337,7 @@ export interface DownloadAPI {
 
 export interface DownloadAPIRenderer extends DownloadAPI {
   onQueueUpdated: (callback: (queue: DownloadItem[]) => void) => () => void
+  onStorageStatusChanged: (callback: (status: DownloadStorageStatus) => void) => () => void
   installFromCompleted: (releaseName: string, deviceId: string) => Promise<void>
   installManualFile: (filePath: string, deviceId: string) => Promise<boolean>
   copyObbFolder: (folderPath: string, deviceId: string) => Promise<boolean>
@@ -497,6 +509,35 @@ export interface BackupProfile {
   includeInternalData?: boolean
   /** Human-readable note about this game's quirks, surfaced in UI and logs. */
   notes?: string
+  /**
+   * Best-effort adjustments applied to the device after a restore push, for
+   * games whose save layout can't be restored by copying the tree back
+   * verbatim. Never fatal — a failed fixup is logged but the restore still
+   * counts as successful.
+   */
+  restoreFixups?: RestoreFixup[]
+}
+
+/**
+ * A post-restore fixup directive.
+ *
+ * `profileFolderSync` handles games (e.g. Walkabout Mini Golf) that keep their
+ * save inside a per-profile subfolder whose name is randomised and regenerated
+ * on reinstall — e.g. `files/Profiles/Oculus/<random>/Profile_Default.data`.
+ * Restoring the captured tree recreates the *old* random folder, but the freshly
+ * reinstalled game reads a *new* one, so the save looks lost. This fixup copies
+ * the restored save file into every current profile subfolder on the device so
+ * whichever one the game actually reads contains it.
+ */
+export interface RestoreFixup {
+  type: 'profileFolderSync'
+  /** Save filename kept inside each profile subfolder (e.g. "Profile_Default.data"). */
+  file: string
+  /**
+   * Directory, relative to the primary restored root, whose immediate
+   * subfolders are the per-profile folders (e.g. "files/Profiles/Oculus").
+   */
+  profilesDir: string
 }
 
 export interface BackupEntry {

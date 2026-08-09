@@ -14,14 +14,20 @@ if (!apiKey) {
 // Collect commits since the previous tag, skipping ci/chore noise
 let commits
 try {
-  const prevTag = execSync('git describe --tags --abbrev=0 HEAD^ 2>/dev/null', { encoding: 'utf-8' }).trim()
-  commits = execSync(`git log "${prevTag}..HEAD" --pretty=format:"- %s" --no-merges`, { encoding: 'utf-8' })
+  const prevTag = execSync('git describe --tags --abbrev=0 HEAD^ 2>/dev/null', {
+    encoding: 'utf-8'
+  }).trim()
+  commits = execSync(`git log "${prevTag}..HEAD" --pretty=format:"- %s" --no-merges`, {
+    encoding: 'utf-8'
+  })
 } catch {
   commits = execSync('git log --pretty=format:"- %s" --no-merges -30', { encoding: 'utf-8' })
 }
 commits = commits
   .split('\n')
-  .filter(l => l.trim() !== '-' && l.trim() !== '' && !/\[skip ci\]|^- chore: bump version/.test(l))
+  .filter(
+    (l) => l.trim() !== '-' && l.trim() !== '' && !/\[skip ci\]|^- chore: bump version/.test(l)
+  )
   .slice(0, 30)
   .join('\n')
 
@@ -57,30 +63,43 @@ const options = {
 
 const req = https.request(options, (res) => {
   let data = ''
-  res.on('data', chunk => { data += chunk })
+  res.on('data', (chunk) => {
+    data += chunk
+  })
   res.on('end', () => {
     try {
       const response = JSON.parse(data)
       const text = response.content?.[0]?.text
       if (!text) throw new Error('No text in response: ' + data)
       // Strip any accidental markdown fences before parsing
-      const clean = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
+      const clean = text
+        .replace(/^```(?:json)?\n?/, '')
+        .replace(/\n?```$/, '')
+        .trim()
       const parsed = JSON.parse(clean)
       if (!parsed.release_name || !parsed.changelog) {
         throw new Error('Missing release_name or changelog in: ' + text)
       }
       const root = path.join(__dirname, '..', '..')
-      fs.writeFileSync(path.join(root, '.github', 'release-name.txt'), parsed.release_name.trim() + '\n')
-      fs.writeFileSync(path.join(root, '.github', 'release-changelog.md'), parsed.changelog.trim() + '\n')
+      fs.writeFileSync(
+        path.join(root, '.github', 'release-name.txt'),
+        parsed.release_name.trim() + '\n'
+      )
+      fs.writeFileSync(
+        path.join(root, '.github', 'release-changelog.md'),
+        parsed.changelog.trim() + '\n'
+      )
       process.stdout.write(`Generated release name: ${parsed.release_name}\n`)
     } catch (e) {
-      process.stderr.write('Failed to parse Claude response: ' + e.message + '\nRaw: ' + data + '\n')
+      process.stderr.write(
+        'Failed to parse Claude response: ' + e.message + '\nRaw: ' + data + '\n'
+      )
       process.exit(1)
     }
   })
 })
 
-req.on('error', e => {
+req.on('error', (e) => {
   process.stderr.write('Request failed: ' + e.message + '\n')
   process.exit(1)
 })

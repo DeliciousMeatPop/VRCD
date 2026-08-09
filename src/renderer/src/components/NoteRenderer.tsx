@@ -119,9 +119,7 @@ interface Step {
   /** What we'll show the user in the confirm prompt and result panel. */
   display: string
   /** How we actually run it. */
-  exec:
-    | { kind: 'shell'; command: string }
-    | { kind: 'adb'; args: string }
+  exec: { kind: 'shell'; command: string } | { kind: 'adb'; args: string }
 }
 
 /**
@@ -297,10 +295,7 @@ const NoteRenderer: React.FC<NoteRendererProps> = ({ note, selectedDevice, downl
       for (const step of steps) {
         try {
           if (step.exec.kind === 'shell') {
-            const out = await window.api.adb.runShellCommand(
-              selectedDevice,
-              step.exec.command
-            )
+            const out = await window.api.adb.runShellCommand(selectedDevice, step.exec.command)
             collected.push({
               display: step.display,
               output: out ?? '(no output)',

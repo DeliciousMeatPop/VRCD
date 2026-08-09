@@ -1,6 +1,6 @@
 name: "\U0001F4A1 Feature Request"
 description: Suggest a new feature or improvement for VR CyberDeck.
-labels: ["enhancement"]
+labels: ['enhancement']
 body:
   - type: markdown
     attributes:

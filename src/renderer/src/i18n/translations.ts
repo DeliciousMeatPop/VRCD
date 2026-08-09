@@ -20,8 +20,7 @@ const translations = {
     // Connectivity / dependency errors
     networkConnectivityIssues: 'Network Connectivity Issues',
     cannotReachServices: 'Cannot reach the following services:',
-    connectivityHint:
-      'This is likely due to DNS or firewall restrictions. Please try:',
+    connectivityHint: 'This is likely due to DNS or firewall restrictions. Please try:',
     connectivityTip1: 'Change your DNS to Cloudflare (1.1.1.1) or Google (8.8.8.8)',
     connectivityTip2: 'Use a VPN like ProtonVPN or 1.1.1.1 VPN',
     connectivityTip3: 'Check your router/firewall settings',
@@ -172,8 +171,7 @@ const translations = {
     addNewMirror: 'Add New Remote',
     addMirrorDesc:
       'Paste your rclone remote configuration below. The configuration should be in INI format.',
-    noMirrorsConfigured:
-      'No custom remotes configured. Import from file or add one manually.',
+    noMirrorsConfigured: 'No custom remotes configured. Import from file or add one manually.',
     lastTested: 'Last tested:',
 
     // GamesView
@@ -204,6 +202,11 @@ const translations = {
     filterAll: 'All',
     filterInstalled: 'Installed',
     filterUpdates: 'Updates',
+    filterStarred: 'Starred',
+    starGame: 'Star game',
+    unstarGame: 'Unstar game',
+    noStarredGames: 'No starred games',
+    noStarredGamesHint: 'Use the star button on a game to add it here.',
     displayed: 'displayed',
     searchPlaceholder: 'Search name/package...',
     processing: 'Processing...',
@@ -225,7 +228,7 @@ const translations = {
     downloadingGameData: 'Downloading game data...',
     extractingGameData: 'Extracting game data...',
     preparingLibrary: 'Preparing game library...',
-    enterVrName: 'Enter your VR gaming name',
+    enterVrName: 'Enter your VR gaming name'
   },
 
   es: {
@@ -431,11 +434,17 @@ const translations = {
     filterAll: 'Todos',
     filterInstalled: 'Instalados',
     filterUpdates: 'Actualizaciones',
+    filterStarred: 'Destacados',
+    starGame: 'Destacar juego',
+    unstarGame: 'Quitar de destacados',
+    noStarredGames: 'No hay juegos destacados',
+    noStarredGamesHint: 'Usa el botón de estrella de un juego para añadirlo aquí.',
     displayed: 'mostrados',
     searchPlaceholder: 'Buscar nombre/paquete...',
     processing: 'Procesando...',
     loadingGamesLibrary: 'Cargando biblioteca de juegos...',
-    noGamesFound: 'No se encontraron juegos. Haz clic en "Actualizar juegos" para sincronizar la biblioteca.',
+    noGamesFound:
+      'No se encontraron juegos. Haz clic en "Actualizar juegos" para sincronizar la biblioteca.',
     queued: 'En cola',
     installError: 'Error de instalación',
     signatureMismatch: 'Firma no coincide',
@@ -452,7 +461,7 @@ const translations = {
     downloadingGameData: 'Descargando datos del juego...',
     extractingGameData: 'Extrayendo datos del juego...',
     preparingLibrary: 'Preparando la biblioteca de juegos...',
-    enterVrName: 'Introduce tu nombre de jugador VR',
+    enterVrName: 'Introduce tu nombre de jugador VR'
   }
 } as const
 
