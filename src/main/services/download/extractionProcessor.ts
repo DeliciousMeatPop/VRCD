@@ -5,7 +5,8 @@ import { QueueManager } from './queueManager'
 import dependencyService from '../dependencyService'
 import { DownloadItem, DownloadStatus } from '@shared/types'
 import mirrorService from '../mirrorService'
-import { getAvailableDiskSpace, getDirectorySize, formatBytes, parseSizeToBytes } from './utils'
+import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
+import { parseReleaseManifest, RELEASE_MANIFEST_FILENAME } from './releaseManifest'
 import { type DownloadedFile, validateDownloadCompletion } from './archiveDiscovery'
 
 // Type for VRP config - reuse or import
@@ -203,33 +204,6 @@ export class ExtractionProcessor {
       )
     }
 
-    // Cross-check the downloaded payload against the size the release manifest
-    // advertises, as an early integrity signal. Best-effort and non-fatal:
-    // extraction itself is the hard gate that rejects a truly incomplete
-    // download (a missing 7z volume fails with a clear error), so a mismatch
-    // here only warrants a warning. We can't be certain whether the manifest
-    // size is the compressed download or the extracted payload, so we only flag
-    // a shortfall that looks like a missing part in the compressed-size regime
-    // (downloaded is close to, but short of, expected) and stay quiet otherwise
-    // to avoid false alarms. The 0.90 upper bound absorbs MB/MiB rounding.
-    const expectedBytes = parseSizeToBytes(item.size ?? '')
-    if (expectedBytes > 0 && downloadedSize > 0) {
-      const ratio = downloadedSize / expectedBytes
-      if (ratio >= 0.5 && ratio < 0.9) {
-        console.warn(
-          `[ExtractProc] Download size check for ${item.releaseName}: got ${formatBytes(downloadedSize)}, ` +
-            `manifest advertises ${formatBytes(expectedBytes)} (${(ratio * 100).toFixed(1)}%, short by ` +
-            `${formatBytes(expectedBytes - downloadedSize)}). The download may be incomplete; ` +
-            `extraction will fail if a part is missing.`
-        )
-      } else {
-        console.log(
-          `[ExtractProc] Download size check for ${item.releaseName}: got ${formatBytes(downloadedSize)} ` +
-            `vs manifest ${formatBytes(expectedBytes)} (ratio ${ratio.toFixed(2)}).`
-        )
-      }
-    }
-
     let downloadedFiles: DownloadedFile[]
     try {
       const entries = await fs.readdir(downloadPath, { withFileTypes: true })
@@ -254,6 +228,12 @@ export class ExtractionProcessor {
     if (activeMirror) {
       this.updateItemStatus(item.releaseName, 'Extracting', 100, undefined, undefined, undefined, 0)
       await this.extractNestedArchives(downloadPath, item.releaseName)
+
+      const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      if (!manifestCheck.ok) {
+        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
+        return false
+      }
 
       // Update final status to Completed
       this.updateItemStatus(
@@ -473,6 +453,12 @@ export class ExtractionProcessor {
 
       await this.extractNestedArchives(downloadPath, item.releaseName)
 
+      const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      if (!manifestCheck.ok) {
+        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
+        return false
+      }
+
       // Update final status to Completed
       this.updateItemStatus(
         item.releaseName,
@@ -581,6 +567,79 @@ export class ExtractionProcessor {
       }
       return false // Indicate failure
     }
+  }
+
+  /**
+   * Verify the extracted files against the release's `release.manifest`, which
+   * lists the exact byte size of every file in the release. A missing or
+   * size-mismatched file means the extraction is incomplete or corrupt and the
+   * game would launch with missing/partial resources (a common cause of
+   * crashes), so it fails the item.
+   *
+   * The check is authoritative (exact byte sizes, no user input needed) but only
+   * runs when the manifest is present and parseable — older releases without a
+   * manifest, or an unreadable one, are skipped so this never blocks an
+   * otherwise-good install. Only files listed in the manifest are checked; extra
+   * files in the folder (including release.manifest itself) are ignored.
+   */
+  private async verifyAgainstReleaseManifest(
+    downloadPath: string,
+    releaseName: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    const manifestPath = join(downloadPath, RELEASE_MANIFEST_FILENAME)
+    if (!existsSync(manifestPath)) {
+      console.log(
+        `[ExtractProc] No ${RELEASE_MANIFEST_FILENAME} for ${releaseName}; skipping manifest verification.`
+      )
+      return { ok: true }
+    }
+
+    let files: ReturnType<typeof parseReleaseManifest>['files']
+    try {
+      const text = await fs.readFile(manifestPath, 'utf-8')
+      files = parseReleaseManifest(text).files
+    } catch (err) {
+      console.warn(
+        `[ExtractProc] Could not read/parse ${RELEASE_MANIFEST_FILENAME} for ${releaseName}; skipping verification.`,
+        err
+      )
+      return { ok: true }
+    }
+
+    if (files.length === 0) {
+      console.warn(
+        `[ExtractProc] ${RELEASE_MANIFEST_FILENAME} for ${releaseName} listed no files; skipping verification.`
+      )
+      return { ok: true }
+    }
+
+    const mismatches: string[] = []
+    for (const entry of files) {
+      const localPath = join(downloadPath, ...entry.path.split('/'))
+      try {
+        const stat = await fs.stat(localPath)
+        if (!stat.isFile()) {
+          mismatches.push(`${entry.path} (not a file)`)
+        } else if (stat.size !== entry.size) {
+          mismatches.push(`${entry.path} (expected ${entry.size} B, found ${stat.size} B)`)
+        }
+      } catch {
+        mismatches.push(`${entry.path} (missing)`)
+      }
+    }
+
+    if (mismatches.length > 0) {
+      const detail = mismatches.slice(0, 8).join('; ')
+      const more = mismatches.length > 8 ? ` (+${mismatches.length - 8} more)` : ''
+      const error = `Extracted files do not match ${RELEASE_MANIFEST_FILENAME}: ${mismatches.length} problem(s): ${detail}${more}`
+      console.error(`[ExtractProc] ${error} (${releaseName})`)
+      return { ok: false, error: error.substring(0, 500) }
+    }
+
+    console.log(
+      `[ExtractProc] Verified ${files.length} extracted file(s) against ${RELEASE_MANIFEST_FILENAME} for ${releaseName}.`
+    )
+    return { ok: true }
   }
 
   // Method to check if extraction is active
