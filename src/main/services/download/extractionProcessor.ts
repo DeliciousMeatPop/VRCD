@@ -5,7 +5,7 @@ import { QueueManager } from './queueManager'
 import dependencyService from '../dependencyService'
 import { DownloadItem, DownloadStatus } from '@shared/types'
 import mirrorService from '../mirrorService'
-import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
+import { getAvailableDiskSpace, getDirectorySize, formatBytes, parseSizeToBytes } from './utils'
 import { type DownloadedFile, validateDownloadCompletion } from './archiveDiscovery'
 
 // Type for VRP config - reuse or import
@@ -201,6 +201,33 @@ export class ExtractionProcessor {
       console.log(
         `[ExtractProc] Disk space check passed for extraction of ${item.releaseName}. Downloaded: ${formatBytes(downloadedSize)}, Available: ${formatBytes(availableSpace)}, Estimated required: ${formatBytes(requiredSpace)}`
       )
+    }
+
+    // Cross-check the downloaded payload against the size the release manifest
+    // advertises, as an early integrity signal. Best-effort and non-fatal:
+    // extraction itself is the hard gate that rejects a truly incomplete
+    // download (a missing 7z volume fails with a clear error), so a mismatch
+    // here only warrants a warning. We can't be certain whether the manifest
+    // size is the compressed download or the extracted payload, so we only flag
+    // a shortfall that looks like a missing part in the compressed-size regime
+    // (downloaded is close to, but short of, expected) and stay quiet otherwise
+    // to avoid false alarms. The 0.90 upper bound absorbs MB/MiB rounding.
+    const expectedBytes = parseSizeToBytes(item.size ?? '')
+    if (expectedBytes > 0 && downloadedSize > 0) {
+      const ratio = downloadedSize / expectedBytes
+      if (ratio >= 0.5 && ratio < 0.9) {
+        console.warn(
+          `[ExtractProc] Download size check for ${item.releaseName}: got ${formatBytes(downloadedSize)}, ` +
+            `manifest advertises ${formatBytes(expectedBytes)} (${(ratio * 100).toFixed(1)}%, short by ` +
+            `${formatBytes(expectedBytes - downloadedSize)}). The download may be incomplete; ` +
+            `extraction will fail if a part is missing.`
+        )
+      } else {
+        console.log(
+          `[ExtractProc] Download size check for ${item.releaseName}: got ${formatBytes(downloadedSize)} ` +
+            `vs manifest ${formatBytes(expectedBytes)} (ratio ${ratio.toFixed(2)}).`
+        )
+      }
     }
 
     let downloadedFiles: DownloadedFile[]
