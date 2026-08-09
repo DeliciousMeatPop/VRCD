@@ -690,11 +690,7 @@ class GameService extends EventEmitter implements GamesAPI {
   private async saveLibrarySnapshot(): Promise<void> {
     if (!this.librarySnapshot) return
     try {
-      await fs.writeFile(
-        this.librarySnapshotPath,
-        JSON.stringify(this.librarySnapshot),
-        'utf-8'
-      )
+      await fs.writeFile(this.librarySnapshotPath, JSON.stringify(this.librarySnapshot), 'utf-8')
     } catch (err) {
       console.warn('Failed to save library snapshot:', err)
     }
@@ -865,9 +861,7 @@ class GameService extends EventEmitter implements GamesAPI {
 
         // Generate thumbnail path if the package name is available
         const thumbnailFile = `${packageName}.jpg`
-        const thumbnailPath = packageName
-          ? join(this.metaPath, 'thumbnails', thumbnailFile)
-          : ''
+        const thumbnailPath = packageName ? join(this.metaPath, 'thumbnails', thumbnailFile) : ''
 
         const thumbnailExists = packageName ? thumbnailSet.has(thumbnailFile) : false
 
@@ -933,7 +927,10 @@ class GameService extends EventEmitter implements GamesAPI {
         lastSync: this.vrpConfig?.lastSync
       }
       await this.saveConfig()
-      console.log('[GameService] Server config updated at runtime - baseUri:', !!this.vrpConfig.baseUri)
+      console.log(
+        '[GameService] Server config updated at runtime - baseUri:',
+        !!this.vrpConfig.baseUri
+      )
     } else {
       this.vrpConfig = null
       console.log('[GameService] Server config cleared at runtime (sideloader mode).')

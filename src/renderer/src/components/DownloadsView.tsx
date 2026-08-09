@@ -29,7 +29,12 @@ import { formatDistanceToNow } from 'date-fns'
 import placeholderImage from '../assets/images/game-placeholder.png'
 import { useGames } from '@renderer/hooks/useGames'
 import { useGameDialog } from '@renderer/hooks/useGameDialog'
-import { getDeleteOnRemove, getSideloadingDisabled, getSkipUninstallWarning, setSkipUninstallWarning } from '../hooks/useExtrasSettings'
+import {
+  getDeleteOnRemove,
+  getSideloadingDisabled,
+  getSkipUninstallWarning,
+  setSkipUninstallWarning
+} from '../hooks/useExtrasSettings'
 import ErrorDetailDialog, { ErrorPhase } from './ErrorDetailDialog'
 import UninstallWarningDialog from './UninstallWarningDialog'
 
@@ -97,7 +102,18 @@ interface DownloadsViewProps {
 
 const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
   const styles = useStyles()
-  const { queue, isLoading, error, removeFromQueue, removeFromQueueOnly, moveToFront, cancelDownload, retryDownload, pauseDownload, resumeDownload } = useDownload()
+  const {
+    queue,
+    isLoading,
+    error,
+    removeFromQueue,
+    removeFromQueueOnly,
+    moveToFront,
+    cancelDownload,
+    retryDownload,
+    pauseDownload,
+    resumeDownload
+  } = useDownload()
   const { selectedDevice, isConnected, loadPackages } = useAdb()
   const { games } = useGames()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -227,7 +243,15 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
 
   return (
     <div className={styles.root}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '4px',
+          flexWrap: 'wrap'
+        }}
+      >
         <Button
           size="small"
           appearance="subtle"
@@ -235,7 +259,12 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
           onClick={handleScan}
           disabled={isScanning}
           title="Scan downloads folder and register any untracked completed downloads"
-          style={{ fontFamily: 'monospace', fontSize: '11px', color: 'rgba(var(--vrcd-neon-raw),0.8)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)' }}
+          style={{
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: 'rgba(var(--vrcd-neon-raw),0.8)',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.3)'
+          }}
         >
           {isScanning ? 'Scanning...' : 'Scan Downloads'}
         </Button>
@@ -246,12 +275,20 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
           onClick={handleClearCompleted}
           disabled={!queue.some((i) => i.status === 'Completed' || i.status === 'Cancelled')}
           title="Remove all completed and cancelled entries from the list (keeps downloaded files)"
-          style={{ fontFamily: 'monospace', fontSize: '11px', color: 'rgba(var(--vrcd-neon-raw),0.8)', border: '1px solid rgba(var(--vrcd-neon-raw),0.3)' }}
+          style={{
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: 'rgba(var(--vrcd-neon-raw),0.8)',
+            border: '1px solid rgba(var(--vrcd-neon-raw),0.3)'
+          }}
         >
           Clear Completed
         </Button>
         {scanResult && (
-          <Text size={200} style={{ color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace' }}>
+          <Text
+            size={200}
+            style={{ color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace' }}
+          >
             {scanResult}
           </Text>
         )}
@@ -418,39 +455,45 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
                   )}
 
                   {/* Install/Uninstall Buttons */}
-                  {item.status === 'Completed' && !isInstalled(item.releaseName) && !sideloadingDisabled && (
-                    <Button
-                      icon={<DownloadInstallIcon />}
-                      aria-label="Install game"
-                      size="small"
-                      appearance="primary"
-                      onClick={() => handleInstallFromCompleted(item.releaseName)}
-                      disabled={!isConnected || !selectedDevice}
-                      title={
-                        !isConnected || !selectedDevice ? 'Connect a device to install' : 'Install'
-                      }
-                    >
-                      Install
-                    </Button>
-                  )}
+                  {item.status === 'Completed' &&
+                    !isInstalled(item.releaseName) &&
+                    !sideloadingDisabled && (
+                      <Button
+                        icon={<DownloadInstallIcon />}
+                        aria-label="Install game"
+                        size="small"
+                        appearance="primary"
+                        onClick={() => handleInstallFromCompleted(item.releaseName)}
+                        disabled={!isConnected || !selectedDevice}
+                        title={
+                          !isConnected || !selectedDevice
+                            ? 'Connect a device to install'
+                            : 'Install'
+                        }
+                      >
+                        Install
+                      </Button>
+                    )}
 
-                  {item.status === 'Completed' && isInstalled(item.releaseName) && !sideloadingDisabled && (
-                    <Button
-                      icon={<UninstallIcon />}
-                      aria-label="Uninstall game"
-                      size="small"
-                      appearance="outline"
-                      onClick={() => handleUninstall(item)}
-                      disabled={!isConnected || !selectedDevice}
-                      title={
-                        !isConnected || !selectedDevice
-                          ? 'Connect a device to uninstall'
-                          : 'Uninstall'
-                      }
-                    >
-                      Uninstall
-                    </Button>
-                  )}
+                  {item.status === 'Completed' &&
+                    isInstalled(item.releaseName) &&
+                    !sideloadingDisabled && (
+                      <Button
+                        icon={<UninstallIcon />}
+                        aria-label="Uninstall game"
+                        size="small"
+                        appearance="outline"
+                        onClick={() => handleUninstall(item)}
+                        disabled={!isConnected || !selectedDevice}
+                        title={
+                          !isConnected || !selectedDevice
+                            ? 'Connect a device to uninstall'
+                            : 'Uninstall'
+                        }
+                      >
+                        Uninstall
+                      </Button>
+                    )}
                 </div>
                 {/* Actions */}
                 <div className={styles.actions}>
@@ -525,26 +568,45 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
                     item.status === 'Paused' ||
                     item.status === 'Error' ||
                     item.status === 'InstallError' ||
-                    item.status === 'Queued') && (
-                    confirmPending === item.releaseName ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
-                        <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>Delete files too?</Text>
+                    item.status === 'Queued') &&
+                    (confirmPending === item.releaseName ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          alignItems: 'flex-end'
+                        }}
+                      >
+                        <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
+                          Delete files too?
+                        </Text>
                         <div style={{ display: 'flex', gap: '4px' }}>
                           <Button
                             icon={<FolderRegular />}
                             size="small"
                             appearance="subtle"
                             title="Remove from list, keep files"
-                            onClick={() => { setConfirmPending(null); removeFromQueueOnly(item.releaseName) }}
-                          >Keep</Button>
+                            onClick={() => {
+                              setConfirmPending(null)
+                              removeFromQueueOnly(item.releaseName)
+                            }}
+                          >
+                            Keep
+                          </Button>
                           <Button
                             icon={<DeleteDismissRegular />}
                             size="small"
                             appearance="subtle"
                             title="Remove and delete downloaded files"
                             style={{ color: tokens.colorPaletteRedForeground1 }}
-                            onClick={() => { setConfirmPending(null); removeFromQueue(item.releaseName) }}
-                          >Delete</Button>
+                            onClick={() => {
+                              setConfirmPending(null)
+                              removeFromQueue(item.releaseName)
+                            }}
+                          >
+                            Delete
+                          </Button>
                           <Button
                             icon={<CloseIcon />}
                             size="small"
@@ -563,8 +625,7 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
                         onClick={() => handleDeleteButton(item.releaseName)}
                         title="Remove from list"
                       />
-                    )
-                  )}
+                    ))}
                 </div>
               </div>
             ))}
@@ -577,11 +638,7 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
         error={errorDetail?.error}
         phase={errorDetail?.phase || 'download'}
         contextLabel={errorDetail?.contextLabel}
-        onRetry={
-          errorDetail
-            ? () => retryDownload(errorDetail.releaseName)
-            : undefined
-        }
+        onRetry={errorDetail ? () => retryDownload(errorDetail.releaseName) : undefined}
       />
 
       {pendingUninstall && (

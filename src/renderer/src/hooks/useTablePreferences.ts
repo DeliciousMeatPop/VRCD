@@ -6,15 +6,20 @@ export interface TablePreferences {
   evenRowColor: string
   oddRowColor: string
   viewMode: 'table' | 'cards'
-  cardSize: number            // 0=smallest, 100=largest
-  cardSortKey: string         // column id or '' for none
+  cardSize: number // 0=smallest, 100=largest
+  cardSortKey: string // column id or '' for none
   cardSortDir: 'asc' | 'desc'
-  tableSortKey: string        // persisted table-mode sort column
+  tableSortKey: string // persisted table-mode sort column
   tableSortDir: 'asc' | 'desc'
 }
 
 const STORAGE_KEY = 'avr-table-prefs-v5'
-const OLD_KEYS = ['avr-table-prefs-v1', 'avr-table-prefs-v2', 'avr-table-prefs-v3', 'avr-table-prefs-v4']
+const OLD_KEYS = [
+  'avr-table-prefs-v1',
+  'avr-table-prefs-v2',
+  'avr-table-prefs-v3',
+  'avr-table-prefs-v4'
+]
 
 const DEFAULTS: TablePreferences = {
   rowDensity: 50,
@@ -31,7 +36,11 @@ const DEFAULTS: TablePreferences = {
 
 function load(): TablePreferences {
   for (const key of OLD_KEYS) {
-    try { localStorage.removeItem(key) } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      /* ignore */
+    }
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -39,10 +48,13 @@ function load(): TablePreferences {
       const parsed = JSON.parse(raw) as Partial<TablePreferences>
       if (parsed.viewMode !== 'table' && parsed.viewMode !== 'cards') parsed.viewMode = 'table'
       if (parsed.cardSortDir !== 'asc' && parsed.cardSortDir !== 'desc') parsed.cardSortDir = 'asc'
-      if (parsed.tableSortDir !== 'asc' && parsed.tableSortDir !== 'desc') parsed.tableSortDir = 'asc'
+      if (parsed.tableSortDir !== 'asc' && parsed.tableSortDir !== 'desc')
+        parsed.tableSortDir = 'asc'
       return { ...DEFAULTS, ...parsed }
     }
-  } catch { /* corrupt storage — start fresh */ }
+  } catch {
+    /* corrupt storage — start fresh */
+  }
   return { ...DEFAULTS }
 }
 
@@ -55,7 +67,11 @@ export function useTablePreferences() {
       if (next.viewMode !== 'table' && next.viewMode !== 'cards') next.viewMode = 'table'
       if (next.cardSortDir !== 'asc' && next.cardSortDir !== 'desc') next.cardSortDir = 'asc'
       if (next.tableSortDir !== 'asc' && next.tableSortDir !== 'desc') next.tableSortDir = 'asc'
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      } catch {
+        /* ignore */
+      }
       return next
     })
   }, [])

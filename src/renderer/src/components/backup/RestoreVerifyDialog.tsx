@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { Dialog, DialogSurface, DialogBody, Button, Text, Spinner } from '@fluentui/react-components'
 import {
-  CheckmarkCircleRegular,
-  DismissCircleRegular,
-  ClockRegular
-} from '@fluentui/react-icons'
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  Button,
+  Text,
+  Spinner
+} from '@fluentui/react-components'
+import { CheckmarkCircleRegular, DismissCircleRegular, ClockRegular } from '@fluentui/react-icons'
 import { BackupVerification, BackupReportResult } from '@shared/types'
 
 const NEON = 'var(--vrcd-neon)'
@@ -84,7 +87,9 @@ const RestoreVerifyDialog: React.FC<RestoreVerifyDialogProps> = ({
           padding: 0
         }}
       >
-        <DialogBody style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <DialogBody
+          style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}
+        >
           <div
             style={{
               fontFamily: 'monospace',
@@ -99,7 +104,14 @@ const RestoreVerifyDialog: React.FC<RestoreVerifyDialogProps> = ({
 
           {reportResult === undefined ? (
             <>
-              <Text style={{ color: 'rgba(var(--vrcd-neon-raw),0.8)', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.6 }}>
+              <Text
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.8)',
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  lineHeight: 1.6
+                }}
+              >
                 Save data for <strong style={{ color: NEON }}>{appLabel}</strong> was restored.
                 Please open the app on your headset and check that your progress/settings are back,
                 then let me know. This helps me make backups more reliable during the BETA.
@@ -108,7 +120,13 @@ const RestoreVerifyDialog: React.FC<RestoreVerifyDialogProps> = ({
               {reporting ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Spinner size="tiny" />
-                  <Text style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(var(--vrcd-neon-raw),0.8)' }}>
+                  <Text
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: 'rgba(var(--vrcd-neon-raw),0.8)'
+                    }}
+                  >
                     Filing an anonymous report...
                   </Text>
                 </div>
@@ -144,13 +162,26 @@ const RestoreVerifyDialog: React.FC<RestoreVerifyDialogProps> = ({
                 </div>
               )}
 
-              <Text style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(var(--vrcd-neon-raw),0.45)' }}>
+              <Text
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  color: 'rgba(var(--vrcd-neon-raw),0.45)'
+                }}
+              >
                 You can change your answer later from Settings → Save Backups.
               </Text>
             </>
           ) : (
             <>
-              <Text style={{ color: 'rgba(var(--vrcd-neon-raw),0.85)', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.6 }}>
+              <Text
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.85)',
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  lineHeight: 1.6
+                }}
+              >
                 Thanks. A pre-filled GitHub issue{' '}
                 {reportResult ? 'was opened in your browser' : 'could not be opened automatically'}.
                 {reportResult?.rentryUrl

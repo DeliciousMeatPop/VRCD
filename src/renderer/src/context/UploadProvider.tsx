@@ -170,7 +170,18 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children }) => {
       clearCompleted,
       prepareUpload
     }),
-    [isUploading, progress, error, queue, addToQueue, removeFromQueue, cancelUpload, retryUpload, clearCompleted, prepareUpload]
+    [
+      isUploading,
+      progress,
+      error,
+      queue,
+      addToQueue,
+      removeFromQueue,
+      cancelUpload,
+      retryUpload,
+      clearCompleted,
+      prepareUpload
+    ]
   )
 
   return <UploadContext.Provider value={value}>{children}</UploadContext.Provider>

@@ -41,9 +41,7 @@ const TransferStrip: React.FC = () => {
 
   const entries = useMemo<Entry[]>(() => {
     const downloads: Entry[] = downloadQueue
-      .filter((d) =>
-        ['Queued', 'Downloading', 'Extracting', 'Installing'].includes(d.status)
-      )
+      .filter((d) => ['Queued', 'Downloading', 'Extracting', 'Installing'].includes(d.status))
       .map((d) => ({
         key: `d:${d.releaseName}`,
         direction: 'down',
@@ -111,8 +109,7 @@ const TransferStrip: React.FC = () => {
   const safeIndex = Math.min(index, entries.length - 1)
   const e = entries[safeIndex]
   const directionGlyph = e.direction === 'down' ? '↓' : '↑'
-  const directionColor =
-    e.direction === 'down' ? 'var(--vrcd-neon)' : 'var(--vrcd-purple)'
+  const directionColor = e.direction === 'down' ? 'var(--vrcd-neon)' : 'var(--vrcd-purple)'
   const progressPct = e.progress != null ? Math.max(0, Math.min(100, e.progress)) : null
 
   return (
@@ -125,7 +122,9 @@ const TransferStrip: React.FC = () => {
         minWidth: 0
       }}
     >
-      <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.45)', letterSpacing: '0.14em', flexShrink: 0 }}>
+      <span
+        style={{ color: 'rgba(var(--vrcd-neon-raw),0.45)', letterSpacing: '0.14em', flexShrink: 0 }}
+      >
         // TRANSFER_BUS
       </span>
       <span
@@ -186,7 +185,14 @@ const TransferStrip: React.FC = () => {
               }}
             />
           </div>
-          <span style={{ color: 'var(--vrcd-neon)', flexShrink: 0, minWidth: '40px', textAlign: 'right' }}>
+          <span
+            style={{
+              color: 'var(--vrcd-neon)',
+              flexShrink: 0,
+              minWidth: '40px',
+              textAlign: 'right'
+            }}
+          >
             {progressPct.toFixed(0)}%
           </span>
         </>

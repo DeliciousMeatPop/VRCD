@@ -62,7 +62,9 @@ const api = {
       typedIpcRenderer.invoke('adb:get-installed-packages', serial),
     uninstallPackage: (serial: string, packageName: string): Promise<boolean> =>
       typedIpcRenderer.invoke('adb:uninstallPackage', serial, packageName),
-    deleteGameFiles: (releaseName: string): Promise<{ deleted: boolean; path: string; error?: string }> =>
+    deleteGameFiles: (
+      releaseName: string
+    ): Promise<{ deleted: boolean; path: string; error?: string }> =>
       typedIpcRenderer.invoke('adb:deleteGameFiles', releaseName),
     pingDevice: (ipAddress: string): Promise<{ reachable: boolean; responseTime?: number }> =>
       typedIpcRenderer.invoke('adb:ping-device', ipAddress),
@@ -114,10 +116,7 @@ const api = {
     getLastSyncTime: (): Promise<Date | null> =>
       typedIpcRenderer.invoke('games:get-last-sync-time'),
     forceSync: (): Promise<GameInfo[]> => typedIpcRenderer.invoke('games:force-sync-games'),
-    getTrailerUrl: (
-      gameName: string,
-      packageName: string | undefined
-    ): Promise<string | null> =>
+    getTrailerUrl: (gameName: string, packageName: string | undefined): Promise<string | null> =>
       typedIpcRenderer.invoke('games:get-trailer-url', gameName, packageName),
     onDownloadProgress: (callback: (progress: DownloadProgress) => void): (() => void) => {
       const listener = (_: IpcRendererEvent, progress: DownloadProgress): void => callback(progress)
@@ -181,7 +180,8 @@ const api = {
       return () => typedIpcRenderer.removeListener('download:queue-updated', listener)
     },
     onStorageStatusChanged: (callback: (status: DownloadStorageStatus) => void): (() => void) => {
-      const listener = (_: IpcRendererEvent, status: DownloadStorageStatus): void => callback(status)
+      const listener = (_: IpcRendererEvent, status: DownloadStorageStatus): void =>
+        callback(status)
       typedIpcRenderer.on('download:storage-status-changed', listener)
       return () => typedIpcRenderer.removeListener('download:storage-status-changed', listener)
     },

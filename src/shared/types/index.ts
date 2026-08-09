@@ -244,7 +244,9 @@ export interface AdbAPI {
   getInstalledPackages: (serial: string) => Promise<PackageInfo[]>
   getApplicationLabel: (serial: string, packageName: string) => Promise<string | null>
   uninstallPackage: (serial: string, packageName: string) => Promise<boolean>
-  deleteGameFiles: (releaseName: string) => Promise<{ deleted: boolean; path: string; error?: string }>
+  deleteGameFiles: (
+    releaseName: string
+  ) => Promise<{ deleted: boolean; path: string; error?: string }>
   startTrackingDevices: (mainWindow?: BrowserWindow) => void
   stopTrackingDevices: () => void
   getUserName: (serial: string) => Promise<string>
@@ -505,6 +507,35 @@ export interface BackupProfile {
   includeInternalData?: boolean
   /** Human-readable note about this game's quirks, surfaced in UI and logs. */
   notes?: string
+  /**
+   * Best-effort adjustments applied to the device after a restore push, for
+   * games whose save layout can't be restored by copying the tree back
+   * verbatim. Never fatal — a failed fixup is logged but the restore still
+   * counts as successful.
+   */
+  restoreFixups?: RestoreFixup[]
+}
+
+/**
+ * A post-restore fixup directive.
+ *
+ * `profileFolderSync` handles games (e.g. Walkabout Mini Golf) that keep their
+ * save inside a per-profile subfolder whose name is randomised and regenerated
+ * on reinstall — e.g. `files/Profiles/Oculus/<random>/Profile_Default.data`.
+ * Restoring the captured tree recreates the *old* random folder, but the freshly
+ * reinstalled game reads a *new* one, so the save looks lost. This fixup copies
+ * the restored save file into every current profile subfolder on the device so
+ * whichever one the game actually reads contains it.
+ */
+export interface RestoreFixup {
+  type: 'profileFolderSync'
+  /** Save filename kept inside each profile subfolder (e.g. "Profile_Default.data"). */
+  file: string
+  /**
+   * Directory, relative to the primary restored root, whose immediate
+   * subfolders are the per-profile folders (e.g. "files/Profiles/Oculus").
+   */
+  profilesDir: string
 }
 
 export interface BackupEntry {
@@ -556,10 +587,7 @@ export interface BackupAPI {
   ) => Promise<BackupCreateResult>
   restoreBackup: (backupId: string, deviceId: string) => Promise<BackupResult>
   deleteBackup: (backupId: string) => Promise<boolean>
-  setVerification: (
-    backupId: string,
-    result: BackupVerification
-  ) => Promise<BackupEntry | null>
+  setVerification: (backupId: string, result: BackupVerification) => Promise<BackupEntry | null>
   reportFailure: (backupId: string) => Promise<BackupReportResult | null>
   /**
    * Look up the (remote, cached) save-backup profile for a package, or null if

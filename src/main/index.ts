@@ -83,12 +83,7 @@ function createWindow(): void {
     if (saved.x !== undefined && saved.y !== undefined) {
       const onScreen = screen.getAllDisplays().some((d) => {
         const { x, y, width, height } = d.workArea
-        return (
-          saved.x! + w > x &&
-          saved.x! < x + width &&
-          saved.y! + h > y &&
-          saved.y! < y + height
-        )
+        return saved.x! + w > x && saved.x! < x + width && saved.y! + h > y && saved.y! < y + height
       })
       if (onScreen) {
         initialBounds.x = saved.x
@@ -130,25 +125,19 @@ function createWindow(): void {
   ytSession.setUserAgent(
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
   )
-  ytSession.webRequest.onBeforeSendHeaders(
-    { urls: ytUrlFilters },
-    (details, callback) => {
-      details.requestHeaders['Referer'] = 'https://www.youtube.com/'
-      details.requestHeaders['Origin'] = 'https://www.youtube.com'
-      callback({ requestHeaders: details.requestHeaders })
-    }
-  )
-  ytSession.webRequest.onHeadersReceived(
-    { urls: ytUrlFilters },
-    (details, callback) => {
-      const headers = { ...details.responseHeaders }
-      delete headers['X-Frame-Options']
-      delete headers['x-frame-options']
-      delete headers['Content-Security-Policy']
-      delete headers['content-security-policy']
-      callback({ responseHeaders: headers })
-    }
-  )
+  ytSession.webRequest.onBeforeSendHeaders({ urls: ytUrlFilters }, (details, callback) => {
+    details.requestHeaders['Referer'] = 'https://www.youtube.com/'
+    details.requestHeaders['Origin'] = 'https://www.youtube.com'
+    callback({ requestHeaders: details.requestHeaders })
+  })
+  ytSession.webRequest.onHeadersReceived({ urls: ytUrlFilters }, (details, callback) => {
+    const headers = { ...details.responseHeaders }
+    delete headers['X-Frame-Options']
+    delete headers['x-frame-options']
+    delete headers['Content-Security-Policy']
+    delete headers['content-security-policy']
+    callback({ responseHeaders: headers })
+  })
 
   // Explicitly set minimum size to ensure constraint is enforced.
   // Sized for ~1366x768 laptops (typical small-screen target) with the OS
@@ -344,18 +333,43 @@ app.whenReady().then(async () => {
   const resetFlag = join(userData, 'pending-data-reset')
   if (existsSync(resetFlag)) {
     const resetTargets = [
-      'bin', 'vrp-data', 'Cache', 'Code Cache', 'GPUCache',
-      'DawnWebGPUCache', 'DawnCache', 'Session Storage', 'Local Storage',
-      'IndexedDB', 'blob_storage', 'logs',
+      'bin',
+      'vrp-data',
+      'Cache',
+      'Code Cache',
+      'GPUCache',
+      'DawnWebGPUCache',
+      'DawnCache',
+      'Session Storage',
+      'Local Storage',
+      'IndexedDB',
+      'blob_storage',
+      'logs'
     ]
-    const resetFileTargets = ['Preferences', 'Network Persistent State', 'CrashpadMetrics-spare.pma']
+    const resetFileTargets = [
+      'Preferences',
+      'Network Persistent State',
+      'CrashpadMetrics-spare.pma'
+    ]
     for (const name of resetTargets) {
-      try { await fsPromises.rm(join(userData, name), { recursive: true, force: true }) } catch { /* ignore */ }
+      try {
+        await fsPromises.rm(join(userData, name), { recursive: true, force: true })
+      } catch {
+        /* ignore */
+      }
     }
     for (const name of resetFileTargets) {
-      try { await fsPromises.unlink(join(userData, name)) } catch { /* ignore */ }
+      try {
+        await fsPromises.unlink(join(userData, name))
+      } catch {
+        /* ignore */
+      }
     }
-    try { await fsPromises.unlink(resetFlag) } catch { /* ignore */ }
+    try {
+      await fsPromises.unlink(resetFlag)
+    } catch {
+      /* ignore */
+    }
   }
 
   // Set app user model id for windows
@@ -391,9 +405,15 @@ app.whenReady().then(async () => {
     try {
       await fsPromises.writeFile(join(app.getPath('userData'), 'pending-data-reset'), '')
     } catch (e) {
-      return { success: false, error: `Could not write reset flag: ${e instanceof Error ? e.message : String(e)}` }
+      return {
+        success: false,
+        error: `Could not write reset flag: ${e instanceof Error ? e.message : String(e)}`
+      }
     }
-    setTimeout(() => { app.relaunch(); app.exit(0) }, 500)
+    setTimeout(() => {
+      app.relaunch()
+      app.exit(0)
+    }, 500)
     return { success: true }
   })
 
@@ -468,9 +488,17 @@ app.whenReady().then(async () => {
       console.log(`[IPC] adb:deleteGameFiles - Deleted ${gamePath}`)
       return { deleted: true, path: gamePath }
     } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
+      ) {
         console.log(`[IPC] adb:deleteGameFiles - Path not found: ${gamePath}`)
-        return { deleted: false, path: gamePath, error: 'Game files not found in current download folder' }
+        return {
+          deleted: false,
+          path: gamePath,
+          error: 'Game files not found in current download folder'
+        }
       }
       console.error(`[IPC] adb:deleteGameFiles - Error deleting ${gamePath}:`, error)
       return { deleted: false, path: gamePath, error: String(error) }

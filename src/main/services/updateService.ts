@@ -99,9 +99,10 @@ class UpdateService extends EventEmitter {
         const nsisAsset =
           find(
             (a) =>
-              a.name.endsWith('.exe') && a.name.toLowerCase().includes('setup') && a.name.includes(arch)
-          ) ??
-          find((a) => a.name.endsWith('.exe') && a.name.toLowerCase().includes('setup'))
+              a.name.endsWith('.exe') &&
+              a.name.toLowerCase().includes('setup') &&
+              a.name.includes(arch)
+          ) ?? find((a) => a.name.endsWith('.exe') && a.name.toLowerCase().includes('setup'))
         if (nsisAsset) return nsisAsset
       }
 
@@ -109,7 +110,9 @@ class UpdateService extends EventEmitter {
       return (
         find(
           (a) =>
-            a.name.endsWith('.exe') && a.name.toLowerCase().includes('portable') && a.name.includes(arch)
+            a.name.endsWith('.exe') &&
+            a.name.toLowerCase().includes('portable') &&
+            a.name.includes(arch)
         ) ??
         find((a) => a.name.endsWith('.exe') && a.name.includes(arch)) ??
         find((a) => a.name.endsWith('.exe')) ??
@@ -134,16 +137,22 @@ class UpdateService extends EventEmitter {
       // AppImage and would silently fall through to whatever AppImage
       // appeared first — e.g. the arm64 build.
       const appImageTags: string[] =
-        arch === 'x64' ? ['x86_64', 'x64']
-        : arch === 'arm64' ? ['arm64', 'aarch64']
-        : arch === 'ia32' ? ['i386']
-        : [arch]
+        arch === 'x64'
+          ? ['x86_64', 'x64']
+          : arch === 'arm64'
+            ? ['arm64', 'aarch64']
+            : arch === 'ia32'
+              ? ['i386']
+              : [arch]
 
       const debTags: string[] =
-        arch === 'x64' ? ['amd64', 'x64']
-        : arch === 'arm64' ? ['arm64', 'aarch64']
-        : arch === 'ia32' ? ['i386']
-        : [arch]
+        arch === 'x64'
+          ? ['amd64', 'x64']
+          : arch === 'arm64'
+            ? ['arm64', 'aarch64']
+            : arch === 'ia32'
+              ? ['i386']
+              : [arch]
 
       const matchesTag = (name: string, tags: string[]): boolean =>
         tags.some((t) => name.includes(`-${t}.`) || name.includes(`_${t}.`))
@@ -181,7 +190,9 @@ class UpdateService extends EventEmitter {
 
         if (asset) {
           this.pendingAssetUrl = asset.browser_download_url
-          console.log(`[UpdateService] Matched asset: ${asset.name} (${asset.browser_download_url})`)
+          console.log(
+            `[UpdateService] Matched asset: ${asset.name} (${asset.browser_download_url})`
+          )
         } else {
           this.pendingAssetUrl = null
           console.warn(

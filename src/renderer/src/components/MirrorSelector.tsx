@@ -173,7 +173,9 @@ const MirrorSelector: React.FC = () => {
           </DialogTrigger>
           <DialogSurface className={styles.managementDialog}>
             <DialogTitle>{t('mirrorManagement')}</DialogTitle>
-            <DialogContent style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <DialogContent
+              style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+            >
               <DialogBody style={{ flex: 1, overflow: 'hidden' }}>
                 <MirrorManagement />
               </DialogBody>

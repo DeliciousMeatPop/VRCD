@@ -38,22 +38,54 @@ const PRESETS: PresetCategory[] = [
   {
     name: 'PERFORMANCE',
     items: [
-      { label: 'CPU 4', command: 'setprop debug.oculus.cpuLevel 4', desc: 'Pin CPU to highest level (4)' },
-      { label: 'GPU 4', command: 'setprop debug.oculus.gpuLevel 4', desc: 'Pin GPU to highest level (4)' },
-      { label: 'CPU/GPU AUTO', command: 'setprop debug.oculus.cpuLevel 0 && setprop debug.oculus.gpuLevel 0', desc: 'Reset CPU/GPU governors to auto' },
+      {
+        label: 'CPU 4',
+        command: 'setprop debug.oculus.cpuLevel 4',
+        desc: 'Pin CPU to highest level (4)'
+      },
+      {
+        label: 'GPU 4',
+        command: 'setprop debug.oculus.gpuLevel 4',
+        desc: 'Pin GPU to highest level (4)'
+      },
+      {
+        label: 'CPU/GPU AUTO',
+        command: 'setprop debug.oculus.cpuLevel 0 && setprop debug.oculus.gpuLevel 0',
+        desc: 'Reset CPU/GPU governors to auto'
+      },
       { label: '72 Hz', command: 'setprop debug.oculus.refreshRate 72' },
       { label: '90 Hz', command: 'setprop debug.oculus.refreshRate 90' },
       { label: '120 Hz', command: 'setprop debug.oculus.refreshRate 120' },
-      { label: 'TEX 1.0', command: 'setprop debug.oculus.textureWidth 0 && setprop debug.oculus.textureHeight 0', desc: 'Reset render resolution to default' },
-      { label: 'GFX STATS', command: 'dumpsys SurfaceFlinger --latency-clear', desc: 'Reset SurfaceFlinger frame stats' }
+      {
+        label: 'TEX 1.0',
+        command: 'setprop debug.oculus.textureWidth 0 && setprop debug.oculus.textureHeight 0',
+        desc: 'Reset render resolution to default'
+      },
+      {
+        label: 'GFX STATS',
+        command: 'dumpsys SurfaceFlinger --latency-clear',
+        desc: 'Reset SurfaceFlinger frame stats'
+      }
     ]
   },
   {
     name: 'UPDATES',
     items: [
-      { label: 'BLOCK FW', command: 'pm disable-user --user 0 com.oculus.updater', desc: 'Disable the OS updater (rollback-friendly)' },
-      { label: 'UNBLOCK FW', command: 'pm enable com.oculus.updater', desc: 'Re-enable the OS updater' },
-      { label: 'BLOCK STORE', command: 'pm disable-user --user 0 com.oculus.store', desc: 'Disable Meta Store updates' },
+      {
+        label: 'BLOCK FW',
+        command: 'pm disable-user --user 0 com.oculus.updater',
+        desc: 'Disable the OS updater (rollback-friendly)'
+      },
+      {
+        label: 'UNBLOCK FW',
+        command: 'pm enable com.oculus.updater',
+        desc: 'Re-enable the OS updater'
+      },
+      {
+        label: 'BLOCK STORE',
+        command: 'pm disable-user --user 0 com.oculus.store',
+        desc: 'Disable Meta Store updates'
+      },
       { label: 'UNBLOCK STORE', command: 'pm enable com.oculus.store' }
     ]
   },
@@ -66,10 +98,21 @@ const PRESETS: PresetCategory[] = [
       { label: 'BATTERY', command: 'dumpsys battery', desc: 'Show full battery status' },
       { label: 'STORAGE', command: 'df -h /sdcard' },
       { label: 'WIFI INFO', command: 'dumpsys wifi | head -40' },
-      { label: 'IP ADDR', command: 'ip route | awk \'{print $9}\'', desc: 'Print device IP address' },
-      { label: 'PROXIMITY OFF', command: 'am broadcast -a com.oculus.vrpowermanager.prox_close', desc: 'Disable proximity sensor (sleep prevention)' },
-      { label: 'PROXIMITY ON', command: 'am broadcast -a com.oculus.vrpowermanager.automation_disable' },
-      { label: 'REVERT UI (PRE NAVIGATOR)', command: 'adb shell pm clear com.oculus.vrshell', desc: 'Clear VR shell data to revert UI to pre-Navigator state' }
+      { label: 'IP ADDR', command: "ip route | awk '{print $9}'", desc: 'Print device IP address' },
+      {
+        label: 'PROXIMITY OFF',
+        command: 'am broadcast -a com.oculus.vrpowermanager.prox_close',
+        desc: 'Disable proximity sensor (sleep prevention)'
+      },
+      {
+        label: 'PROXIMITY ON',
+        command: 'am broadcast -a com.oculus.vrpowermanager.automation_disable'
+      },
+      {
+        label: 'REVERT UI (PRE NAVIGATOR)',
+        command: 'adb shell pm clear com.oculus.vrshell',
+        desc: 'Clear VR shell data to revert UI to pre-Navigator state'
+      }
     ]
   },
   {
@@ -77,7 +120,7 @@ const PRESETS: PresetCategory[] = [
     items: [
       { label: 'LIST 3RD-PARTY', command: 'pm list packages -3' },
       { label: 'LIST ALL', command: 'pm list packages' },
-      { label: 'CURRENT APP', command: 'dumpsys window | grep -E \'mCurrentFocus|mFocusedApp\'' }
+      { label: 'CURRENT APP', command: "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'" }
     ]
   },
   {
@@ -97,7 +140,11 @@ const PRESETS: PresetCategory[] = [
   {
     name: 'WIRELESS',
     items: [
-      { label: 'TCPIP 5555', command: 'adb tcpip 5555', desc: 'Switch local adbd to TCP mode on port 5555' },
+      {
+        label: 'TCPIP 5555',
+        command: 'adb tcpip 5555',
+        desc: 'Switch local adbd to TCP mode on port 5555'
+      },
       { label: 'DEVICES', command: 'adb devices -l' }
     ]
   }
@@ -158,7 +205,14 @@ interface PillProps {
   variant?: 'neon' | 'purple' | 'add'
 }
 
-const Pill: React.FC<PillProps> = ({ children, onClick, onContextMenu, title, disabled, variant = 'neon' }) => {
+const Pill: React.FC<PillProps> = ({
+  children,
+  onClick,
+  onContextMenu,
+  title,
+  disabled,
+  variant = 'neon'
+}) => {
   const [hovered, setHovered] = useState(false)
   const color = variant === 'purple' ? PURPLE : NEON
   const colorRaw = variant === 'purple' ? 'var(--vrcd-purple-raw)' : 'var(--vrcd-neon-raw)'
@@ -175,7 +229,7 @@ const Pill: React.FC<PillProps> = ({ children, onClick, onContextMenu, title, di
         background: hovered && !disabled ? `rgba(${colorRaw},0.12)` : 'transparent',
         border: `1px ${dashed ? 'dashed' : 'solid'} ${hovered && !disabled ? color : `rgba(${colorRaw},0.4)`}`,
         color: hovered && !disabled ? color : `rgba(${colorRaw},0.8)`,
-        fontFamily: "var(--vrcd-font-mono)",
+        fontFamily: 'var(--vrcd-font-mono)',
         fontSize: '11px',
         letterSpacing: '0.06em',
         padding: '4px 10px',
@@ -208,7 +262,7 @@ const ShortcutEditor: React.FC<ShortcutEditorProps> = ({ initial, onSave, onCanc
     background: '#000008',
     border: `1px solid ${NEON_DIM}`,
     color: NEON,
-    fontFamily: "var(--vrcd-font-mono)",
+    fontFamily: 'var(--vrcd-font-mono)',
     fontSize: '12px',
     padding: '6px 10px',
     borderRadius: '3px',
@@ -242,7 +296,7 @@ const ShortcutEditor: React.FC<ShortcutEditorProps> = ({ initial, onSave, onCanc
           padding: '20px 22px',
           width: '440px',
           maxWidth: '90vw',
-          fontFamily: "var(--vrcd-font-mono)",
+          fontFamily: 'var(--vrcd-font-mono)',
           boxShadow: '0 0 40px rgba(var(--vrcd-neon-raw),0.1)'
         }}
       >
@@ -259,7 +313,15 @@ const ShortcutEditor: React.FC<ShortcutEditorProps> = ({ initial, onSave, onCanc
           [ {initial ? 'EDIT' : 'NEW'} CUSTOM SHORTCUT ]
         </div>
 
-        <label style={{ display: 'block', color: 'rgba(var(--vrcd-neon-raw),0.6)', fontSize: '11px', marginBottom: '4px', letterSpacing: '0.08em' }}>
+        <label
+          style={{
+            display: 'block',
+            color: 'rgba(var(--vrcd-neon-raw),0.6)',
+            fontSize: '11px',
+            marginBottom: '4px',
+            letterSpacing: '0.08em'
+          }}
+        >
           LABEL
         </label>
         <input
@@ -271,7 +333,15 @@ const ShortcutEditor: React.FC<ShortcutEditorProps> = ({ initial, onSave, onCanc
           style={{ ...inputStyle, marginBottom: '14px' }}
         />
 
-        <label style={{ display: 'block', color: 'rgba(var(--vrcd-neon-raw),0.6)', fontSize: '11px', marginBottom: '4px', letterSpacing: '0.08em' }}>
+        <label
+          style={{
+            display: 'block',
+            color: 'rgba(var(--vrcd-neon-raw),0.6)',
+            fontSize: '11px',
+            marginBottom: '4px',
+            letterSpacing: '0.08em'
+          }}
+        >
           COMMAND
         </label>
         <input
@@ -281,11 +351,15 @@ const ShortcutEditor: React.FC<ShortcutEditorProps> = ({ initial, onSave, onCanc
           spellCheck={false}
           style={inputStyle}
         />
-        <div style={{ color: 'rgba(var(--vrcd-neon-raw),0.4)', fontSize: '10px', marginTop: '4px' }}>
+        <div
+          style={{ color: 'rgba(var(--vrcd-neon-raw),0.4)', fontSize: '10px', marginTop: '4px' }}
+        >
           Same syntax as the shell input. Prefix with &quot;adb &quot; for local adb commands.
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+        <div
+          style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}
+        >
           <Pill onClick={onCancel}>CANCEL</Pill>
           <Pill
             onClick={() => canSave && onSave(label.trim(), command.trim())}
@@ -317,16 +391,14 @@ const AdbShortcuts: React.FC<AdbShortcutsProps> = ({ onRun, disabled }) => {
   }, [collapsed])
 
   const editing = useMemo(
-    () => (editingId ? custom.find((c) => c.id === editingId) ?? null : null),
+    () => (editingId ? (custom.find((c) => c.id === editingId) ?? null) : null),
     [editingId, custom]
   )
 
   const addOrUpdate = useCallback(
     (label: string, command: string) => {
       if (editingId) {
-        setCustom((prev) =>
-          prev.map((c) => (c.id === editingId ? { ...c, label, command } : c))
-        )
+        setCustom((prev) => prev.map((c) => (c.id === editingId ? { ...c, label, command } : c)))
       } else {
         const id = `cs_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
         setCustom((prev) => [...prev, { id, label, command }])
@@ -363,7 +435,7 @@ const AdbShortcuts: React.FC<AdbShortcutsProps> = ({ onRun, disabled }) => {
           border: `1px solid ${NEON_DIM}`,
           borderRadius: '4px',
           background: 'rgba(0,0,8,0.5)',
-          fontFamily: "var(--vrcd-font-mono)"
+          fontFamily: 'var(--vrcd-font-mono)'
         }}
       >
         {/* Header bar */}
@@ -411,7 +483,10 @@ const AdbShortcuts: React.FC<AdbShortcutsProps> = ({ onRun, disabled }) => {
             }}
           >
             {PRESETS.map((cat) => (
-              <div key={cat.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <div
+                key={cat.name}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}
+              >
                 <span
                   style={{
                     color: 'rgba(var(--vrcd-neon-raw),0.45)',

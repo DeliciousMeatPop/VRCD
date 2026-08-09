@@ -12,14 +12,21 @@ export interface UsernamePref {
 export function getMatrixUsername(): string {
   const builtInRandom = [
     ...(geekyUsernames?.random ?? []),
-    'DMP', 'KaladinDMP', 'n30_h4ck3r', 'v01d_w4lk3r', 'glitch_daemon', 'r00t@cyberdeck'
+    'DMP',
+    'KaladinDMP',
+    'n30_h4ck3r',
+    'v01d_w4lk3r',
+    'glitch_daemon',
+    'r00t@cyberdeck'
   ]
 
   let prefs: UsernamePref = { mode: 'random+custom', ratio: 2, custom: [] }
   try {
     const raw = localStorage.getItem(USERNAME_PREFS_KEY)
     if (raw) prefs = { ...prefs, ...JSON.parse(raw) }
-  } catch { /* use defaults */ }
+  } catch {
+    /* use defaults */
+  }
 
   const { mode, ratio, custom } = prefs
   const hasCustom = custom.length > 0

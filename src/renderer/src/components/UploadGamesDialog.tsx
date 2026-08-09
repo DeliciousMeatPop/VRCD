@@ -40,7 +40,10 @@ const UploadGamesDialog: React.FC = () => {
     if (uploadCandidates?.length > 0 && uploadCandidatesVersion > lastShownVersion.current) {
       lastShownVersion.current = uploadCandidatesVersion
       const initialSelected = uploadCandidates.reduce(
-        (acc, c) => { acc[c.packageName] = true; return acc },
+        (acc, c) => {
+          acc[c.packageName] = true
+          return acc
+        },
         {} as Record<string, boolean>
       )
       setSelectedCandidates(initialSelected)
@@ -59,13 +62,25 @@ const UploadGamesDialog: React.FC = () => {
 
   const handleSelectAll = (checked: boolean): void => {
     setSelectedCandidates(
-      uploadCandidates.reduce((acc, c) => { acc[c.packageName] = checked; return acc }, {} as Record<string, boolean>)
+      uploadCandidates.reduce(
+        (acc, c) => {
+          acc[c.packageName] = checked
+          return acc
+        },
+        {} as Record<string, boolean>
+      )
     )
   }
 
   const handleReverseSelection = (): void => {
     setSelectedCandidates(
-      uploadCandidates.reduce((acc, c) => { acc[c.packageName] = !selectedCandidates[c.packageName]; return acc }, {} as Record<string, boolean>)
+      uploadCandidates.reduce(
+        (acc, c) => {
+          acc[c.packageName] = !selectedCandidates[c.packageName]
+          return acc
+        },
+        {} as Record<string, boolean>
+      )
     )
   }
 
@@ -86,7 +101,12 @@ const UploadGamesDialog: React.FC = () => {
     setIsQueuing(true)
     let count = 0
     for (const c of toUpload) {
-      const ok = await addToQueue(c.packageName, resolvedGameName(c.packageName, c.gameName), c.versionCode, selectedDevice!)
+      const ok = await addToQueue(
+        c.packageName,
+        resolvedGameName(c.packageName, c.gameName),
+        c.versionCode,
+        selectedDevice!
+      )
       if (ok) count++
     }
     setQueuedCount(count)
@@ -104,14 +124,19 @@ const UploadGamesDialog: React.FC = () => {
   }
 
   const handleUploadSelectedBlacklistRest = async (): Promise<void> => {
-    const toUpload    = uploadCandidates.filter((c) =>  selectedCandidates[c.packageName])
+    const toUpload = uploadCandidates.filter((c) => selectedCandidates[c.packageName])
     const toBlacklist = uploadCandidates.filter((c) => !selectedCandidates[c.packageName])
     setShowUploadDialog(false)
     for (const c of toBlacklist) {
       await addGameToBlacklist(c.packageName, c.versionCode)
     }
     for (const c of toUpload) {
-      await addToQueue(c.packageName, resolvedGameName(c.packageName, c.gameName), c.versionCode, selectedDevice!)
+      await addToQueue(
+        c.packageName,
+        resolvedGameName(c.packageName, c.gameName),
+        c.versionCode,
+        selectedDevice!
+      )
     }
   }
 
@@ -123,7 +148,17 @@ const UploadGamesDialog: React.FC = () => {
     <Dialog open={showUploadDialog} onOpenChange={(_, data) => setShowUploadDialog(data.open)}>
       <DialogSurface
         mountNode={document.getElementById('portal')}
-        style={{ maxWidth: '1100px', background: '#050514', border: '1px solid rgba(var(--vrcd-neon-raw),0.35)', ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)', ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)', ['--colorNeutralBackground1' as string]: '#050514', ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)', ['--colorBrandBackground' as string]: 'var(--vrcd-neon)', ['--colorNeutralForegroundOnBrand' as string]: '#050514' }}
+        style={{
+          maxWidth: '1100px',
+          background: '#050514',
+          border: '1px solid rgba(var(--vrcd-neon-raw),0.35)',
+          ['--colorNeutralForeground1' as string]: 'var(--vrcd-neon)',
+          ['--colorNeutralForeground2' as string]: 'rgba(var(--vrcd-neon-raw),0.75)',
+          ['--colorNeutralBackground1' as string]: '#050514',
+          ['--colorNeutralStroke1' as string]: 'rgba(var(--vrcd-neon-raw),0.25)',
+          ['--colorBrandBackground' as string]: 'var(--vrcd-neon)',
+          ['--colorNeutralForegroundOnBrand' as string]: '#050514'
+        }}
       >
         <DialogBody>
           <DialogTitle>{t('uploadGamesTitle')}</DialogTitle>
@@ -135,7 +170,9 @@ const UploadGamesDialog: React.FC = () => {
                 <TableRow>
                   <TableHeaderCell style={{ width: '80px' }}>
                     <Checkbox
-                      checked={headerCheckboxState.indeterminate ? 'mixed' : headerCheckboxState.checked}
+                      checked={
+                        headerCheckboxState.indeterminate ? 'mixed' : headerCheckboxState.checked
+                      }
                       onChange={(_e, data) => handleSelectAll(!!data.checked)}
                     />
                     {t('uploadColumn')}
@@ -144,8 +181,20 @@ const UploadGamesDialog: React.FC = () => {
                   <TableHeaderCell>{t('packageName')}</TableHeaderCell>
                   <TableHeaderCell style={{ width: '100px' }}>{t('version')}</TableHeaderCell>
                   <TableHeaderCell>{t('status')}</TableHeaderCell>
-                  <TableHeaderCell style={{ width: '90px' }} title="Mark as a modified/patched build — appends _CRACKED to the upload name">
-                    <span style={{ fontFamily: 'monospace', fontSize: '11px', color: 'rgba(255,120,0,0.9)', letterSpacing: '0.06em' }}>CRACKED</span>
+                  <TableHeaderCell
+                    style={{ width: '90px' }}
+                    title="Mark as a modified/patched build — appends _CRACKED to the upload name"
+                  >
+                    <span
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        color: 'rgba(255,120,0,0.9)',
+                        letterSpacing: '0.06em'
+                      }}
+                    >
+                      CRACKED
+                    </span>
                   </TableHeaderCell>
                 </TableRow>
               </TableHeader>
@@ -163,7 +212,13 @@ const UploadGamesDialog: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <span style={isCracked ? { color: 'rgba(255,140,0,0.9)', fontFamily: 'monospace' } : undefined}>
+                          <span
+                            style={
+                              isCracked
+                                ? { color: 'rgba(255,140,0,0.9)', fontFamily: 'monospace' }
+                                : undefined
+                            }
+                          >
                             {isCracked ? `${candidate.gameName}_CRACKED` : candidate.gameName}
                           </span>
                         </TableCell>
@@ -190,13 +245,22 @@ const UploadGamesDialog: React.FC = () => {
 
           <DialogActions>
             {queuedCount > 0 && !isQueuing && (
-              <Text size={200} style={{ color: 'rgba(var(--vrcd-neon-raw),0.8)', fontFamily: 'monospace', marginRight: 'auto' }}>
+              <Text
+                size={200}
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.8)',
+                  fontFamily: 'monospace',
+                  marginRight: 'auto'
+                }}
+              >
                 ✓ {queuedCount} queued
               </Text>
             )}
 
             <DialogTrigger disableButtonEnhancement>
-              <Button appearance="secondary" disabled={isQueuing}>{t('cancel')}</Button>
+              <Button appearance="secondary" disabled={isQueuing}>
+                {t('cancel')}
+              </Button>
             </DialogTrigger>
 
             <Button appearance="secondary" onClick={handleReverseSelection} disabled={isQueuing}>

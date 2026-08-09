@@ -11,7 +11,9 @@ if (!version) {
 
 const root = path.join(__dirname, '..', '..')
 const name = fs.readFileSync(path.join(root, '.github', 'release-name.txt'), 'utf-8').trim()
-const changelog = fs.readFileSync(path.join(root, '.github', 'release-changelog.md'), 'utf-8').trim()
+const changelog = fs
+  .readFileSync(path.join(root, '.github', 'release-changelog.md'), 'utf-8')
+  .trim()
 
 const v = version
 

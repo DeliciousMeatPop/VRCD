@@ -1,5 +1,3 @@
-
-
 <p align="center">
   <img src="https://github.com/user-attachments/assets/2ace873a-2aef-4959-af2a-beec4b6d2ff5" width="500">
 </p>
@@ -15,6 +13,7 @@
 [ TARGET ] ANDROID // META QUEST // ALL MODELS
 [ STACK  ] ELECTRON · REACT · TYPESCRIPT
 ```
+
 I REMOVED DISCUSSIONS SINCE PEOPLE WERE ONLY USING IT AS A WAY TO AVOID ADDING LOGS TO AN ISSUE IT SEEMS, EVEN IF THAT WAS NOT THE INTENTION, IN ACTUALITY THAT WAS THE RESULT
 
 ---
@@ -25,39 +24,41 @@ VR CyberDeck is a cross-platform desktop deck for sideloading content to Android
 
 ## `// FORK_NOTE`
 
-VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/apprenticeVr) by **jimzrt**. The core engine — ADB control, the download/upload pipeline, rclone integration, library connection — is theirs. Everything below the surface is a heavy rewrite of the *experience*:
+VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/apprenticeVr) by **jimzrt**. The core engine — ADB control, the download/upload pipeline, rclone integration, library connection — is theirs. Everything below the surface is a heavy rewrite of the _experience_:
 
-| | ApprenticeVR | VR CyberDeck |
-|---|---|---|
-| **Theme** | Stock Fluent UI | Fully optional cyberpunk / neon-terminal rebrand |
-| **Onboarding** | Hardcoded (original) /Configure server before use (forks) | Easily configure an rclone config or json file |
-| **Intro** | None | `UNAUTHORIZED → AUTHORIZED` glitch boot |
-| **Identity** | None | Matrix-style random `g33ky_u$3rn4m3$` per session |
-| **Console** | None | In-header Hacker Console + ADB Shell with quick-command shortcuts and user macros |
-| **Live HUD** | None | Header `// TRANSFER_BUS` strip with rotating progress, speed, ETA |
-| **Library view** | Table only | Table **and** card view, sort presets, table stretches edge-to-edge |
-| **Trailers** | Loads full youtube.com page | Locked-down nocookie embed — no ads, no suggestions, no subscribe |
-| **Downloads** | Sequential | Up to **5 concurrent**, with NEW / UPDATED badges |
-| **Quit safety** | None | Confirmation prompt when transfers are in flight |
-| **Settings** | Flat panel | Collapsible sections, accent color, font picker, tab memory |
-| **A11y** | Limited | Full colorblind theming, font picker, font scale to 200%, 900x640 min size |
-| **Sound** | None | Optional drop-in click / type / matrix sound effects |
-| **Updates** | Manual | In-app auto-updater on every platform |
+|                  | ApprenticeVR                                              | VR CyberDeck                                                                      |
+| ---------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Theme**        | Stock Fluent UI                                           | Fully optional cyberpunk / neon-terminal rebrand                                  |
+| **Onboarding**   | Hardcoded (original) /Configure server before use (forks) | Easily configure an rclone config or json file                                    |
+| **Intro**        | None                                                      | `UNAUTHORIZED → AUTHORIZED` glitch boot                                           |
+| **Identity**     | None                                                      | Matrix-style random `g33ky_u$3rn4m3$` per session                                 |
+| **Console**      | None                                                      | In-header Hacker Console + ADB Shell with quick-command shortcuts and user macros |
+| **Live HUD**     | None                                                      | Header `// TRANSFER_BUS` strip with rotating progress, speed, ETA                 |
+| **Library view** | Table only                                                | Table **and** card view, sort presets, table stretches edge-to-edge               |
+| **Trailers**     | Loads full youtube.com page                               | Locked-down nocookie embed — no ads, no suggestions, no subscribe                 |
+| **Downloads**    | Sequential                                                | Up to **5 concurrent**, with NEW / UPDATED badges                                 |
+| **Quit safety**  | None                                                      | Confirmation prompt when transfers are in flight                                  |
+| **Settings**     | Flat panel                                                | Collapsible sections, accent color, font picker, tab memory                       |
+| **A11y**         | Limited                                                   | Full colorblind theming, font picker, font scale to 200%, 900x640 min size        |
+| **Sound**        | None                                                      | Optional drop-in click / type / matrix sound effects                              |
+| **Updates**      | Manual                                                    | In-app auto-updater on every platform                                             |
 
 ---
 
 ## `// FEATURES`
 
 **`[ LIBRARY ]`** — optional, only when you add a server
+
 - Sideloader-first: works on first launch with zero config; a library is entirely opt-in
 - Add your own server under **Manage Remotes** (a server config or an rclone config) to unlock a browsable library
 - Card view + table view, persistent sort, size presets, 18+ filter
 - Table view stretches to fill the window so wide screens aren't wasted
-- `NEW` / `UPDATED` badges driven off real `lastUpdated` timestamps 
+- `NEW` / `UPDATED` badges driven off real `lastUpdated` timestamps
 
 // NOTE: `NEW` = added to the library in the last 30 days. `UPDATED` = existing game updated in the last 7 days. Both badges can appear on the same title simultaneously.
 
 **`[ TRANSFERS ]`**
+
 - Up to 5 parallel downloads with live progress
 - Live `// TRANSFER_BUS` strip in the header — rotates through active transfers with name, stage, %, speed, and ETA
 - Unified Transfers drawer with stage-aware labels (`Installing APK...`, `Copying OBB...`)
@@ -66,6 +67,7 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 - Close the window mid-transfer? Cyberdeck warns you with `[ TRANSFERS IN PROGRESS ]` before letting you bail (works for both X and Cmd+Q on macOS)
 
 **`[ DEVICE / ADB ]`**
+
 - Auto-connect Quest on launch
 - ADB Shell dialog with built-in **quick-command shortcuts**:
   - `PERFORMANCE` — pin CPU/GPU level, swap refresh rate (72/90/120Hz), reset texture
@@ -78,10 +80,12 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 - WiFi bookmarks for wireless ADB
 
 **`[ TRAILERS ]`**
+
 - Locked-down `youtube-nocookie.com/embed/` player — no ads, no suggested videos, no subscribe button, no comments, no end-screen "Watch next" grid
 - Autoplays as soon as you open the trailer drawer
 
 **`[ INTERFACE ]`**
+
 - Glitch boot intro, neon Hacker Console, themed dialogs top to bottom
 - Compact laptop-friendly header — drops down to a 900x640 min window
 - Dark mode done right (no half-themed popups)
@@ -96,25 +100,27 @@ VR CyberDeck started as a fork of [**ApprenticeVR**](https://github.com/jimzrt/a
 
 ## `// DOWNLOAD`
 
-| File | Platform |
-|------|----------|
-| `vr-cyberdeck-x.x.x-x64.dmg` | macOS x64 |
-| `vr-cyberdeck-x.x.x-arm64.dmg` | macOS arm64 |
-| `vr-cyberdeck-x.x.x-setup-x64.exe` | Windows — Installer |
-| `vr-cyberdeck-x.x.x-portable-x64.exe` | Windows — Portable |
-| `vr-cyberdeck-x.x.x-x86_64.AppImage` | Linux x64 |
-| `vr-cyberdeck-x.x.x-arm64.AppImage` | Linux ARM64 |
-| `vr-cyberdeck-x.x.x-amd64.deb` | Debian/Ubuntu x64 |
-| `vr-cyberdeck-x.x.x-arm64.deb` | Debian/Ubuntu ARM64 |
+| File                                  | Platform            |
+| ------------------------------------- | ------------------- |
+| `vr-cyberdeck-x.x.x-x64.dmg`          | macOS x64           |
+| `vr-cyberdeck-x.x.x-arm64.dmg`        | macOS arm64         |
+| `vr-cyberdeck-x.x.x-setup-x64.exe`    | Windows — Installer |
+| `vr-cyberdeck-x.x.x-portable-x64.exe` | Windows — Portable  |
+| `vr-cyberdeck-x.x.x-x86_64.AppImage`  | Linux x64           |
+| `vr-cyberdeck-x.x.x-arm64.AppImage`   | Linux ARM64         |
+| `vr-cyberdeck-x.x.x-amd64.deb`        | Debian/Ubuntu x64   |
+| `vr-cyberdeck-x.x.x-arm64.deb`        | Debian/Ubuntu ARM64 |
 
 Always grab the latest release. If it's already installed, just update in-app.
 
 **macOS — "App is damaged":**
+
 ```
 xattr -c /Applications/VR\ CyberDeck.app
 ```
 
 **Linux AppImage:**
+
 ```
 chmod +x vr-cyberdeck-x.x.x-x86_64.AppImage
 ./vr-cyberdeck-x.x.x-x86_64.AppImage
@@ -132,7 +138,6 @@ chmod +x vr-cyberdeck-x.x.x-x86_64.AppImage
 That's it — no account, no server, no JSON to edit.
 
 > Want a browsable library instead? Add your own server — a server config or your own rclone config — under **Manage Remotes**. Other advanced flows live in **Other Settings**. [Tutorial Video for Server Setup](https://streamable.com/v0ljxx)
-
 
 > Power user? Open the **ADB Shell** right from the deck — the shortcut panel above the terminal covers most Quest tweaks in one click, and you can save your own commands as `MY MACROS` pills.
 
@@ -158,11 +163,11 @@ If you've got a sound clip you think would suit the UI (terminal click, mechanic
 npm install --legacy-peer-deps
 ```
 
-| Platform | Command |
-|----------|---------|
-| Windows | `npx electron-vite build && npx electron-builder --win --x64` |
-| macOS | `npx electron-vite build && npx electron-builder --mac --x64` |
-| Linux | `npx electron-vite build && npx electron-builder --linux --x64` |
+| Platform | Command                                                         |
+| -------- | --------------------------------------------------------------- |
+| Windows  | `npx electron-vite build && npx electron-builder --win --x64`   |
+| macOS    | `npx electron-vite build && npx electron-builder --mac --x64`   |
+| Linux    | `npx electron-vite build && npx electron-builder --linux --x64` |
 
 ---
 

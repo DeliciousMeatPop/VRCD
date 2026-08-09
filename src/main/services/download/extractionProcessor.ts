@@ -6,6 +6,7 @@ import dependencyService from '../dependencyService'
 import { DownloadItem, DownloadStatus } from '@shared/types'
 import mirrorService from '../mirrorService'
 import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
+import { parseReleaseManifest, RELEASE_MANIFEST_FILENAME } from './releaseManifest'
 import { type DownloadedFile, validateDownloadCompletion } from './archiveDiscovery'
 
 // Type for VRP config - reuse or import
@@ -114,12 +115,11 @@ export class ExtractionProcessor {
         console.log(`[ExtractProc] Starting extraction for nested archive: ${nestedArchivePath}.`)
 
         try {
-          await execa(sevenZipPath, [
-            'x', nestedArchivePath,
-            '-y',
-            `-o${baseExtractPath}`,
-            '-mmt=on'
-          ], { windowsHide: true })
+          await execa(
+            sevenZipPath,
+            ['x', nestedArchivePath, '-y', `-o${baseExtractPath}`, '-mmt=on'],
+            { windowsHide: true }
+          )
           console.log(`[ExtractProc] Nested extraction complete for ${archiveName}`)
 
           try {
@@ -229,6 +229,12 @@ export class ExtractionProcessor {
       this.updateItemStatus(item.releaseName, 'Extracting', 100, undefined, undefined, undefined, 0)
       await this.extractNestedArchives(downloadPath, item.releaseName)
 
+      const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      if (!manifestCheck.ok) {
+        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
+        return false
+      }
+
       // Update final status to Completed
       this.updateItemStatus(
         item.releaseName,
@@ -244,9 +250,7 @@ export class ExtractionProcessor {
 
     const completion = validateDownloadCompletion(downloadedFiles, true)
     if (!completion.ok || !completion.archive) {
-      const error = completion.ok
-        ? 'No usable .7z.001 archive was found.'
-        : completion.error
+      const error = completion.ok ? 'No usable .7z.001 archive was found.' : completion.error
       console.error(`[ExtractProc] Archive validation failed for ${item.releaseName}: ${error}`)
       this.updateItemStatus(item.releaseName, 'Error', 100, error)
       return false
@@ -260,7 +264,12 @@ export class ExtractionProcessor {
     let decodedPassword = ''
     if (!this.vrpConfig?.password) {
       console.error(`[ExtractProc] Missing server password for extraction of ${item.releaseName}.`)
-      this.updateItemStatus(item.releaseName, 'Error', 100, 'Missing server password for extraction')
+      this.updateItemStatus(
+        item.releaseName,
+        'Error',
+        100,
+        'Missing server password for extraction'
+      )
       return false
     }
     try {
@@ -290,17 +299,18 @@ export class ExtractionProcessor {
     let stderrContent = ''
     let stdoutContent = ''
     try {
-      const proc = execa(sevenZipPath, [
-        'x', archivePath,
-        '-y',
-        `-o${downloadPath}`,
-        `-p${decodedPassword}`,
-        '-bsp1',
-        '-mmt=on'
-      ], { windowsHide: true, buffer: false })
+      const proc = execa(
+        sevenZipPath,
+        ['x', archivePath, '-y', `-o${downloadPath}`, `-p${decodedPassword}`, '-bsp1', '-mmt=on'],
+        { windowsHide: true, buffer: false }
+      )
 
       this.activeExtractions.set(item.releaseName, () => {
-        try { proc.kill('SIGTERM') } catch { /* noop */ }
+        try {
+          proc.kill('SIGTERM')
+        } catch {
+          /* noop */
+        }
       })
       console.log(`[ExtractProc] 7zip started for ${item.releaseName}`)
 
@@ -443,6 +453,12 @@ export class ExtractionProcessor {
 
       await this.extractNestedArchives(downloadPath, item.releaseName)
 
+      const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      if (!manifestCheck.ok) {
+        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
+        return false
+      }
+
       // Update final status to Completed
       this.updateItemStatus(
         item.releaseName,
@@ -459,10 +475,13 @@ export class ExtractionProcessor {
       const statusBeforeCatch = currentItemState?.status ?? 'Unknown'
 
       // Handle intentional termination (SIGTERM / cancelled)
-      const isExecaLike = (err: unknown): err is { isCanceled?: boolean; exitCode?: number; signal?: string } =>
+      const isExecaLike = (
+        err: unknown
+      ): err is { isCanceled?: boolean; exitCode?: number; signal?: string } =>
         typeof err === 'object' && err !== null && 'exitCode' in err
       if (
-        (isExecaLike(error) && (error.isCanceled || error.exitCode === 143 || error.signal === 'SIGTERM')) ||
+        (isExecaLike(error) &&
+          (error.isCanceled || error.exitCode === 143 || error.signal === 'SIGTERM')) ||
         (error instanceof Error && /killed|SIGTERM|SIGKILL|exit code 14[37]/.test(error.message))
       ) {
         console.log(
@@ -500,9 +519,17 @@ export class ExtractionProcessor {
         // corrupt/incomplete encrypted data — keep the phrase (the diagnosis UI
         // keys off it) but make the raw message honest about the corruption case.
         errorMessage = 'Wrong password or corrupt archive — 7-Zip could not unpack the download'
-      } else if (combinedOutput.includes('data error') || combinedOutput.includes('crc failed') || combinedOutput.includes('crc error')) {
+      } else if (
+        combinedOutput.includes('data error') ||
+        combinedOutput.includes('crc failed') ||
+        combinedOutput.includes('crc error')
+      ) {
         errorMessage = 'Data/CRC error - archive may be corrupt'
-      } else if (combinedOutput.includes('no space left') || combinedOutput.includes('not enough space') || combinedOutput.includes('disk full')) {
+      } else if (
+        combinedOutput.includes('no space left') ||
+        combinedOutput.includes('not enough space') ||
+        combinedOutput.includes('disk full')
+      ) {
         errorMessage = 'Insufficient disk space during extraction'
       } else if (isExecaLike(error) && error.exitCode === 1) {
         const diagnosticOutput = (stderrContent || stdoutContent).trim()
@@ -540,6 +567,79 @@ export class ExtractionProcessor {
       }
       return false // Indicate failure
     }
+  }
+
+  /**
+   * Verify the extracted files against the release's `release.manifest`, which
+   * lists the exact byte size of every file in the release. A missing or
+   * size-mismatched file means the extraction is incomplete or corrupt and the
+   * game would launch with missing/partial resources (a common cause of
+   * crashes), so it fails the item.
+   *
+   * The check is authoritative (exact byte sizes, no user input needed) but only
+   * runs when the manifest is present and parseable — older releases without a
+   * manifest, or an unreadable one, are skipped so this never blocks an
+   * otherwise-good install. Only files listed in the manifest are checked; extra
+   * files in the folder (including release.manifest itself) are ignored.
+   */
+  private async verifyAgainstReleaseManifest(
+    downloadPath: string,
+    releaseName: string
+  ): Promise<{ ok: boolean; error?: string }> {
+    const manifestPath = join(downloadPath, RELEASE_MANIFEST_FILENAME)
+    if (!existsSync(manifestPath)) {
+      console.log(
+        `[ExtractProc] No ${RELEASE_MANIFEST_FILENAME} for ${releaseName}; skipping manifest verification.`
+      )
+      return { ok: true }
+    }
+
+    let files: ReturnType<typeof parseReleaseManifest>['files']
+    try {
+      const text = await fs.readFile(manifestPath, 'utf-8')
+      files = parseReleaseManifest(text).files
+    } catch (err) {
+      console.warn(
+        `[ExtractProc] Could not read/parse ${RELEASE_MANIFEST_FILENAME} for ${releaseName}; skipping verification.`,
+        err
+      )
+      return { ok: true }
+    }
+
+    if (files.length === 0) {
+      console.warn(
+        `[ExtractProc] ${RELEASE_MANIFEST_FILENAME} for ${releaseName} listed no files; skipping verification.`
+      )
+      return { ok: true }
+    }
+
+    const mismatches: string[] = []
+    for (const entry of files) {
+      const localPath = join(downloadPath, ...entry.path.split('/'))
+      try {
+        const stat = await fs.stat(localPath)
+        if (!stat.isFile()) {
+          mismatches.push(`${entry.path} (not a file)`)
+        } else if (stat.size !== entry.size) {
+          mismatches.push(`${entry.path} (expected ${entry.size} B, found ${stat.size} B)`)
+        }
+      } catch {
+        mismatches.push(`${entry.path} (missing)`)
+      }
+    }
+
+    if (mismatches.length > 0) {
+      const detail = mismatches.slice(0, 8).join('; ')
+      const more = mismatches.length > 8 ? ` (+${mismatches.length - 8} more)` : ''
+      const error = `Extracted files do not match ${RELEASE_MANIFEST_FILENAME}: ${mismatches.length} problem(s): ${detail}${more}`
+      console.error(`[ExtractProc] ${error} (${releaseName})`)
+      return { ok: false, error: error.substring(0, 500) }
+    }
+
+    console.log(
+      `[ExtractProc] Verified ${files.length} extracted file(s) against ${RELEASE_MANIFEST_FILENAME} for ${releaseName}.`
+    )
+    return { ok: true }
   }
 
   // Method to check if extraction is active

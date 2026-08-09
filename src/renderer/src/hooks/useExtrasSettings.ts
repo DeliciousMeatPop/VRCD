@@ -75,7 +75,9 @@ function readDeleteOnRemove(): DeleteOnRemove {
   try {
     const v = localStorage.getItem(DELETE_ON_REMOVE_KEY)
     if (v === 'delete' || v === 'keep' || v === 'ask') return v
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'ask'
 }
 
@@ -124,15 +126,20 @@ export function getFontFamilyChoice(): FontFamilyChoice {
   try {
     const v = localStorage.getItem(FONT_FAMILY_KEY)
     if (v && v in FONT_FAMILY_OPTIONS) return v as FontFamilyChoice
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return DEFAULT_FONT_FAMILY
 }
 
 export function applyFontFamily(choice: FontFamilyChoice): void {
   try {
-    const stack = FONT_FAMILY_OPTIONS[choice]?.stack ?? FONT_FAMILY_OPTIONS[DEFAULT_FONT_FAMILY].stack
+    const stack =
+      FONT_FAMILY_OPTIONS[choice]?.stack ?? FONT_FAMILY_OPTIONS[DEFAULT_FONT_FAMILY].stack
     document.documentElement.style.setProperty('--vrcd-font-mono', stack)
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 // Convert "#RRGGBB" → "R, G, B" raw triple for use in rgba()
@@ -155,7 +162,9 @@ export function applyAccentColor(hex: string | null): void {
     if (!raw) return
     root.style.setProperty('--vrcd-neon', hex)
     root.style.setProperty('--vrcd-neon-raw', raw)
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 // ─── Bootstrap helpers (called outside React, e.g. in App.tsx) ─────────────
@@ -216,41 +225,88 @@ export interface ExtrasSettings {
 
 export function useExtrasSettings(): ExtrasSettings {
   const [showIntro, setShowIntroState] = useState<boolean>(() => readBool(INTRO_STORAGE_KEY, true))
-  const [showBreach, setShowBreachState] = useState<boolean>(() => readBool(BREACH_STORAGE_KEY, true))
-  const [showMatrixShell, setShowMatrixShellState] = useState<boolean>(() => readBool(MATRIX_SHELL_STORAGE_KEY, true))
-  const [disableAllExtras, setDisableAllExtrasState] = useState<boolean>(() => readBool(DISABLE_ALL_EXTRAS_KEY, false))
-  const [disableAutoUpdate, setDisableAutoUpdateState] = useState<boolean>(() => readBool(DISABLE_AUTO_UPDATE_KEY, false))
+  const [showBreach, setShowBreachState] = useState<boolean>(() =>
+    readBool(BREACH_STORAGE_KEY, true)
+  )
+  const [showMatrixShell, setShowMatrixShellState] = useState<boolean>(() =>
+    readBool(MATRIX_SHELL_STORAGE_KEY, true)
+  )
+  const [disableAllExtras, setDisableAllExtrasState] = useState<boolean>(() =>
+    readBool(DISABLE_ALL_EXTRAS_KEY, false)
+  )
+  const [disableAutoUpdate, setDisableAutoUpdateState] = useState<boolean>(() =>
+    readBool(DISABLE_AUTO_UPDATE_KEY, false)
+  )
   const [fontScale, setFontScaleState] = useState<number>(() => getFontScale())
   const [deleteOnRemove, setDeleteOnRemoveState] = useState<DeleteOnRemove>(readDeleteOnRemove)
-  const [disableSideloading, setDisableSideloadingState] = useState<boolean>(() => readBool(DISABLE_SIDELOADING_KEY, false))
-  const [colorblindMode, setColorblindModeState] = useState<boolean>(() => readBool(COLORBLIND_MODE_KEY, false))
+  const [disableSideloading, setDisableSideloadingState] = useState<boolean>(() =>
+    readBool(DISABLE_SIDELOADING_KEY, false)
+  )
+  const [colorblindMode, setColorblindModeState] = useState<boolean>(() =>
+    readBool(COLORBLIND_MODE_KEY, false)
+  )
   const [accentColor, setAccentColorState] = useState<string | null>(() => getAccentColor())
   const [fontFamily, setFontFamilyState] = useState<FontFamilyChoice>(() => getFontFamilyChoice())
-  const [skipUninstallWarning, setSkipUninstallWarningState] = useState<boolean>(() => getSkipUninstallWarning())
-  const [backupBetaAgreed, setBackupBetaAgreedState] = useState<boolean>(() => getBackupBetaAgreed())
+  const [skipUninstallWarning, setSkipUninstallWarningState] = useState<boolean>(() =>
+    getSkipUninstallWarning()
+  )
+  const [backupBetaAgreed, setBackupBetaAgreedState] = useState<boolean>(() =>
+    getBackupBetaAgreed()
+  )
 
   const persistBool = (key: string, value: boolean): void => {
-    try { localStorage.setItem(key, String(value)) } catch { /* ignore */ }
+    try {
+      localStorage.setItem(key, String(value))
+    } catch {
+      /* ignore */
+    }
   }
 
   const persistNumber = (key: string, value: number): void => {
-    try { localStorage.setItem(key, String(value)) } catch { /* ignore */ }
+    try {
+      localStorage.setItem(key, String(value))
+    } catch {
+      /* ignore */
+    }
   }
 
-  const setShowIntro = useCallback((v: boolean) => { setShowIntroState(v); persistBool(INTRO_STORAGE_KEY, v) }, [])
-  const setShowBreach = useCallback((v: boolean) => { setShowBreachState(v); persistBool(BREACH_STORAGE_KEY, v) }, [])
-  const setShowMatrixShell = useCallback((v: boolean) => { setShowMatrixShellState(v); persistBool(MATRIX_SHELL_STORAGE_KEY, v) }, [])
-  const setDisableAllExtras = useCallback((v: boolean) => { setDisableAllExtrasState(v); persistBool(DISABLE_ALL_EXTRAS_KEY, v) }, [])
-  const setDisableAutoUpdate = useCallback((v: boolean) => { setDisableAutoUpdateState(v); persistBool(DISABLE_AUTO_UPDATE_KEY, v) }, [])
+  const setShowIntro = useCallback((v: boolean) => {
+    setShowIntroState(v)
+    persistBool(INTRO_STORAGE_KEY, v)
+  }, [])
+  const setShowBreach = useCallback((v: boolean) => {
+    setShowBreachState(v)
+    persistBool(BREACH_STORAGE_KEY, v)
+  }, [])
+  const setShowMatrixShell = useCallback((v: boolean) => {
+    setShowMatrixShellState(v)
+    persistBool(MATRIX_SHELL_STORAGE_KEY, v)
+  }, [])
+  const setDisableAllExtras = useCallback((v: boolean) => {
+    setDisableAllExtrasState(v)
+    persistBool(DISABLE_ALL_EXTRAS_KEY, v)
+  }, [])
+  const setDisableAutoUpdate = useCallback((v: boolean) => {
+    setDisableAutoUpdateState(v)
+    persistBool(DISABLE_AUTO_UPDATE_KEY, v)
+  }, [])
   const setFontScale = useCallback((v: number) => {
     const clamped = Math.max(0.75, Math.min(2.0, v))
     setFontScaleState(clamped)
     persistNumber(FONT_SCALE_KEY, clamped)
-    try { window.api.app.setZoomFactor(clamped) } catch { /* ignore */ }
+    try {
+      window.api.app.setZoomFactor(clamped)
+    } catch {
+      /* ignore */
+    }
   }, [])
   const setDeleteOnRemove = useCallback((v: DeleteOnRemove) => {
     setDeleteOnRemoveState(v)
-    try { localStorage.setItem(DELETE_ON_REMOVE_KEY, v) } catch { /* ignore */ }
+    try {
+      localStorage.setItem(DELETE_ON_REMOVE_KEY, v)
+    } catch {
+      /* ignore */
+    }
   }, [])
   const setDisableSideloading = useCallback((v: boolean) => {
     setDisableSideloadingState(v)
@@ -259,7 +315,9 @@ export function useExtrasSettings(): ExtrasSettings {
     // and otherwise has no way to see this flag.
     try {
       window.api.downloads.setSideloadingDisabled(v)
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [])
   const setColorblindMode = useCallback((v: boolean) => {
     setColorblindModeState(v)
@@ -267,19 +325,27 @@ export function useExtrasSettings(): ExtrasSettings {
     try {
       if (v) document.documentElement.classList.add('vrcd-colorblind')
       else document.documentElement.classList.remove('vrcd-colorblind')
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [])
   const setAccentColor = useCallback((v: string | null) => {
     setAccentColorState(v)
     try {
       if (v === null) localStorage.removeItem(ACCENT_COLOR_KEY)
       else localStorage.setItem(ACCENT_COLOR_KEY, v)
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     applyAccentColor(v)
   }, [])
   const setFontFamily = useCallback((v: FontFamilyChoice) => {
     setFontFamilyState(v)
-    try { localStorage.setItem(FONT_FAMILY_KEY, v) } catch { /* ignore */ }
+    try {
+      localStorage.setItem(FONT_FAMILY_KEY, v)
+    } catch {
+      /* ignore */
+    }
     applyFontFamily(v)
   }, [])
   const setSkipUninstallWarning = useCallback((v: boolean) => {
@@ -295,7 +361,9 @@ export function useExtrasSettings(): ExtrasSettings {
   useEffect(() => {
     try {
       document.documentElement.style.setProperty('--vrcd-font-scale', String(fontScale))
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [fontScale])
 
   // Keep html class in sync with state and override inline CSS vars so the
@@ -315,12 +383,38 @@ export function useExtrasSettings(): ExtrasSettings {
         root.style.removeProperty('--vrcd-purple-raw')
         applyAccentColor(accentColor)
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [colorblindMode, accentColor])
 
   return {
-    showIntro, showBreach, showMatrixShell, disableAllExtras, disableAutoUpdate, fontScale, deleteOnRemove, disableSideloading, colorblindMode, accentColor, fontFamily, skipUninstallWarning, backupBetaAgreed,
-    setShowIntro, setShowBreach, setShowMatrixShell, setDisableAllExtras, setDisableAutoUpdate, setFontScale, setDeleteOnRemove, setDisableSideloading, setColorblindMode, setAccentColor, setFontFamily, setSkipUninstallWarning, setBackupBetaAgreed
+    showIntro,
+    showBreach,
+    showMatrixShell,
+    disableAllExtras,
+    disableAutoUpdate,
+    fontScale,
+    deleteOnRemove,
+    disableSideloading,
+    colorblindMode,
+    accentColor,
+    fontFamily,
+    skipUninstallWarning,
+    backupBetaAgreed,
+    setShowIntro,
+    setShowBreach,
+    setShowMatrixShell,
+    setDisableAllExtras,
+    setDisableAutoUpdate,
+    setFontScale,
+    setDeleteOnRemove,
+    setDisableSideloading,
+    setColorblindMode,
+    setAccentColor,
+    setFontFamily,
+    setSkipUninstallWarning,
+    setBackupBetaAgreed
   }
 }
 
@@ -329,7 +423,9 @@ try {
   const initial = getFontScale()
   document.documentElement.style.setProperty('--vrcd-font-scale', String(initial))
   window.api.app.setZoomFactor(initial)
-} catch { /* ignore */ }
+} catch {
+  /* ignore */
+}
 
 try {
   if (getColorblindMode()) {
@@ -340,18 +436,26 @@ try {
     root.style.setProperty('--vrcd-purple', '#ff8c00')
     root.style.setProperty('--vrcd-purple-raw', '255, 140, 0')
   }
-} catch { /* ignore */ }
+} catch {
+  /* ignore */
+}
 
 try {
   applyFontFamily(getFontFamilyChoice())
-} catch { /* ignore */ }
+} catch {
+  /* ignore */
+}
 
 try {
   applyAccentColor(getAccentColor())
-} catch { /* ignore */ }
+} catch {
+  /* ignore */
+}
 
 // Push the persisted sideloading-disabled flag to the main process at boot
 // so the auto-install pipeline honors it before the user touches Settings.
 try {
   window.api.downloads.setSideloadingDisabled(getSideloadingDisabled())
-} catch { /* ignore */ }
+} catch {
+  /* ignore */
+}

@@ -48,14 +48,17 @@ const SURFACE_VARS = {
   '--colorBrandBackground': NEON,
   '--colorNeutralForegroundOnBrand': BG,
   '--colorPaletteRedForeground1': '#ff5555',
-  '--colorPaletteRedBackground2': 'rgba(255,50,50,0.12)',
+  '--colorPaletteRedBackground2': 'rgba(255,50,50,0.12)'
 } as React.CSSProperties
 
 interface GameDetailsDialogProps {
   game: GameInfo | null
   open: boolean
   onClose: () => void
-  downloadStatusMap: Map<string, { status: string; progress: number; error?: string; downloadPath?: string }>
+  downloadStatusMap: Map<
+    string,
+    { status: string; progress: number; error?: string; downloadPath?: string }
+  >
   onInstall: (game: GameInfo) => void
   onUninstall: (game: GameInfo) => Promise<void>
   onReinstall: (game: GameInfo) => Promise<void>
@@ -74,11 +77,25 @@ interface GameDetailsDialogProps {
 }
 
 const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
-  game, open, onClose, downloadStatusMap,
-  onInstall, onUninstall, onReinstall, onUpdate,
-  onRetry, onCancelDownload, onDeleteDownloaded,
-  onInstallFromCompleted, onUninstallAndUpdate, onDismissUpdateError,
-  getNote, isConnected, isBusy, isStarred, onToggleStarred
+  game,
+  open,
+  onClose,
+  downloadStatusMap,
+  onInstall,
+  onUninstall,
+  onReinstall,
+  onUpdate,
+  onRetry,
+  onCancelDownload,
+  onDeleteDownloaded,
+  onInstallFromCompleted,
+  onUninstallAndUpdate,
+  onDismissUpdateError,
+  getNote,
+  isConnected,
+  isBusy,
+  isStarred,
+  onToggleStarred
 }) => {
   const { getTrailerUrl } = useGames()
   const { selectedDevice } = useAdb()
@@ -157,11 +174,19 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       setLoadingNote(true)
       setCurrentGameNote(null)
       getNote(game.releaseName)
-        .then((n) => { if (alive) setCurrentGameNote(n) })
-        .catch(() => { if (alive) setCurrentGameNote('Error loading note.') })
-        .finally(() => { if (alive) setLoadingNote(false) })
+        .then((n) => {
+          if (alive) setCurrentGameNote(n)
+        })
+        .catch(() => {
+          if (alive) setCurrentGameNote('Error loading note.')
+        })
+        .finally(() => {
+          if (alive) setLoadingNote(false)
+        })
     }
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
   }, [open, game, getNote])
 
   useEffect(() => {
@@ -171,11 +196,19 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       setTrailerUrl(null)
       setTrailerOpen(false)
       getTrailerUrl(game.name, game.packageName)
-        .then((url) => { if (alive && url) setTrailerUrl(url) })
-        .catch(() => { /* no trailer */ })
-        .finally(() => { if (alive) setLoadingVideo(false) })
+        .then((url) => {
+          if (alive && url) setTrailerUrl(url)
+        })
+        .catch(() => {
+          /* no trailer */
+        })
+        .finally(() => {
+          if (alive) setLoadingVideo(false)
+        })
     }
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
   }, [open, game, getTrailerUrl])
 
   const renderActionButtons = (g: GameInfo): React.ReactNode => {
@@ -186,102 +219,209 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     const isErrorOrCancelled = status === 'Error' || status === 'Cancelled'
     const isInstalling = status === 'Installing'
     const noSideload = getSideloadingDisabled()
-    const isSignatureMismatch = isInstallError && isSignatureMismatchError(downloadStatusMap.get(g.releaseName || '')?.error)
+    const isSignatureMismatch =
+      isInstallError && isSignatureMismatchError(downloadStatusMap.get(g.releaseName || '')?.error)
 
-    if (isInstalling) return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Spinner size="small" /><Text>Installing...</Text>
-      </div>
-    )
-    if (canCancel) return (
-      <Button appearance="secondary" style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }} icon={<DismissRegular />} onClick={() => onCancelDownload(g)} disabled={isBusy}>
-        Cancel Download
-      </Button>
-    )
-    if (isSignatureMismatch) return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div
-          style={{
-            fontSize: 12,
-            fontFamily: 'monospace',
-            color: '#ff5555',
-            lineHeight: 1.5,
-            border: '1px solid rgba(255,85,85,0.4)',
-            borderRadius: 6,
-            padding: '8px 10px',
-            background: 'rgba(255,50,50,0.06)'
-          }}
-        >
-          The installed version of this app was signed with a different certificate than this
-          update. To install the update, the existing app must be uninstalled first -{' '}
-          <strong>this will erase its save data, progress, and settings.</strong>
+    if (isInstalling)
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Spinner size="small" />
+          <Text>Installing...</Text>
         </div>
+      )
+    if (canCancel)
+      return (
+        <Button
+          appearance="secondary"
+          style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+          icon={<DismissRegular />}
+          onClick={() => onCancelDownload(g)}
+          disabled={isBusy}
+        >
+          Cancel Download
+        </Button>
+      )
+    if (isSignatureMismatch)
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: '#ff5555',
+              lineHeight: 1.5,
+              border: '1px solid rgba(255,85,85,0.4)',
+              borderRadius: 6,
+              padding: '8px 10px',
+              background: 'rgba(255,50,50,0.06)'
+            }}
+          >
+            The installed version of this app was signed with a different certificate than this
+            update. To install the update, the existing app must be uninstalled first -{' '}
+            <strong>this will erase its save data, progress, and settings.</strong>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {!noSideload && (
+              <Button
+                appearance="secondary"
+                style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.7)', fontWeight: 600 }}
+                icon={<UninstallIcon />}
+                onClick={() => onUninstallAndUpdate(g)}
+                disabled={!isConnected || isBusy}
+              >
+                Uninstall &amp; Update (Erase Save Data)
+              </Button>
+            )}
+            <Button
+              appearance="secondary"
+              onClick={() => onDismissUpdateError(g)}
+              disabled={isBusy}
+            >
+              Don&apos;t Update
+            </Button>
+            <Button
+              appearance="secondary"
+              icon={<InfoRegular />}
+              style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+              onClick={() => setErrorDetailOpen(true)}
+            >
+              Error info
+            </Button>
+          </div>
+        </div>
+      )
+    if (isInstallError || isErrorOrCancelled)
+      return (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button
+            appearance="primary"
+            icon={<ArrowClockwiseRegular />}
+            onClick={() => onRetry(g)}
+            disabled={isBusy}
+          >
+            Retry
+          </Button>
+          {(isInstallError || status === 'Error') && (
+            <Button
+              appearance="secondary"
+              icon={<InfoRegular />}
+              style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+              onClick={() => setErrorDetailOpen(true)}
+            >
+              Error info
+            </Button>
+          )}
+          <Button
+            appearance="secondary"
+            style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+            icon={<DeleteRegular />}
+            onClick={() => onDeleteDownloaded(g)}
+            disabled={isBusy}
+          >
+            Delete Files
+          </Button>
+        </div>
+      )
+    if (g.isInstalled) {
+      if (g.hasUpdate)
+        return (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!noSideload && (
+              <Button
+                appearance="primary"
+                icon={<ArrowUpRegular />}
+                onClick={() => onUpdate(g)}
+                disabled={!isConnected || isBusy}
+              >
+                Update
+              </Button>
+            )}
+            {!noSideload && (
+              <Button
+                appearance="secondary"
+                style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+                icon={<UninstallIcon />}
+                onClick={() => onUninstall(g)}
+                disabled={!isConnected || isBusy}
+              >
+                Uninstall
+              </Button>
+            )}
+            {noSideload && (
+              <Text
+                size={200}
+                style={{ color: 'rgba(var(--vrcd-neon-raw),0.5)', fontFamily: 'monospace' }}
+              >
+                Sideloading disabled
+              </Text>
+            )}
+          </div>
+        )
+      return (
+        <div style={{ display: 'flex', gap: 8 }}>
           {!noSideload && (
             <Button
               appearance="secondary"
-              style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.7)', fontWeight: 600 }}
-              icon={<UninstallIcon />}
-              onClick={() => onUninstallAndUpdate(g)}
+              icon={<ArrowSyncRegular />}
+              onClick={() => onReinstall(g)}
               disabled={!isConnected || isBusy}
             >
-              Uninstall &amp; Update (Erase Save Data)
+              Reinstall
             </Button>
           )}
-          <Button appearance="secondary" onClick={() => onDismissUpdateError(g)} disabled={isBusy}>
-            Don&apos;t Update
-          </Button>
-          <Button
-            appearance="secondary"
-            icon={<InfoRegular />}
-            style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
-            onClick={() => setErrorDetailOpen(true)}
-          >
-            Error info
-          </Button>
-        </div>
-      </div>
-    )
-    if (isInstallError || isErrorOrCancelled) return (
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Button appearance="primary" icon={<ArrowClockwiseRegular />} onClick={() => onRetry(g)} disabled={isBusy}>Retry</Button>
-        {(isInstallError || status === 'Error') && (
-          <Button
-            appearance="secondary"
-            icon={<InfoRegular />}
-            style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
-            onClick={() => setErrorDetailOpen(true)}
-          >
-            Error info
-          </Button>
-        )}
-        <Button appearance="secondary" style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }} icon={<DeleteRegular />} onClick={() => onDeleteDownloaded(g)} disabled={isBusy}>Delete Files</Button>
-      </div>
-    )
-    if (g.isInstalled) {
-      if (g.hasUpdate) return (
-        <div style={{ display: 'flex', gap: 8 }}>
-          {!noSideload && <Button appearance="primary" icon={<ArrowUpRegular />} onClick={() => onUpdate(g)} disabled={!isConnected || isBusy}>Update</Button>}
-          {!noSideload && <Button appearance="secondary" style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }} icon={<UninstallIcon />} onClick={() => onUninstall(g)} disabled={!isConnected || isBusy}>Uninstall</Button>}
-          {noSideload && <Text size={200} style={{ color: 'rgba(var(--vrcd-neon-raw),0.5)', fontFamily: 'monospace' }}>Sideloading disabled</Text>}
-        </div>
-      )
-      return (
-        <div style={{ display: 'flex', gap: 8 }}>
-          {!noSideload && <Button appearance="secondary" icon={<ArrowSyncRegular />} onClick={() => onReinstall(g)} disabled={!isConnected || isBusy}>Reinstall</Button>}
-          {!noSideload && <Button appearance="secondary" style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }} icon={<UninstallIcon />} onClick={() => onUninstall(g)} disabled={!isConnected || isBusy}>Uninstall</Button>}
-          {noSideload && <Text size={200} style={{ color: 'rgba(var(--vrcd-neon-raw),0.5)', fontFamily: 'monospace' }}>Sideloading disabled</Text>}
+          {!noSideload && (
+            <Button
+              appearance="secondary"
+              style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+              icon={<UninstallIcon />}
+              onClick={() => onUninstall(g)}
+              disabled={!isConnected || isBusy}
+            >
+              Uninstall
+            </Button>
+          )}
+          {noSideload && (
+            <Text
+              size={200}
+              style={{ color: 'rgba(var(--vrcd-neon-raw),0.5)', fontFamily: 'monospace' }}
+            >
+              Sideloading disabled
+            </Text>
+          )}
         </div>
       )
     }
-    if (isDownloaded) return (
-      <div style={{ display: 'flex', gap: 8 }}>
-        {!noSideload && <Button appearance="primary" icon={<CheckmarkCircleRegular />} onClick={() => onInstallFromCompleted(g)} disabled={!isConnected || isBusy}>Install</Button>}
-        <Button appearance="secondary" style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }} icon={<DeleteRegular />} onClick={() => onDeleteDownloaded(g)} disabled={isBusy}>Delete Files</Button>
-      </div>
-    )
+    if (isDownloaded)
+      return (
+        <div style={{ display: 'flex', gap: 8 }}>
+          {!noSideload && (
+            <Button
+              appearance="primary"
+              icon={<CheckmarkCircleRegular />}
+              onClick={() => onInstallFromCompleted(g)}
+              disabled={!isConnected || isBusy}
+            >
+              Install
+            </Button>
+          )}
+          <Button
+            appearance="secondary"
+            style={{ color: '#ff5555', borderColor: 'rgba(255,85,85,0.5)' }}
+            icon={<DeleteRegular />}
+            onClick={() => onDeleteDownloaded(g)}
+            disabled={isBusy}
+          >
+            Delete Files
+          </Button>
+        </div>
+      )
     return (
-      <Button appearance="primary" icon={<DownloadIcon />} onClick={() => onInstall(g)} disabled={isBusy}>
+      <Button
+        appearance="primary"
+        icon={<DownloadIcon />}
+        onClick={() => onInstall(g)}
+        disabled={isBusy}
+      >
         Download
       </Button>
     )
@@ -292,19 +432,31 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   const statusEntry = game.releaseName ? downloadStatusMap.get(game.releaseName) : undefined
   const dlStatus = statusEntry?.status
   const dlProgress = statusEntry?.progress ?? 0
-  const showProgress = dlStatus === 'Downloading' || dlStatus === 'Extracting' || dlStatus === 'Installing'
+  const showProgress =
+    dlStatus === 'Downloading' || dlStatus === 'Extracting' || dlStatus === 'Installing'
 
-  const statusColor = game.isInstalled ? NEON
-    : dlStatus === 'Completed' ? 'rgba(var(--vrcd-neon-raw),0.5)'
-    : dlStatus === 'InstallError' || dlStatus === 'Error' ? '#ff5555'
-    : 'rgba(var(--vrcd-neon-raw),0.4)'
-  const statusLabel = game.isInstalled ? (game.hasUpdate ? 'Update Available' : 'Installed')
-    : dlStatus === 'Completed' ? 'Downloaded'
-    : dlStatus === 'InstallError'
-      ? (isSignatureMismatchError(statusEntry?.error) ? 'Signature Mismatch' : 'Install Error')
-    : dlStatus === 'Error' ? 'Download Error'
-    : dlStatus === 'Installing' ? 'Installing...'
-    : 'Not Installed'
+  const statusColor = game.isInstalled
+    ? NEON
+    : dlStatus === 'Completed'
+      ? 'rgba(var(--vrcd-neon-raw),0.5)'
+      : dlStatus === 'InstallError' || dlStatus === 'Error'
+        ? '#ff5555'
+        : 'rgba(var(--vrcd-neon-raw),0.4)'
+  const statusLabel = game.isInstalled
+    ? game.hasUpdate
+      ? 'Update Available'
+      : 'Installed'
+    : dlStatus === 'Completed'
+      ? 'Downloaded'
+      : dlStatus === 'InstallError'
+        ? isSignatureMismatchError(statusEntry?.error)
+          ? 'Signature Mismatch'
+          : 'Install Error'
+        : dlStatus === 'Error'
+          ? 'Download Error'
+          : dlStatus === 'Installing'
+            ? 'Installing...'
+            : 'Not Installed'
 
   return (
     <Dialog open={open} onOpenChange={(_e, d) => !d.open && onClose()} modalType="modal">
@@ -328,29 +480,72 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
         <button
           onClick={onClose}
           style={{
-            position: 'absolute', top: 10, right: 12, zIndex: 10,
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'rgba(var(--vrcd-neon-raw),0.6)', fontSize: 18, lineHeight: 1,
+            position: 'absolute',
+            top: 10,
+            right: 12,
+            zIndex: 10,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'rgba(var(--vrcd-neon-raw),0.6)',
+            fontSize: 18,
+            lineHeight: 1,
             padding: '2px 6px'
           }}
           aria-label="Close"
-        >✕</button>
+        >
+          ✕
+        </button>
 
-        <DialogBody style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
+        <DialogBody
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16
+          }}
+        >
           {/* ── Cover + info row ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 16, alignItems: 'start' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '140px 1fr',
+              gap: 16,
+              alignItems: 'start'
+            }}
+          >
             {/* Cover image */}
             <img
               src={game.thumbnailPath ? `file://${game.thumbnailPath}` : placeholderImage}
               alt={game.name}
-              style={{ width: 140, height: 140, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(var(--vrcd-neon-raw),0.3)', display: 'block' }}
+              style={{
+                width: 140,
+                height: 140,
+                objectFit: 'cover',
+                borderRadius: 8,
+                border: '1px solid rgba(var(--vrcd-neon-raw),0.3)',
+                display: 'block'
+              }}
             />
 
             {/* Game meta */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ flex: 1, fontSize: 18, fontWeight: 700, color: NEON, fontFamily: 'monospace', letterSpacing: '0.04em', lineHeight: 1.2 }}>{game.name}</div>
+                <div
+                  style={{
+                    flex: 1,
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: NEON,
+                    fontFamily: 'monospace',
+                    letterSpacing: '0.04em',
+                    lineHeight: 1.2
+                  }}
+                >
+                  {game.name}
+                </div>
                 <Button
                   appearance="subtle"
                   size="small"
@@ -359,56 +554,137 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   title={isStarred ? t('unstarGame') : t('starGame')}
                   disabled={!game.packageName}
                   onClick={onToggleStarred}
-                  style={{ minWidth: 28, padding: 2, color: isStarred ? NEON : 'rgba(var(--vrcd-neon-raw),0.55)' }}
+                  style={{
+                    minWidth: 28,
+                    padding: 2,
+                    color: isStarred ? NEON : 'rgba(var(--vrcd-neon-raw),0.55)'
+                  }}
                 />
               </div>
-              <div style={{ fontSize: 11, color: `${PURPLE}cc`, fontFamily: 'monospace' }}>{game.packageName}</div>
+              <div style={{ fontSize: 11, color: `${PURPLE}cc`, fontFamily: 'monospace' }}>
+                {game.packageName}
+              </div>
 
               {/* Status badge */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
-                {(dlStatus === 'InstallError' || dlStatus === 'Error') ? (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  flexWrap: 'wrap',
+                  marginTop: 2
+                }}
+              >
+                {dlStatus === 'InstallError' || dlStatus === 'Error' ? (
                   <button
                     type="button"
                     onClick={() => setErrorDetailOpen(true)}
                     title="Click for error details"
                     style={{
-                      fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
-                      color: statusColor, border: `1px solid ${statusColor}`,
-                      borderRadius: 4, padding: '1px 7px', letterSpacing: '0.06em',
-                      background: 'transparent', cursor: 'pointer'
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      fontWeight: 600,
+                      color: statusColor,
+                      border: `1px solid ${statusColor}`,
+                      borderRadius: 4,
+                      padding: '1px 7px',
+                      letterSpacing: '0.06em',
+                      background: 'transparent',
+                      cursor: 'pointer'
                     }}
                   >
                     {statusLabel} ⓘ
                   </button>
                 ) : (
-                  <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 600, color: statusColor, border: `1px solid ${statusColor}`, borderRadius: 4, padding: '1px 7px', letterSpacing: '0.06em' }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      fontWeight: 600,
+                      color: statusColor,
+                      border: `1px solid ${statusColor}`,
+                      borderRadius: 4,
+                      padding: '1px 7px',
+                      letterSpacing: '0.06em'
+                    }}
+                  >
                     {statusLabel}
                   </span>
                 )}
-                <span style={{ fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace' }}>
-                  <DocumentDataRegular fontSize={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />{game.size || '-'}
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                    fontFamily: 'monospace'
+                  }}
+                >
+                  <DocumentDataRegular
+                    fontSize={12}
+                    style={{ verticalAlign: 'middle', marginRight: 3 }}
+                  />
+                  {game.size || '-'}
                 </span>
-                <span style={{ fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace' }}>
-                  <DownloadIcon fontSize={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />{game.downloads?.toLocaleString() || '-'}
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                    fontFamily: 'monospace'
+                  }}
+                >
+                  <DownloadIcon fontSize={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+                  {game.downloads?.toLocaleString() || '-'}
                 </span>
-                <span style={{ fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace' }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                    fontFamily: 'monospace'
+                  }}
+                >
                   <InfoRegular fontSize={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
                   {game.version ? `v${game.version}` : '-'}
-                  {game.isInstalled && game.deviceVersionCode && <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.4)' }}> (dev: v{game.deviceVersionCode})</span>}
+                  {game.isInstalled && game.deviceVersionCode && (
+                    <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.4)' }}>
+                      {' '}
+                      (dev: v{game.deviceVersionCode})
+                    </span>
+                  )}
                 </span>
               </div>
 
-              <div style={{ height: '1px', background: 'rgba(var(--vrcd-neon-raw),0.15)', marginTop: 4 }} />
+              <div
+                style={{
+                  height: '1px',
+                  background: 'rgba(var(--vrcd-neon-raw),0.15)',
+                  marginTop: 4
+                }}
+              />
 
-              <div style={{ fontSize: 11, color: 'rgba(var(--vrcd-neon-raw),0.7)', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <span><TagRegular fontSize={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{game.releaseName || '-'}</span>
-                <span><CalendarClockRegular fontSize={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />{String(game.lastUpdated || '-')}</span>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'rgba(var(--vrcd-neon-raw),0.7)',
+                  fontFamily: 'monospace',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3
+                }}
+              >
+                <span>
+                  <TagRegular fontSize={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                  {game.releaseName || '-'}
+                </span>
+                <span>
+                  <CalendarClockRegular
+                    fontSize={12}
+                    style={{ verticalAlign: 'middle', marginRight: 4 }}
+                  />
+                  {String(game.lastUpdated || '-')}
+                </span>
               </div>
 
               {/* ── ACTION BUTTONS (moved up) ── */}
-              <div style={{ marginTop: 8 }}>
-                {renderActionButtons(game)}
-              </div>
+              <div style={{ marginTop: 8 }}>{renderActionButtons(game)}</div>
             </div>
           </div>
 
@@ -417,7 +693,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Spinner size="tiny" />
-                <span style={{ color: NEON, fontFamily: 'monospace', fontSize: 12 }}>{dlStatus}... {dlProgress}%</span>
+                <span style={{ color: NEON, fontFamily: 'monospace', fontSize: 12 }}>
+                  {dlStatus}... {dlProgress}%
+                </span>
               </div>
               <ProgressBar value={dlProgress} max={100} shape="rounded" thickness="medium" />
             </div>
@@ -437,22 +715,50 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             <button
               onClick={() => setTrailerOpen(!trailerOpen)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                background: 'transparent', border: 'none', cursor: 'pointer',
-                color: 'rgba(var(--vrcd-neon-raw),0.8)', fontFamily: 'monospace', fontSize: 12,
-                letterSpacing: '0.1em', textAlign: 'left', padding: '2px 0'
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'rgba(var(--vrcd-neon-raw),0.8)',
+                fontFamily: 'monospace',
+                fontSize: 12,
+                letterSpacing: '0.1em',
+                textAlign: 'left',
+                padding: '2px 0'
               }}
             >
               <span style={{ fontSize: 10 }}>{trailerOpen ? '▼' : '▶'}</span>
               <span>TRAILER</span>
               {loadingVideo && <Spinner size="tiny" style={{ marginLeft: 4 }} />}
               {!trailerUrl && !loadingVideo && (
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(var(--vrcd-neon-raw),0.35)' }}>no trailer found</span>
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    fontSize: 10,
+                    color: 'rgba(var(--vrcd-neon-raw),0.35)'
+                  }}
+                >
+                  no trailer found
+                </span>
               )}
             </button>
 
             {trailerOpen && trailerUrl && (
-              <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', marginTop: 10, borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(var(--vrcd-neon-raw),0.2)', background: '#000' }}>
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  paddingTop: '56.25%',
+                  marginTop: 10,
+                  borderRadius: 6,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(var(--vrcd-neon-raw),0.2)',
+                  background: '#000'
+                }}
+              >
                 {/youtube(?:-nocookie)?\.com|youtu\.be/.test(trailerUrl) ? (
                   <webview
                     ref={webviewRef}
@@ -460,7 +766,14 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     src={trailerUrl}
                     // eslint-disable-next-line react/no-unknown-property
                     partition="persist:youtube"
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      border: 'none'
+                    }}
                   />
                 ) : (
                   <video
@@ -470,19 +783,45 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                     autoPlay
                     playsInline
                     preload="metadata"
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain'
+                    }}
                   />
                 )}
               </div>
             )}
             {trailerOpen && !trailerUrl && !loadingVideo && (
-              <p style={{ color: 'rgba(var(--vrcd-neon-raw),0.4)', fontFamily: 'monospace', fontSize: 12, margin: '8px 0 0' }}>No trailer available.</p>
+              <p
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.4)',
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  margin: '8px 0 0'
+                }}
+              >
+                No trailer available.
+              </p>
             )}
           </div>
 
           {/* ── Note section (bottom) ── */}
           <div style={{ borderTop: '1px solid rgba(var(--vrcd-neon-raw),0.12)', paddingTop: 12 }}>
-            <div style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.1em', color: 'rgba(var(--vrcd-neon-raw),0.6)', marginBottom: 6 }}>// NOTE</div>
+            <div
+              style={{
+                fontSize: 11,
+                fontFamily: 'monospace',
+                letterSpacing: '0.1em',
+                color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                marginBottom: 6
+              }}
+            >
+              // NOTE
+            </div>
             {loadingNote ? (
               <Spinner size="tiny" label="Loading..." />
             ) : currentGameNote ? (
@@ -492,10 +831,17 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 downloadPath={statusEntry?.downloadPath ?? null}
               />
             ) : (
-              <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(var(--vrcd-neon-raw),0.35)' }}>No note available.</span>
+              <span
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  color: 'rgba(var(--vrcd-neon-raw),0.35)'
+                }}
+              >
+                No note available.
+              </span>
             )}
           </div>
-
         </DialogBody>
       </DialogSurface>
       <ErrorDetailDialog
