@@ -261,11 +261,14 @@ class AdbService extends EventEmitter implements AdbAPI {
         // the UI via the existing tracker-error channel, and return so the app
         // stays usable as a sideloader.
         this.isTracking = false
-        const message = secondError instanceof Error ? secondError.message : String(secondError)
+        const rawMessage = secondError instanceof Error ? secondError.message : String(secondError)
         console.error(
           '[ADB Service] Failed to start device tracking after adb server recovery:',
-          message
+          rawMessage
         )
+        // Surface a short, actionable message to the UI instead of the raw
+        // "Command failed: … cannot connect to daemon" dump.
+        const message = this.describeTrackerError(rawMessage)
         this.emit('tracker-error', message)
         if (mainWindow) {
           typedWebContentsSend.send(mainWindow, 'adb:device-tracker-error', message)
@@ -1435,6 +1438,33 @@ class AdbService extends EventEmitter implements AdbAPI {
     } catch (e) {
       console.warn('[ADB Service] Could not run kill-server:', e)
     }
+  }
+
+  /**
+   * Turn a raw adb start-server / device-tracking failure into a short,
+   * actionable message for the UI. The common cause is a conflicting adb server
+   * already holding port 5037 (SideQuest, Rookie, Android platform-tools, or
+   * another adb version), for which the raw "Command failed: … cannot connect to
+   * daemon" dump is unhelpful. Anything that doesn't match falls through to the
+   * raw message so real/unexpected failures stay visible.
+   */
+  private describeTrackerError(rawMessage: string): string {
+    const m = rawMessage.toLowerCase()
+    const looksLikeDaemonConflict =
+      m.includes('cannot connect to daemon') ||
+      m.includes('could not read ok from adb server') ||
+      m.includes('failed to start daemon') ||
+      m.includes('daemon not running')
+    if (looksLikeDaemonConflict) {
+      return (
+        'Could not reach the ADB server — another ADB server is probably already ' +
+        'running on port 5037. Close other tools that use ADB (SideQuest, Rookie ' +
+        'Sideloader, Android platform-tools, or another sideloader), or run ' +
+        '"adb kill-server", then click Scan. You can keep sideloading local files ' +
+        'in the meantime.'
+      )
+    }
+    return rawMessage
   }
 
   /**
