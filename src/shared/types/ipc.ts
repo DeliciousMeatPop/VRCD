@@ -93,6 +93,8 @@ export interface IPCChannels {
   'download:remove': DefineChannel<[releaseName: string], void>
   'download:remove-only': DefineChannel<[releaseName: string], void>
   'download:move-to-front': DefineChannel<[releaseName: string], boolean>
+  'download:move-up': DefineChannel<[releaseName: string], boolean>
+  'download:move-down': DefineChannel<[releaseName: string], boolean>
   'download:scan': DefineChannel<[], { added: number; pruned: number }>
   'download:delete-files': DefineChannel<[releaseName: string], boolean>
   'download:install-from-completed': DefineChannel<[releaseName: string, deviceId: string], void>
@@ -115,6 +117,7 @@ export interface IPCChannels {
   'app:get-system-username': DefineChannel<[], string>
   'app:get-sound': DefineChannel<[name: string], string | null>
   'app:reset-app-data': DefineChannel<[], { success: boolean; error?: string }>
+  'app:show-notification': DefineChannel<[title: string, body: string], void>
 
   // Update related channels
   'update:check-for-updates': DefineChannel<[], void>
@@ -178,7 +181,10 @@ export interface IPCChannels {
   // (install an APK/ZIP/game-folder vs. copy an OBB folder).
   'manual:classify-path': DefineChannel<
     [path: string],
-    { kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown'; name: string }
+    {
+      kind: 'apk' | 'zip' | 'gameFolder' | 'obbFolder' | 'unknown'
+      name: string
+    }
   >
 
   // Save Backup (BETA) channels

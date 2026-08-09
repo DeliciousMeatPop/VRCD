@@ -9,6 +9,7 @@ import mirrorService from './mirrorService'
 import settingsService from './settingsService'
 import { getApiKey, redactApiKey as redactKey } from './apiKey'
 import { GameInfo, ServiceStatus, GamesAPI, BlacklistEntry } from '@shared/types'
+import metaStoreService from './metaStoreService'
 import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
@@ -911,6 +912,14 @@ class GameService extends EventEmitter implements GamesAPI {
 
   getLastSyncTime(): Promise<Date | null> {
     return Promise.resolve(this.vrpConfig?.lastSync || null)
+  }
+
+  /**
+   * Resolve the YouTube trailer URL for a game. Delegates to MetaStoreService,
+   * which owns the trailer override registry and the local meta cache.
+   */
+  async getTrailerUrl(gameName: string, packageName: string | undefined): Promise<string | null> {
+    return metaStoreService.getTrailerUrl(gameName, packageName)
   }
 
   /**

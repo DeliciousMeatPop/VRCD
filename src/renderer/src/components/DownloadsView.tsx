@@ -23,7 +23,9 @@ import {
   PlayRegular as ResumeIcon,
   FolderRegular,
   DeleteDismissRegular,
-  DismissCircleRegular as ClearIcon
+  DismissCircleRegular as ClearIcon,
+  ChevronUpRegular,
+  ChevronDownRegular
 } from '@fluentui/react-icons'
 import { formatDistanceToNow } from 'date-fns'
 import placeholderImage from '../assets/images/game-placeholder.png'
@@ -109,6 +111,8 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
     removeFromQueue,
     removeFromQueueOnly,
     moveToFront,
+    moveQueuedUp,
+    moveQueuedDown,
     cancelDownload,
     retryDownload,
     pauseDownload,
@@ -287,7 +291,10 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
         {scanResult && (
           <Text
             size={200}
-            style={{ color: 'rgba(var(--vrcd-neon-raw),0.6)', fontFamily: 'monospace' }}
+            style={{
+              color: 'rgba(var(--vrcd-neon-raw),0.6)',
+              fontFamily: 'monospace'
+            }}
           >
             {scanResult}
           </Text>
@@ -297,338 +304,356 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
         <Text>Download queue is empty.</Text>
       ) : (
         <div>
-          {queue
-            .sort((a, b) => b.addedDate - a.addedDate)
-            .map((item) => (
-              <div key={item.releaseName} className={styles.itemRow}>
-                {/* Thumbnail */}
-                <Image
-                  src={item.thumbnailPath ? `file://${item.thumbnailPath}` : placeholderImage}
-                  alt={`${item.gameName} thumbnail`}
-                  className={styles.thumbnail}
-                  shape="rounded"
-                  fit="cover"
-                />
-                {/* Game Info */}
-                <div
-                  className={styles.gameInfo}
-                  onClick={() => {
-                    let gameToOpen = games.find((g) => g.releaseName === item.releaseName)
-                    if (!gameToOpen) {
-                      console.log('Game not found by release name, trying by package name')
-                      gameToOpen = games.find((g) => g.packageName === item.packageName)
-                    }
-                    if (gameToOpen) {
-                      setDialogGame(gameToOpen)
-                    }
-                    onClose()
-                  }}
-                >
-                  <div className={styles.gameNameRow}>
-                    <Text weight="semibold">{item.gameName}</Text>
-                    {isInstalled(item.releaseName) && (
-                      <Badge
-                        appearance="filled"
-                        color="success"
-                        size="small"
-                        className={styles.installedBadge}
-                      >
-                        Installed
-                      </Badge>
-                    )}
-                  </div>
-                  <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
-                    {item.releaseName}
-                  </Text>
-                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                    Added: {formatAddedTime(item.addedDate)}
-                  </Text>
+          {queue.map((item) => (
+            <div key={item.releaseName} className={styles.itemRow}>
+              {/* Thumbnail */}
+              <Image
+                src={item.thumbnailPath ? `file://${item.thumbnailPath}` : placeholderImage}
+                alt={`${item.gameName} thumbnail`}
+                className={styles.thumbnail}
+                shape="rounded"
+                fit="cover"
+              />
+              {/* Game Info */}
+              <div
+                className={styles.gameInfo}
+                onClick={() => {
+                  let gameToOpen = games.find((g) => g.releaseName === item.releaseName)
+                  if (!gameToOpen) {
+                    console.log('Game not found by release name, trying by package name')
+                    gameToOpen = games.find((g) => g.packageName === item.packageName)
+                  }
+                  if (gameToOpen) {
+                    setDialogGame(gameToOpen)
+                  }
+                  onClose()
+                }}
+              >
+                <div className={styles.gameNameRow}>
+                  <Text weight="semibold">{item.gameName}</Text>
+                  {isInstalled(item.releaseName) && (
+                    <Badge
+                      appearance="filled"
+                      color="success"
+                      size="small"
+                      className={styles.installedBadge}
+                    >
+                      Installed
+                    </Badge>
+                  )}
                 </div>
-                {/* Progress / Status */}
-                <div className={styles.progressStatus}>
-                  {item.status === 'Downloading' && (
-                    <>
-                      <ProgressBar value={item.progress / 100} className={styles.progressBar} />
-                      <Text className={styles.statusText}>{item.progress}%</Text>
-                      {item.speed && (
+                <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
+                  {item.releaseName}
+                </Text>
+                <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                  Added: {formatAddedTime(item.addedDate)}
+                </Text>
+              </div>
+              {/* Progress / Status */}
+              <div className={styles.progressStatus}>
+                {item.status === 'Downloading' && (
+                  <>
+                    <ProgressBar value={item.progress / 100} className={styles.progressBar} />
+                    <Text className={styles.statusText}>{item.progress}%</Text>
+                    {item.speed && (
+                      <Text size={200} className={styles.statusText}>
+                        Speed: {item.speed}
+                      </Text>
+                    )}
+                    {item.eta &&
+                      item.eta !== '-' && ( // Don't show ETA if it's just '-'
                         <Text size={200} className={styles.statusText}>
-                          Speed: {item.speed}
+                          ETA: {item.eta}
                         </Text>
                       )}
-                      {item.eta &&
-                        item.eta !== '-' && ( // Don't show ETA if it's just '-'
-                          <Text size={200} className={styles.statusText}>
-                            ETA: {item.eta}
-                          </Text>
-                        )}
-                    </>
-                  )}
-                  {/* Added Extraction Progress Display */}
-                  {item.status === 'Extracting' && (
-                    <>
+                  </>
+                )}
+                {/* Added Extraction Progress Display */}
+                {item.status === 'Extracting' && (
+                  <>
+                    <ProgressBar
+                      value={(item.extractProgress || 0) / 100}
+                      className={styles.progressBar}
+                    />
+                    <Text className={styles.statusText}>
+                      Extracting... {item.extractProgress || 0}%
+                    </Text>
+                  </>
+                )}
+                {item.status === 'Installing' && (
+                  <>
+                    {(item.progress || 0) < 50 ? (
+                      <ProgressBar className={styles.progressBar} />
+                    ) : (
                       <ProgressBar
-                        value={(item.extractProgress || 0) / 100}
+                        value={(item.progress || 0) / 100}
                         className={styles.progressBar}
                       />
-                      <Text className={styles.statusText}>
-                        Extracting... {item.extractProgress || 0}%
-                      </Text>
-                    </>
-                  )}
-                  {item.status === 'Installing' && (
-                    <>
-                      {(item.progress || 0) < 50 ? (
-                        <ProgressBar className={styles.progressBar} />
-                      ) : (
-                        <ProgressBar
-                          value={(item.progress || 0) / 100}
-                          className={styles.progressBar}
-                        />
-                      )}
-                      <Text className={styles.statusText}>
-                        {(item.progress || 0) < 50 ? 'Installing APK...' : 'Copying OBB...'}
-                      </Text>
-                    </>
-                  )}
-                  {item.status === 'Queued' && <Text className={styles.statusText}>Queued</Text>}
-                  {item.status === 'Completed' && (
-                    <Text style={{ color: tokens.colorPaletteGreenForeground1 }}>Completed</Text>
-                  )}
-                  {item.status === 'Cancelled' && (
-                    <Text className={styles.statusText}>Cancelled</Text>
-                  )}
-                  {item.status === 'Paused' && (
-                    <>
-                      <ProgressBar value={item.progress / 100} className={styles.progressBar} />
-                      <Text className={styles.statusText}>Paused – {item.progress}%</Text>
-                    </>
-                  )}
-                  {item.status === 'Error' && (
+                    )}
+                    <Text className={styles.statusText}>
+                      {(item.progress || 0) < 50 ? 'Installing APK...' : 'Copying OBB...'}
+                    </Text>
+                  </>
+                )}
+                {item.status === 'Queued' && <Text className={styles.statusText}>Queued</Text>}
+                {item.status === 'Completed' && (
+                  <Text style={{ color: tokens.colorPaletteGreenForeground1 }}>Completed</Text>
+                )}
+                {item.status === 'Cancelled' && (
+                  <Text className={styles.statusText}>Cancelled</Text>
+                )}
+                {item.status === 'Paused' && (
+                  <>
+                    <ProgressBar value={item.progress / 100} className={styles.progressBar} />
+                    <Text className={styles.statusText}>Paused – {item.progress}%</Text>
+                  </>
+                )}
+                {item.status === 'Error' && (
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    onClick={() =>
+                      setErrorDetail({
+                        error: item.error || '',
+                        phase: 'download',
+                        contextLabel: `${item.gameName} (${item.releaseName})`,
+                        releaseName: item.releaseName
+                      })
+                    }
+                    style={{
+                      color: tokens.colorPaletteRedForeground1,
+                      border: `1px solid ${tokens.colorPaletteRedForeground1}`,
+                      padding: '2px 10px',
+                      minHeight: 0,
+                      height: 'auto',
+                      fontWeight: 600
+                    }}
+                    title="Click for details"
+                  >
+                    Error - click for details
+                  </Button>
+                )}
+                {item.status === 'InstallError' && (
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    onClick={() =>
+                      setErrorDetail({
+                        error: item.error || '',
+                        phase: 'install',
+                        contextLabel: `${item.gameName} (${item.releaseName})`,
+                        releaseName: item.releaseName
+                      })
+                    }
+                    style={{
+                      color: tokens.colorPaletteRedForeground1,
+                      border: `1px solid ${tokens.colorPaletteRedForeground1}`,
+                      padding: '2px 10px',
+                      minHeight: 0,
+                      height: 'auto',
+                      fontWeight: 600
+                    }}
+                    title="Click for details"
+                  >
+                    Install error - click for details
+                  </Button>
+                )}
+
+                {/* Install/Uninstall Buttons */}
+                {item.status === 'Completed' &&
+                  !isInstalled(item.releaseName) &&
+                  !sideloadingDisabled && (
                     <Button
-                      appearance="subtle"
+                      icon={<DownloadInstallIcon />}
+                      aria-label="Install game"
                       size="small"
-                      onClick={() =>
-                        setErrorDetail({
-                          error: item.error || '',
-                          phase: 'download',
-                          contextLabel: `${item.gameName} (${item.releaseName})`,
-                          releaseName: item.releaseName
-                        })
+                      appearance="primary"
+                      onClick={() => handleInstallFromCompleted(item.releaseName)}
+                      disabled={!isConnected || !selectedDevice}
+                      title={
+                        !isConnected || !selectedDevice ? 'Connect a device to install' : 'Install'
                       }
-                      style={{
-                        color: tokens.colorPaletteRedForeground1,
-                        border: `1px solid ${tokens.colorPaletteRedForeground1}`,
-                        padding: '2px 10px',
-                        minHeight: 0,
-                        height: 'auto',
-                        fontWeight: 600
-                      }}
-                      title="Click for details"
                     >
-                      Error - click for details
+                      Install
                     </Button>
                   )}
-                  {item.status === 'InstallError' && (
+
+                {item.status === 'Completed' &&
+                  isInstalled(item.releaseName) &&
+                  !sideloadingDisabled && (
                     <Button
-                      appearance="subtle"
+                      icon={<UninstallIcon />}
+                      aria-label="Uninstall game"
                       size="small"
-                      onClick={() =>
-                        setErrorDetail({
-                          error: item.error || '',
-                          phase: 'install',
-                          contextLabel: `${item.gameName} (${item.releaseName})`,
-                          releaseName: item.releaseName
-                        })
+                      appearance="outline"
+                      onClick={() => handleUninstall(item)}
+                      disabled={!isConnected || !selectedDevice}
+                      title={
+                        !isConnected || !selectedDevice
+                          ? 'Connect a device to uninstall'
+                          : 'Uninstall'
                       }
-                      style={{
-                        color: tokens.colorPaletteRedForeground1,
-                        border: `1px solid ${tokens.colorPaletteRedForeground1}`,
-                        padding: '2px 10px',
-                        minHeight: 0,
-                        height: 'auto',
-                        fontWeight: 600
-                      }}
-                      title="Click for details"
                     >
-                      Install error - click for details
+                      Uninstall
                     </Button>
                   )}
-
-                  {/* Install/Uninstall Buttons */}
-                  {item.status === 'Completed' &&
-                    !isInstalled(item.releaseName) &&
-                    !sideloadingDisabled && (
-                      <Button
-                        icon={<DownloadInstallIcon />}
-                        aria-label="Install game"
-                        size="small"
-                        appearance="primary"
-                        onClick={() => handleInstallFromCompleted(item.releaseName)}
-                        disabled={!isConnected || !selectedDevice}
-                        title={
-                          !isConnected || !selectedDevice
-                            ? 'Connect a device to install'
-                            : 'Install'
-                        }
-                      >
-                        Install
-                      </Button>
-                    )}
-
-                  {item.status === 'Completed' &&
-                    isInstalled(item.releaseName) &&
-                    !sideloadingDisabled && (
-                      <Button
-                        icon={<UninstallIcon />}
-                        aria-label="Uninstall game"
-                        size="small"
-                        appearance="outline"
-                        onClick={() => handleUninstall(item)}
-                        disabled={!isConnected || !selectedDevice}
-                        title={
-                          !isConnected || !selectedDevice
-                            ? 'Connect a device to uninstall'
-                            : 'Uninstall'
-                        }
-                      >
-                        Uninstall
-                      </Button>
-                    )}
-                </div>
-                {/* Actions */}
-                <div className={styles.actions}>
-                  {/* Pause Button */}
-                  {item.status === 'Downloading' && (
-                    <Button
-                      icon={<PauseIcon />}
-                      aria-label="Pause"
-                      size="small"
-                      appearance="subtle"
-                      onClick={() => pauseDownload(item.releaseName)}
-                      title="Pause download"
-                    />
-                  )}
-
-                  {/* Resume Button */}
-                  {item.status === 'Paused' && (
-                    <Button
-                      icon={<ResumeIcon />}
-                      aria-label="Resume"
-                      size="small"
-                      appearance="subtle"
-                      onClick={() => resumeDownload(item.releaseName)}
-                      title="Resume download"
-                    />
-                  )}
-
-                  {/* Bump-to-top Button (Queued only) */}
-                  {item.status === 'Queued' && (
-                    <Button
-                      icon={<BumpIcon />}
-                      aria-label="Move to front of queue"
-                      size="small"
-                      appearance="subtle"
-                      onClick={() => moveToFront(item.releaseName)}
-                      title="Download next"
-                    />
-                  )}
-
-                  {/* Cancel Button */}
-                  {(item.status === 'Queued' ||
-                    item.status === 'Downloading' ||
-                    item.status === 'Extracting' ||
-                    item.status === 'Installing') && (
-                    <Button
-                      icon={<CloseIcon />}
-                      aria-label="Cancel"
-                      size="small"
-                      appearance="subtle"
-                      onClick={() => cancelDownload(item.releaseName)}
-                      title="Cancel"
-                    />
-                  )}
-
-                  {/* Retry Button */}
-                  {(item.status === 'Cancelled' ||
-                    item.status === 'Error' ||
-                    item.status === 'InstallError') && (
-                    <Button
-                      icon={<RetryIcon />}
-                      aria-label="Retry download"
-                      size="small"
-                      appearance="subtle"
-                      onClick={() => retryDownload(item.releaseName)}
-                      title="Retry"
-                    />
-                  )}
-
-                  {/* Remove Button (appears when not actively downloading/extracting/installing) */}
-                  {(item.status === 'Completed' ||
-                    item.status === 'Cancelled' ||
-                    item.status === 'Paused' ||
-                    item.status === 'Error' ||
-                    item.status === 'InstallError' ||
-                    item.status === 'Queued') &&
-                    (confirmPending === item.releaseName ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '4px',
-                          alignItems: 'flex-end'
-                        }}
-                      >
-                        <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
-                          Delete files too?
-                        </Text>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <Button
-                            icon={<FolderRegular />}
-                            size="small"
-                            appearance="subtle"
-                            title="Remove from list, keep files"
-                            onClick={() => {
-                              setConfirmPending(null)
-                              removeFromQueueOnly(item.releaseName)
-                            }}
-                          >
-                            Keep
-                          </Button>
-                          <Button
-                            icon={<DeleteDismissRegular />}
-                            size="small"
-                            appearance="subtle"
-                            title="Remove and delete downloaded files"
-                            style={{ color: tokens.colorPaletteRedForeground1 }}
-                            onClick={() => {
-                              setConfirmPending(null)
-                              removeFromQueue(item.releaseName)
-                            }}
-                          >
-                            Delete
-                          </Button>
-                          <Button
-                            icon={<CloseIcon />}
-                            size="small"
-                            appearance="subtle"
-                            title="Cancel"
-                            onClick={() => setConfirmPending(null)}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        icon={<DeleteRegular />}
-                        aria-label="Remove from list"
-                        size="small"
-                        appearance="subtle"
-                        onClick={() => handleDeleteButton(item.releaseName)}
-                        title="Remove from list"
-                      />
-                    ))}
-                </div>
               </div>
-            ))}
+              {/* Actions */}
+              <div className={styles.actions}>
+                {/* Pause Button */}
+                {item.status === 'Downloading' && (
+                  <Button
+                    icon={<PauseIcon />}
+                    aria-label="Pause"
+                    size="small"
+                    appearance="subtle"
+                    onClick={() => pauseDownload(item.releaseName)}
+                    title="Pause download"
+                  />
+                )}
+
+                {/* Resume Button */}
+                {item.status === 'Paused' && (
+                  <Button
+                    icon={<ResumeIcon />}
+                    aria-label="Resume"
+                    size="small"
+                    appearance="subtle"
+                    onClick={() => resumeDownload(item.releaseName)}
+                    title="Resume download"
+                  />
+                )}
+
+                {/* Bump-to-top Button (Queued only) */}
+                {item.status === 'Queued' && (
+                  <Button
+                    icon={<BumpIcon />}
+                    aria-label="Move to front of queue"
+                    size="small"
+                    appearance="subtle"
+                    onClick={() => moveToFront(item.releaseName)}
+                    title="Download next"
+                  />
+                )}
+
+                {/* Reorder buttons (Queued only) */}
+                {item.status === 'Queued' && (
+                  <>
+                    <Button
+                      icon={<ChevronUpRegular />}
+                      aria-label="Move up in queue"
+                      size="small"
+                      appearance="subtle"
+                      onClick={() => moveQueuedUp(item.releaseName)}
+                      title="Move earlier in queue"
+                    />
+                    <Button
+                      icon={<ChevronDownRegular />}
+                      aria-label="Move down in queue"
+                      size="small"
+                      appearance="subtle"
+                      onClick={() => moveQueuedDown(item.releaseName)}
+                      title="Move later in queue"
+                    />
+                  </>
+                )}
+
+                {/* Cancel Button */}
+                {(item.status === 'Queued' ||
+                  item.status === 'Downloading' ||
+                  item.status === 'Extracting' ||
+                  item.status === 'Installing') && (
+                  <Button
+                    icon={<CloseIcon />}
+                    aria-label="Cancel"
+                    size="small"
+                    appearance="subtle"
+                    onClick={() => cancelDownload(item.releaseName)}
+                    title="Cancel"
+                  />
+                )}
+
+                {/* Retry Button */}
+                {(item.status === 'Cancelled' ||
+                  item.status === 'Error' ||
+                  item.status === 'InstallError') && (
+                  <Button
+                    icon={<RetryIcon />}
+                    aria-label="Retry download"
+                    size="small"
+                    appearance="subtle"
+                    onClick={() => retryDownload(item.releaseName)}
+                    title="Retry"
+                  />
+                )}
+
+                {/* Remove Button (appears when not actively downloading/extracting/installing) */}
+                {(item.status === 'Completed' ||
+                  item.status === 'Cancelled' ||
+                  item.status === 'Paused' ||
+                  item.status === 'Error' ||
+                  item.status === 'InstallError' ||
+                  item.status === 'Queued') &&
+                  (confirmPending === item.releaseName ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        alignItems: 'flex-end'
+                      }}
+                    >
+                      <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
+                        Delete files too?
+                      </Text>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <Button
+                          icon={<FolderRegular />}
+                          size="small"
+                          appearance="subtle"
+                          title="Remove from list, keep files"
+                          onClick={() => {
+                            setConfirmPending(null)
+                            removeFromQueueOnly(item.releaseName)
+                          }}
+                        >
+                          Keep
+                        </Button>
+                        <Button
+                          icon={<DeleteDismissRegular />}
+                          size="small"
+                          appearance="subtle"
+                          title="Remove and delete downloaded files"
+                          style={{ color: tokens.colorPaletteRedForeground1 }}
+                          onClick={() => {
+                            setConfirmPending(null)
+                            removeFromQueue(item.releaseName)
+                          }}
+                        >
+                          Delete
+                        </Button>
+                        <Button
+                          icon={<CloseIcon />}
+                          size="small"
+                          appearance="subtle"
+                          title="Cancel"
+                          onClick={() => setConfirmPending(null)}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      icon={<DeleteRegular />}
+                      aria-label="Remove from list"
+                      size="small"
+                      appearance="subtle"
+                      onClick={() => handleDeleteButton(item.releaseName)}
+                      title="Remove from list"
+                    />
+                  ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

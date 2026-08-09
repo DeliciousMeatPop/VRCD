@@ -6,6 +6,7 @@ import {
   GameInfo,
   ExistingDownloadAction
 } from '@shared/types'
+import { playSound } from '../hooks/useSoundEffects'
 
 interface DownloadProviderProps {
   children: ReactNode
@@ -51,6 +52,24 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       })
 
     const removeUpdateListener = window.api.downloads.onQueueUpdated((updatedQueue) => {
+      // Detect newly-completed items for notification
+      const prevCompleted = new Set(
+        queue.filter((i) => i.status === 'Completed').map((i) => i.releaseName)
+      )
+      for (const item of updatedQueue) {
+        if (item.status === 'Completed' && !prevCompleted.has(item.releaseName)) {
+          // Fire notification + sound for newly completed download
+          playSound('click')
+          try {
+            window.api.app.showNotification(
+              'Download Complete',
+              `${item.gameName} finished downloading.`
+            )
+          } catch {
+            /* ignore */
+          }
+        }
+      }
       setQueue(updatedQueue)
       setError(null)
     })
@@ -165,6 +184,26 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
     }
   }, [])
 
+  const moveQueuedUp = useCallback(async (releaseName: string): Promise<boolean> => {
+    try {
+      return await window.api.downloads.moveQueuedUp(releaseName)
+    } catch (err) {
+      console.error('Error moving item up via IPC:', err)
+      setError('Failed to move item up.')
+      return false
+    }
+  }, [])
+
+  const moveQueuedDown = useCallback(async (releaseName: string): Promise<boolean> => {
+    try {
+      return await window.api.downloads.moveQueuedDown(releaseName)
+    } catch (err) {
+      console.error('Error moving item down via IPC:', err)
+      setError('Failed to move item down.')
+      return false
+    }
+  }, [])
+
   const cancelDownload = useCallback((releaseName: string): void => {
     try {
       window.api.downloads.cancelUserRequest(releaseName)
@@ -224,6 +263,8 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       removeFromQueue,
       removeFromQueueOnly,
       moveToFront,
+      moveQueuedUp,
+      moveQueuedDown,
       cancelDownload,
       retryDownload,
       pauseDownload,
@@ -240,6 +281,8 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       removeFromQueue,
       removeFromQueueOnly,
       moveToFront,
+      moveQueuedUp,
+      moveQueuedDown,
       cancelDownload,
       retryDownload,
       pauseDownload,
@@ -339,7 +382,12 @@ const ExistingDownloadPromptDialog: React.FC<PromptDialogProps> = ({
         >
           A complete copy of <strong>{gameName}</strong> already exists in your downloads folder.
           <br />
-          <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.55)', fontSize: '11px' }}>
+          <span
+            style={{
+              color: 'rgba(var(--vrcd-neon-raw),0.55)',
+              fontSize: '11px'
+            }}
+          >
             {releaseName}
           </span>
         </div>

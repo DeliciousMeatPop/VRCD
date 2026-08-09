@@ -11,14 +11,17 @@ export interface TablePreferences {
   cardSortDir: 'asc' | 'desc'
   tableSortKey: string // persisted table-mode sort column
   tableSortDir: 'asc' | 'desc'
+  columnWidths: Record<string, number> // persisted per-column widths
+  visibleColumns: Record<string, boolean> // persisted column visibility
 }
 
-const STORAGE_KEY = 'avr-table-prefs-v5'
+const STORAGE_KEY = 'avr-table-prefs-v6'
 const OLD_KEYS = [
   'avr-table-prefs-v1',
   'avr-table-prefs-v2',
   'avr-table-prefs-v3',
-  'avr-table-prefs-v4'
+  'avr-table-prefs-v4',
+  'avr-table-prefs-v5'
 ]
 
 const DEFAULTS: TablePreferences = {
@@ -31,7 +34,9 @@ const DEFAULTS: TablePreferences = {
   cardSortKey: 'name',
   cardSortDir: 'asc',
   tableSortKey: '',
-  tableSortDir: 'asc'
+  tableSortDir: 'asc',
+  columnWidths: {},
+  visibleColumns: {}
 }
 
 function load(): TablePreferences {
@@ -58,7 +63,10 @@ function load(): TablePreferences {
   return { ...DEFAULTS }
 }
 
-export function useTablePreferences() {
+export function useTablePreferences(): {
+  prefs: TablePreferences
+  setPrefs: (update: Partial<TablePreferences>) => void
+} {
   const [prefs, setState] = useState<TablePreferences>(load)
 
   const setPrefs = useCallback((update: Partial<TablePreferences>) => {

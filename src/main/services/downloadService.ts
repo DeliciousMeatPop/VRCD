@@ -431,6 +431,24 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     return moved
   }
 
+  public async moveQueuedUp(releaseName: string): Promise<boolean> {
+    const moved = this.queueManager.moveQueuedUp(releaseName)
+    if (moved) {
+      console.log(`[Service] Moved ${releaseName} up in queue.`)
+      this.emitUpdate()
+    }
+    return moved
+  }
+
+  public async moveQueuedDown(releaseName: string): Promise<boolean> {
+    const moved = this.queueManager.moveQueuedDown(releaseName)
+    if (moved) {
+      console.log(`[Service] Moved ${releaseName} down in queue.`)
+      this.emitUpdate()
+    }
+    return moved
+  }
+
   public async removeFromQueueOnly(releaseName: string): Promise<void> {
     const item = this.queueManager.findItem(releaseName)
     if (!item) return
@@ -462,7 +480,10 @@ class DownloadService extends EventEmitter implements DownloadAPI {
 
       // CRITICAL: Change status from 'Queued' IMMEDIATELY before the async pipeline starts,
       // so the next loop iteration of findNextQueuedItem() won't pick the same item again.
-      this.queueManager.updateItem(nextItem.releaseName, { status: 'Downloading', progress: 0 })
+      this.queueManager.updateItem(nextItem.releaseName, {
+        status: 'Downloading',
+        progress: 0
+      })
 
       // Mark as active immediately so the next loop iteration won't pick it again
       this.activeCount++
@@ -689,7 +710,13 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     eta?: string,
     extractProgress?: number
   ): void {
-    const updates: Partial<DownloadItem> = { status, progress, error, speed, eta }
+    const updates: Partial<DownloadItem> = {
+      status,
+      progress,
+      error,
+      speed,
+      eta
+    }
     if (extractProgress !== undefined) {
       updates.extractProgress = extractProgress
     } else if (
@@ -928,7 +955,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       } else {
         errorMsg = `Failed to delete files: ${String(error)}`.substring(0, 200)
       }
-      const updated = this.queueManager.updateItem(releaseName, { error: errorMsg })
+      const updated = this.queueManager.updateItem(releaseName, {
+        error: errorMsg
+      })
       if (updated) this.emitUpdate()
       return Promise.resolve(false)
     }
@@ -948,7 +977,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       for (const entry of entries) {
         if (!entry.isDirectory()) continue
         try {
-          const inner = await fs.readdir(join(folderPath, entry.name), { withFileTypes: true })
+          const inner = await fs.readdir(join(folderPath, entry.name), {
+            withFileTypes: true
+          })
           if (inner.some((e) => e.isFile() && e.name.toLowerCase().endsWith('.apk'))) return true
         } catch {
           // ignore unreadable subdirs
@@ -968,7 +999,9 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       for (const entry of entries) {
         if (!entry.isDirectory()) continue
         try {
-          const inner = await fs.readdir(join(folderPath, entry.name), { withFileTypes: true })
+          const inner = await fs.readdir(join(folderPath, entry.name), {
+            withFileTypes: true
+          })
           const nested = inner.find((e) => e.isFile() && e.name.toLowerCase().endsWith('.apk'))
           if (nested) return join(folderPath, entry.name, nested.name)
         } catch {
@@ -982,7 +1015,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
   }
 
   private async extractPackageNameFromApk(apkPath: string): Promise<string> {
-    const candidates: Array<{ tool: string; args: string[]; parse: (out: string) => string }> = [
+    const candidates: Array<{
+      tool: string
+      args: string[]
+      parse: (out: string) => string
+    }> = [
       {
         tool: 'aapt2',
         args: ['dump', 'packagename', apkPath],
@@ -1045,14 +1082,16 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     }
     let subdirs: string[] = []
     try {
-      const dirents = await fs.readdir(this.downloadsPath, { withFileTypes: true })
+      const dirents = await fs.readdir(this.downloadsPath, {
+        withFileTypes: true
+      })
       subdirs = dirents.filter((d) => d.isDirectory()).map((d) => d.name)
     } catch {
       return { added: 0, pruned: 0 }
     }
 
     // Pull the catalog so we can resolve packageName for re-imported entries.
-    let catalogPackages = new Map<string, string>()
+    const catalogPackages = new Map<string, string>()
     try {
       const games = await gameService.getGames()
       for (const g of games) {

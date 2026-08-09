@@ -4,7 +4,9 @@ import { BrowserWindow } from 'electron'
 import { EventEmitter } from 'events'
 import { exec } from 'child_process'
 import dependencyService from './dependencyService'
+import settingsService from './settingsService'
 import fs, { Dirent } from 'fs'
+import { promises as fsPromises } from 'fs'
 import path from 'path'
 import ping from 'pingman'
 import { AdbAPI, DeviceInfo, PackageInfo, ServiceStatus } from '@shared/types'
@@ -231,7 +233,27 @@ class AdbService extends EventEmitter implements AdbAPI {
 
     this.isTracking = true
 
-    const tracker = await this.client.trackDevices()
+    let tracker: Tracker
+    try {
+      tracker = await this.client.trackDevices()
+    } catch (error) {
+      // adb start-server can fail (port 5037 taken by another adb, or a
+      // firewall/AV blocking the loopback socket). Don't let that surface as an
+      // unhandled rejection, and don't leave isTracking=true — that would wedge
+      // every future retry. Reset, notify the UI via the existing tracker-error
+      // channel, and return so the app stays usable as a sideloader.
+      this.isTracking = false
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(
+        '[ADB Service] Failed to start device tracking (adb server unavailable):',
+        message
+      )
+      this.emit('tracker-error', message)
+      if (mainWindow) {
+        typedWebContentsSend.send(mainWindow, 'adb:device-tracker-error', message)
+      }
+      return
+    }
     this.deviceTracker = tracker
 
     tracker.on('add', async (device: DeviceInfo) => {
@@ -692,7 +714,9 @@ class AdbService extends EventEmitter implements AdbAPI {
     // 2. Read entries in localDirPath
     let entries: Dirent[]
     try {
-      entries = await fs.promises.readdir(localDirPath, { withFileTypes: true })
+      entries = await fs.promises.readdir(localDirPath, {
+        withFileTypes: true
+      })
     } catch (readDirError) {
       console.error(
         `[AdbService Recursive] Failed to read local directory ${localDirPath}:`,
@@ -1041,7 +1065,12 @@ class AdbService extends EventEmitter implements AdbAPI {
     serial: string,
     packageName: string,
     localDir: string
-  ): Promise<{ accessible: boolean; fileCount: number; totalBytes: number; reason?: string }> {
+  ): Promise<{
+    accessible: boolean
+    fileCount: number
+    totalBytes: number
+    reason?: string
+  }> {
     if (!(await this.isPackageDebuggable(serial, packageName))) {
       return {
         accessible: false,
@@ -1063,7 +1092,12 @@ class AdbService extends EventEmitter implements AdbAPI {
       .filter((l) => l.length > 0 && !l.startsWith('run-as:'))
 
     if (rels.length === 0) {
-      return { accessible: true, fileCount: 0, totalBytes: 0, reason: 'no internal files found' }
+      return {
+        accessible: true,
+        fileCount: 0,
+        totalBytes: 0,
+        reason: 'no internal files found'
+      }
     }
 
     let fileCount = 0
@@ -1188,6 +1222,37 @@ class AdbService extends EventEmitter implements AdbAPI {
     if (out === null) return -1
     const n = parseInt(out.trim(), 10)
     return Number.isFinite(n) ? n : -1
+  }
+
+  async deleteGameFiles(releaseName: string): Promise<{
+    deleted: boolean
+    path: string
+    error?: string
+  }> {
+    const downloadPath = settingsService.getDownloadPath()
+    const gamePath = path.join(downloadPath, releaseName)
+    console.log(`[ADB Service] deleteGameFiles - Deleting ${gamePath}`)
+    try {
+      await fsPromises.stat(gamePath)
+      await fsPromises.rm(gamePath, { recursive: true, force: true })
+      console.log(`[ADB Service] deleteGameFiles - Deleted ${gamePath}`)
+      return { deleted: true, path: gamePath }
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
+      ) {
+        console.log(`[ADB Service] deleteGameFiles - Path not found: ${gamePath}`)
+        return {
+          deleted: false,
+          path: gamePath,
+          error: 'Game files not found in current download folder'
+        }
+      }
+      console.error(`[ADB Service] deleteGameFiles - Error deleting ${gamePath}:`, error)
+      return { deleted: false, path: gamePath, error: String(error) }
+    }
   }
 
   async uninstallPackage(serial: string, packageName: string): Promise<boolean> {

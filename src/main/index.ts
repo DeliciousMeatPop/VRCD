@@ -1,4 +1,14 @@
-import { app, shell, BrowserWindow, screen, protocol, dialog, ipcMain, session } from 'electron'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  screen,
+  protocol,
+  dialog,
+  ipcMain,
+  session,
+  Notification
+} from 'electron'
 import { promises as fsPromises, existsSync } from 'fs'
 // Side-effect import: must run before any service whose singleton constructor
 // reads app.getPath('userData'). ESM evaluates sibling imports in source
@@ -195,6 +205,15 @@ function createWindow(): void {
       mainWindow.webContents.reload()
     }
   })
+
+  // NOTE: Do NOT forward renderer 'console-message' back into the main-process
+  // console. main's console is patched to electron-log (Object.assign above),
+  // and electron-log's main transport forwards main logs to the renderer, whose
+  // electron-log/renderer writes them to the renderer console — which re-fires
+  // 'console-message'. Logging those here closes an infinite feedback loop that
+  // grows each pass and saturates the main thread (window never leaves the boot
+  // screen). Renderer logs are already captured into the main log file by
+  // electron-log/renderer, so no forwarding is needed.
   app.on('child-process-gone', (_event, details) => {
     console.error('[Main] Child process gone:', details.type, details.reason, details.exitCode)
   })
@@ -445,6 +464,20 @@ app.whenReady().then(async () => {
     }
     return null
   })
+  // --- Notification Handler ---
+  typedIpcMain.handle('app:show-notification', async (_event, title: string, body: string) => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFocused()) {
+      const notif = new Notification({ title, body })
+      notif.on('click', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      })
+      notif.show()
+    }
+  })
+
   typedIpcMain.on('app:confirm-close', () => {
     closeConfirmed = true
     // On macOS this is reached after a Cmd+Q that we preventDefault'd, so we
@@ -636,6 +669,16 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('download:move-to-front', (_event, releaseName) => {
     console.log(`[IPC] Bumping to front of queue: ${releaseName}`)
     return downloadService.moveToFront(releaseName)
+  })
+
+  typedIpcMain.handle('download:move-up', (_event, releaseName) => {
+    console.log(`[IPC] Moving up in queue: ${releaseName}`)
+    return downloadService.moveQueuedUp(releaseName)
+  })
+
+  typedIpcMain.handle('download:move-down', (_event, releaseName) => {
+    console.log(`[IPC] Moving down in queue: ${releaseName}`)
+    return downloadService.moveQueuedDown(releaseName)
   })
 
   typedIpcMain.handle('download:scan', async () => {

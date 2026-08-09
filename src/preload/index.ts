@@ -41,6 +41,9 @@ const api = {
       typedIpcRenderer.invoke('app:get-sound', name),
     resetAppData: (): Promise<{ success: boolean; error?: string }> =>
       typedIpcRenderer.invoke('app:reset-app-data'),
+    showNotification: (title: string, body: string): void => {
+      typedIpcRenderer.invoke('app:show-notification', title, body)
+    },
     onCloseRequested: (callback: () => void): (() => void) => {
       const listener = (): void => callback()
       typedIpcRenderer.on('app:close-requested', listener)
@@ -156,6 +159,10 @@ const api = {
       typedIpcRenderer.invoke('download:remove-only', releaseName),
     moveToFront: (releaseName: string): Promise<boolean> =>
       typedIpcRenderer.invoke('download:move-to-front', releaseName),
+    moveQueuedUp: (releaseName: string): Promise<boolean> =>
+      typedIpcRenderer.invoke('download:move-up', releaseName),
+    moveQueuedDown: (releaseName: string): Promise<boolean> =>
+      typedIpcRenderer.invoke('download:move-down', releaseName),
     scanDownloadFolder: (): Promise<{ added: number; pruned: number }> =>
       typedIpcRenderer.invoke('download:scan'),
     cancelUserRequest: (releaseName: string): void =>
@@ -296,8 +303,11 @@ const api = {
   } satisfies SettingsAPIRenderer,
   // Logs APIs
   logs: {
-    uploadCurrentLog: (): Promise<{ url: string; password: string; slug: string } | null> =>
-      typedIpcRenderer.invoke('logs:upload-current'),
+    uploadCurrentLog: (): Promise<{
+      url: string
+      password: string
+      slug: string
+    } | null> => typedIpcRenderer.invoke('logs:upload-current'),
     openLogFolder: (): Promise<void> => typedIpcRenderer.invoke('logs:open-log-folder'),
     openLogFile: (): Promise<void> => typedIpcRenderer.invoke('logs:open-log-file')
   } satisfies LogsAPIRenderer,

@@ -71,7 +71,11 @@ import {
 } from '@fluentui/react-icons'
 import GameDetailsDialog from './GameDetailsDialog'
 import UninstallWarningDialog from './UninstallWarningDialog'
-import { getSkipUninstallWarning, setSkipUninstallWarning } from '@renderer/hooks/useExtrasSettings'
+import {
+  getSkipUninstallWarning,
+  setSkipUninstallWarning,
+  getSideloadingDisabled
+} from '@renderer/hooks/useExtrasSettings'
 import { useGameDialog } from '@renderer/hooks/useGameDialog'
 import MirrorManagement from './MirrorManagement'
 import { AdbShellDialog } from './AdbShellDialog'
@@ -565,6 +569,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [dialogGame, setDialogGame] = useGameDialog()
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
+  const [contextMenu, setContextMenu] = useState<{
+    game: GameInfo
+    x: number
+    y: number
+  } | null>(null)
   const [tableWidth, setTableWidth] = useState<number>(0)
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
@@ -3082,6 +3091,10 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                             setDialogGame(game)
                             setIsDialogOpen(true)
                           }}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            setContextMenu({ game, x: e.clientX, y: e.clientY })
+                          }}
                         >
                           <div className="game-card-thumbnail-wrap">
                             <img
@@ -3274,6 +3287,14 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                                     transform: `translateY(${virtualRow.start}px)`
                                   }}
                                   onClick={(e) => handleRowClick(e, row)}
+                                  onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    setContextMenu({
+                                      game: row.original,
+                                      x: e.clientX,
+                                      y: e.clientY
+                                    })
+                                  }}
                                 >
                                   {row.getVisibleCells().map((cell) => (
                                     <td
@@ -3352,7 +3373,171 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         />
       )}
 
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1400,
+            pointerEvents: 'auto'
+          }}
+          onClick={() => setContextMenu(null)}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            setContextMenu(null)
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              left: Math.min(contextMenu.x, window.innerWidth - 260),
+              top: Math.min(contextMenu.y, window.innerHeight - 340),
+              minWidth: '240px',
+              background: '#07070f',
+              border: '1px solid rgba(var(--vrcd-neon-raw),0.4)',
+              borderRadius: '6px',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.6), 0 0 24px rgba(var(--vrcd-neon-raw),0.08)',
+              padding: '6px',
+              fontFamily: 'var(--vrcd-font-mono)',
+              zIndex: 1401
+            }}
+          >
+            <div
+              style={{
+                padding: '6px 10px 8px',
+                borderBottom: '1px solid rgba(var(--vrcd-neon-raw),0.15)',
+                marginBottom: '4px'
+              }}
+            >
+              <div
+                style={{
+                  color: 'var(--vrcd-neon)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {contextMenu.game.name}
+              </div>
+              <div
+                style={{
+                  color: 'rgba(var(--vrcd-neon-raw),0.4)',
+                  fontSize: '9px',
+                  letterSpacing: '0.08em',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {contextMenu.game.releaseName}
+              </div>
+            </div>
+            <ContextMenuItem
+              onClick={() => {
+                setDialogGame(contextMenu.game)
+                setIsDialogOpen(true)
+                setContextMenu(null)
+              }}
+            >
+              ▶ Details
+            </ContextMenuItem>
+            {!getSideloadingDisabled() && (
+              <>
+                {contextMenu.game.hasUpdate ? (
+                  <ContextMenuItem
+                    onClick={() => {
+                      void handleUpdate(contextMenu.game)
+                      setContextMenu(null)
+                    }}
+                  >
+                    ⟳ Update Game
+                  </ContextMenuItem>
+                ) : contextMenu.game.isInstalled ? (
+                  <>
+                    <ContextMenuItem
+                      onClick={() => {
+                        void handleReinstall(contextMenu.game)
+                        setContextMenu(null)
+                      }}
+                    >
+                      ⟳ Reinstall
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      danger
+                      onClick={() => {
+                        void handleUninstall(contextMenu.game)
+                        setContextMenu(null)
+                      }}
+                    >
+                      ✕ Uninstall
+                    </ContextMenuItem>
+                  </>
+                ) : (
+                  <ContextMenuItem
+                    onClick={() => {
+                      handleInstall(contextMenu.game)
+                      setContextMenu(null)
+                    }}
+                  >
+                    ↓ Download & Install
+                  </ContextMenuItem>
+                )}
+              </>
+            )}
+            <ContextMenuItem
+              onClick={() => {
+                try {
+                  void navigator.clipboard.writeText(contextMenu.game.packageName)
+                } catch {
+                  /* ignore */
+                }
+                setContextMenu(null)
+              }}
+            >
+              ⧉ Copy Package Name
+            </ContextMenuItem>
+          </div>
+        </div>
+      )}
+
       {installDialogs}
+    </div>
+  )
+}
+
+const ContextMenuItem: React.FC<{
+  children: React.ReactNode
+  onClick: () => void
+  danger?: boolean
+}> = ({ children, onClick, danger }) => {
+  const [hovered, setHovered] = useState(false)
+  const color = danger
+    ? '#ff5555'
+    : hovered
+      ? 'var(--vrcd-neon)'
+      : 'rgba(var(--vrcd-neon-raw),0.75)'
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '8px 10px',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '12px',
+        letterSpacing: '0.05em',
+        color,
+        background: hovered ? 'rgba(var(--vrcd-neon-raw),0.08)' : 'transparent',
+        transition: 'background 0.1s, color 0.1s'
+      }}
+    >
+      {children}
     </div>
   )
 }

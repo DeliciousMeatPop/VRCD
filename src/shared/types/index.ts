@@ -322,6 +322,8 @@ export interface DownloadAPI {
   removeFromQueue: (releaseName: string) => Promise<void>
   removeFromQueueOnly: (releaseName: string) => Promise<void>
   moveToFront: (releaseName: string) => Promise<boolean>
+  moveQueuedUp: (releaseName: string) => Promise<boolean>
+  moveQueuedDown: (releaseName: string) => Promise<boolean>
   cancelUserRequest: (releaseName: string) => void
   retryDownload: (releaseName: string) => void
   pauseDownload: (releaseName: string) => void
@@ -601,7 +603,11 @@ export interface BackupAPIRenderer extends BackupAPI {}
 
 // Logs API
 export interface LogsAPI {
-  uploadCurrentLog: () => Promise<{ url: string; password: string; slug: string } | null>
+  uploadCurrentLog: () => Promise<{
+    url: string
+    password: string
+    slug: string
+  } | null>
   openLogFolder: () => Promise<void>
   openLogFile: () => Promise<void>
 }

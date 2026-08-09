@@ -11,6 +11,8 @@ export interface DownloadContextType {
   removeFromQueue: (releaseName: string) => Promise<void>
   removeFromQueueOnly: (releaseName: string) => Promise<void>
   moveToFront: (releaseName: string) => Promise<boolean>
+  moveQueuedUp: (releaseName: string) => Promise<boolean>
+  moveQueuedDown: (releaseName: string) => Promise<boolean>
   cancelDownload: (releaseName: string) => void
   retryDownload: (releaseName: string) => void
   pauseDownload: (releaseName: string) => void

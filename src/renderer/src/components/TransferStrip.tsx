@@ -39,6 +39,27 @@ const TransferStrip: React.FC = () => {
   const { queue: downloadQueue } = useDownload()
   const { queue: uploadQueue } = useUpload()
 
+  // "3 of 12" style summary — completed/queued totals vs active transfers.
+  const renderSummary = (): React.ReactNode => {
+    const totalDownloads = downloadQueue.length
+    const totalUploads = uploadQueue.length
+    const total = totalDownloads + totalUploads
+    if (total === 0) return null
+    const active = entries.length
+    return (
+      <span
+        style={{
+          color: 'rgba(var(--vrcd-neon-raw),0.4)',
+          marginLeft: 'auto',
+          flexShrink: 0,
+          letterSpacing: '0.08em'
+        }}
+      >
+        [{active}/{total} ACTIVE]
+      </span>
+    )
+  }
+
   const entries = useMemo<Entry[]>(() => {
     const downloads: Entry[] = downloadQueue
       .filter((d) => ['Queued', 'Downloading', 'Extracting', 'Installing'].includes(d.status))
@@ -98,10 +119,16 @@ const TransferStrip: React.FC = () => {
           color: 'rgba(var(--vrcd-neon-raw),0.35)'
         }}
       >
-        <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.45)', letterSpacing: '0.14em' }}>
-          // TRANSFER_BUS
+        <span
+          style={{
+            color: 'rgba(var(--vrcd-neon-raw),0.45)',
+            letterSpacing: '0.14em'
+          }}
+        >
+          {'// TRANSFER_BUS'}
         </span>
         <span style={{ color: 'rgba(var(--vrcd-neon-raw),0.3)' }}>IDLE — no active transfers</span>
+        {renderSummary()}
       </div>
     )
   }
@@ -125,7 +152,7 @@ const TransferStrip: React.FC = () => {
       <span
         style={{ color: 'rgba(var(--vrcd-neon-raw),0.45)', letterSpacing: '0.14em', flexShrink: 0 }}
       >
-        // TRANSFER_BUS
+        {'// TRANSFER_BUS'}
       </span>
       <span
         style={{
@@ -214,6 +241,7 @@ const TransferStrip: React.FC = () => {
           [{safeIndex + 1}/{entries.length}]
         </span>
       )}
+      {renderSummary()}
     </div>
   )
 }

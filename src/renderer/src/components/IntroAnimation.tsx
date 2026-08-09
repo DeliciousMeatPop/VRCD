@@ -48,6 +48,13 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   }, [phase])
 
   useEffect(() => {
+    // Reset the liveness flag on every mount. React StrictMode (dev) runs
+    // effects mount → cleanup → mount; without this reset, the cleanup's
+    // `dead.current = true` from the throwaway first mount persists into the
+    // real second mount, so run() bails right after the boot phase and the
+    // intro sticks on the blinking cursor forever (dev-only; StrictMode is a
+    // no-op in production, which is why installed builds are unaffected).
+    dead.current = false
     let systemUser = ''
     const run = async (): Promise<void> => {
       try {

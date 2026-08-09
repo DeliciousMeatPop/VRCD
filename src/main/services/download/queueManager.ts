@@ -91,6 +91,46 @@ export class QueueManager {
     return true
   }
 
+  // Move a Queued item one position earlier among Queued items (does not
+  // displace Downloading/Extracting/Installing items). Returns false if it
+  // can't move (not queued, already first queued, or no queue peers).
+  public moveQueuedUp(releaseName: string): boolean {
+    const idx = this.findIndex(releaseName)
+    if (idx === -1) return false
+    const item = this.queue[idx]
+    if (item.status !== 'Queued') return false
+
+    // Find the previous Queued item's index (skip non-queued entries above)
+    for (let i = idx - 1; i >= 0; i--) {
+      if (this.queue[i].status === 'Queued') {
+        this.queue.splice(idx, 1)
+        this.queue.splice(i, 0, item)
+        this.debouncedSaveQueue()
+        return true
+      }
+    }
+    return false // already first in line
+  }
+
+  // Move a Queued item one position later among Queued items. Returns false
+  // if it can't move (not queued, already last queued, or no queue peers).
+  public moveQueuedDown(releaseName: string): boolean {
+    const idx = this.findIndex(releaseName)
+    if (idx === -1) return false
+    const item = this.queue[idx]
+    if (item.status !== 'Queued') return false
+
+    for (let i = idx + 1; i < this.queue.length; i++) {
+      if (this.queue[i].status === 'Queued') {
+        this.queue.splice(idx, 1)
+        this.queue.splice(i, 0, item)
+        this.debouncedSaveQueue()
+        return true
+      }
+    }
+    return false // already last in line
+  }
+
   public addItem(item: DownloadItem): void {
     // Basic add, assumes checks are done beforehand if needed
     this.queue.push(item)
