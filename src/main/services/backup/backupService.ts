@@ -11,8 +11,10 @@ import {
   BackupCreateResult,
   BackupReportResult,
   BackupProfile,
-  BackupRoot
+  BackupRoot,
+  RestoreFixup
 } from '@shared/types'
+import { planProfileFolderSync } from './restoreFixups'
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -370,6 +372,23 @@ class BackupService {
       }
 
       await this.log(backupId, 'Restore push completed.')
+
+      // Apply any per-game post-restore fixups (best-effort, never fatal). These
+      // handle games whose save can't be restored by copying the tree back
+      // verbatim (e.g. Walkabout's randomised per-profile folders).
+      const profile = await profileService.getProfile(entry.packageName)
+      if (profile?.restoreFixups?.length) {
+        const primaryRoot = pushRoots.find((r) => r.localDir === 'data') ?? pushRoots[0]
+        if (primaryRoot) {
+          await this.applyRestoreFixups(
+            backupId,
+            deviceId,
+            primaryRoot.remotePath,
+            profile.restoreFixups
+          )
+        }
+      }
+
       // A fresh restore invalidates any previous verification — the user needs
       // to re-check whether it actually worked this time.
       entry.verification = 'pending'
@@ -381,6 +400,100 @@ class BackupService {
       await this.log(backupId, `Restore FAILED: ${message}`)
       return { ok: false, error: `Restore failed: ${message}`.substring(0, 300) }
     }
+  }
+
+  /**
+   * Apply a profile's post-restore fixups. Best-effort and never fatal: each
+   * fixup is wrapped so a failure is logged but the restore still succeeds. The
+   * only supported fixup today is `profileFolderSync` — see RestoreFixup.
+   */
+  private async applyRestoreFixups(
+    backupId: string,
+    deviceId: string,
+    primaryRemotePath: string,
+    fixups: RestoreFixup[]
+  ): Promise<void> {
+    const base = primaryRemotePath.replace(/\/+$/, '')
+    for (const fixup of fixups) {
+      try {
+        if (fixup.type !== 'profileFolderSync') {
+          await this.log(backupId, `  Fixup skipped: unknown type "${fixup.type}".`)
+          continue
+        }
+
+        const profilesDir = `${base}/${fixup.profilesDir.replace(/^\/+|\/+$/g, '')}`
+        await this.log(
+          backupId,
+          `  Fixup (profileFolderSync): syncing ${fixup.file} across profile folders in ${profilesDir}`
+        )
+
+        // Immediate subfolders of the profiles dir are the per-profile folders.
+        const dirsOut = await adbService.runShellCommand(
+          deviceId,
+          `find "${profilesDir}" -maxdepth 1 -type d`
+        )
+        // Where the save file currently exists (the just-restored copy lives
+        // under the old randomised folder).
+        const filesOut = await adbService.runShellCommand(
+          deviceId,
+          `find "${profilesDir}" -maxdepth 2 -type f -name "${fixup.file}"`
+        )
+
+        const profileDirs = this.splitLines(dirsOut).filter(
+          (d) => d.replace(/\/+$/, '') !== profilesDir
+        )
+        const existingFilePaths = this.splitLines(filesOut)
+
+        const plan = planProfileFolderSync({
+          existingFilePaths,
+          profileDirs,
+          file: fixup.file
+        })
+
+        if (plan === null) {
+          await this.log(
+            backupId,
+            `    No ${fixup.file} found under ${profilesDir}; nothing to sync.`
+          )
+          continue
+        }
+        if (plan.length === 0) {
+          await this.log(backupId, `    All profile folders already contain ${fixup.file}.`)
+          continue
+        }
+
+        let copied = 0
+        for (const copy of plan) {
+          const out = await adbService.runShellCommand(
+            deviceId,
+            `cp -f "${copy.from}" "${copy.to}"`
+          )
+          // toybox cp is silent on success; any output is an error line.
+          if (out && out.trim() !== '') {
+            await this.log(backupId, `    Copy FAILED → ${copy.to}: ${out.trim()}`)
+          } else {
+            copied++
+            await this.log(backupId, `    Synced ${fixup.file} → ${copy.to}`)
+          }
+        }
+        await this.log(
+          backupId,
+          `  Fixup (profileFolderSync) done: ${copied}/${plan.length} folder(s) updated.`
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        await this.log(backupId, `  Fixup error (non-fatal): ${message}`)
+      }
+    }
+  }
+
+  /** Split adb shell output into non-empty, trimmed lines. */
+  private splitLines(output: string | null): string[] {
+    if (!output) return []
+    return output
+      .split(/[\r\n]+/)
+      .map((l) => l.trim())
+      .filter((l) => l !== '')
   }
 
   public async deleteBackup(backupId: string): Promise<boolean> {

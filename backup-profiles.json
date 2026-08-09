@@ -1,7 +1,7 @@
 {
   "version": 1,
   "updated": "2026-07-09",
-  "_readme": "Per-package save-backup overrides for VR CyberDeck. Games listed here use a custom backup/restore method instead of the default (snapshot of /sdcard/Android/data/<pkg>). VR CyberDeck fetches this file from GitHub before every backup/restore, caches it locally, and falls back to the default method for any package not listed. To add a game: add an entry under `profiles` keyed by its package name. Fields per profile: `appLabel` (string, display only); `paths` (string[], device paths to snapshot — defaults to ['/sdcard/Android/data/<pkg>'], first entry is primary); `includeInternalData` (bool, also attempt a best-effort run-as capture of /data/data/<pkg> — only works on debuggable builds); `notes` (string, shown in the app UI and failure reports).",
+  "_readme": "Per-package save-backup overrides for VR CyberDeck. Games listed here use a custom backup/restore method instead of the default (snapshot of /sdcard/Android/data/<pkg>). VR CyberDeck fetches this file from GitHub before every backup/restore, caches it locally, and falls back to the default method for any package not listed. To add a game: add an entry under `profiles` keyed by its package name. Fields per profile: `appLabel` (string, display only); `paths` (string[], device paths to snapshot — defaults to ['/sdcard/Android/data/<pkg>'], first entry is primary); `includeInternalData` (bool, also attempt a best-effort run-as capture of /data/data/<pkg> — only works on debuggable builds); `notes` (string, shown in the app UI and failure reports); `restoreFixups` (array, optional best-effort adjustments applied to the device AFTER a restore push — never fatal). Supported fixup: {\"type\":\"profileFolderSync\",\"file\":\"<save file>\",\"profilesDir\":\"<dir relative to the primary root>\"} — copies the restored save file into every current per-profile subfolder of profilesDir, for games that regenerate a randomised profile folder on reinstall.",
   "profiles": {
     "com.fyian.TheThrillOfTheFight": {
       "appLabel": "The Thrill of the Fight",
@@ -13,7 +13,14 @@
       "appLabel": "Walkabout Mini Golf",
       "paths": ["/sdcard/Android/data/com.MightyCoconut.WalkaboutMiniGolf"],
       "includeInternalData": true,
-      "notes": "Restoring the external Android/data snapshot brings the files back but not progress, so the real save state lives elsewhere — PlayerPrefs in private internal storage and/or an online game account. Internal capture is best-effort and only succeeds on debuggable builds; retail builds need root. If your progress is tied to an online account it is synced server-side and a local save backup cannot restore it — sign in with the same account to recover it."
+      "restoreFixups": [
+        {
+          "type": "profileFolderSync",
+          "file": "Profile_Default.data",
+          "profilesDir": "files/Profiles/Oculus"
+        }
+      ],
+      "notes": "The local save lives in the external tree at files/Profiles/Oculus/<random>/Profile_Default.data, but the game regenerates a NEW random-numbered profile folder on reinstall, so restoring the old folder verbatim leaves the reinstalled game reading an empty one. The profileFolderSync fixup copies the restored Profile_Default.data into every current profile folder after restore so the game finds it. For best results, launch the game once after reinstalling (so it creates its new profile folder) before restoring. If your progress is tied to an online account it is synced server-side and a local save backup cannot restore it — sign in with the same account to recover it."
     }
   }
 }
