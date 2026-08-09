@@ -236,23 +236,42 @@ class AdbService extends EventEmitter implements AdbAPI {
     let tracker: Tracker
     try {
       tracker = await this.client.trackDevices()
-    } catch (error) {
-      // adb start-server can fail (port 5037 taken by another adb, or a
-      // firewall/AV blocking the loopback socket). Don't let that surface as an
-      // unhandled rejection, and don't leave isTracking=true — that would wedge
-      // every future retry. Reset, notify the UI via the existing tracker-error
-      // channel, and return so the app stays usable as a sideloader.
-      this.isTracking = false
-      const message = error instanceof Error ? error.message : String(error)
-      console.error(
-        '[ADB Service] Failed to start device tracking (adb server unavailable):',
-        message
+    } catch (firstError) {
+      // adb start-server commonly fails when a stale or conflicting adb daemon
+      // already owns port 5037 — e.g. another tool (SideQuest, another
+      // sideloader) or a different adb version is running its own server, so our
+      // bundled adb can't hand-shake ("could not read ok from ADB Server" /
+      // "cannot connect to daemon"). Try once to recover by restarting the
+      // server with our bundled adb (kill-server frees the port, start-server
+      // brings up our daemon), then retry tracking.
+      const firstMessage = firstError instanceof Error ? firstError.message : String(firstError)
+      console.warn(
+        '[ADB Service] Device tracking failed; attempting adb server recovery:',
+        firstMessage
       )
-      this.emit('tracker-error', message)
-      if (mainWindow) {
-        typedWebContentsSend.send(mainWindow, 'adb:device-tracker-error', message)
+      try {
+        await this.restartAdbServer()
+        tracker = await this.client.trackDevices()
+        console.log('[ADB Service] Device tracking recovered after adb server restart.')
+      } catch (secondError) {
+        // Recovery didn't help (e.g. a firewall/AV is blocking the loopback
+        // socket, or port 5037 is held by a process we can't stop). Don't let
+        // this surface as an unhandled rejection, and don't leave
+        // isTracking=true — that would wedge every future retry. Reset, notify
+        // the UI via the existing tracker-error channel, and return so the app
+        // stays usable as a sideloader.
+        this.isTracking = false
+        const message = secondError instanceof Error ? secondError.message : String(secondError)
+        console.error(
+          '[ADB Service] Failed to start device tracking after adb server recovery:',
+          message
+        )
+        this.emit('tracker-error', message)
+        if (mainWindow) {
+          typedWebContentsSend.send(mainWindow, 'adb:device-tracker-error', message)
+        }
+        return
       }
-      return
     }
     this.deviceTracker = tracker
 
@@ -1416,6 +1435,29 @@ class AdbService extends EventEmitter implements AdbAPI {
     } catch (e) {
       console.warn('[ADB Service] Could not run kill-server:', e)
     }
+  }
+
+  /**
+   * Restart the adb server with our bundled adb: `kill-server` frees port 5037
+   * (killing whatever daemon currently owns it, including a conflicting one from
+   * another tool or a different adb version), then `start-server` brings up our
+   * own daemon. Used to recover from a failed device-tracking start. Best-effort
+   * — resolves even if a command reports a non-zero exit, so the caller can
+   * simply retry and fall back to graceful degradation if it still fails.
+   */
+  private async restartAdbServer(): Promise<void> {
+    const adbPath = dependencyService.getAdbPath()
+    const run = (args: string): Promise<void> =>
+      new Promise((resolve) => {
+        exec(`"${adbPath}" ${args}`, { timeout: 10000 }, (err) => {
+          if (err) console.warn(`[ADB Service] "adb ${args}" reported:`, err.message)
+          else console.log(`[ADB Service] "adb ${args}" OK`)
+          resolve()
+        })
+      })
+    console.log('[ADB Service] Recovering adb server (kill-server → start-server)...')
+    await run('kill-server')
+    await run('start-server')
   }
 }
 
