@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseReleaseManifest, RELEASE_MANIFEST_FILENAME } from './releaseManifest.ts'
+import {
+  parseReleaseManifest,
+  RELEASE_MANIFEST_FILENAME,
+  RELEASE_METADATA_SIDECARS,
+  isReleaseMetadataSidecar
+} from './releaseManifest.ts'
 
 // Real-world example (Arizona Sunshine Remake), trimmed but structurally intact.
 const SAMPLE = `#VRPRELEASEMANIFEST 1.0
@@ -72,6 +77,24 @@ garbage line
 d;./dir;0`
   const { files } = parseReleaseManifest(input)
   assert.deepEqual(files, [{ path: 'ok.bin', size: 123 }])
+})
+
+test('treats release.manifest and release.add as metadata sidecars', () => {
+  // Both are release-root metadata, not game payload — they must be skipped by
+  // manifest verification so their absence never fails an otherwise-good install.
+  assert.equal(isReleaseMetadataSidecar('release.manifest'), true)
+  assert.equal(isReleaseMetadataSidecar('release.add'), true)
+  assert.ok(RELEASE_METADATA_SIDECARS.has('release.add'))
+  assert.ok(RELEASE_METADATA_SIDECARS.has(RELEASE_MANIFEST_FILENAME))
+})
+
+test('sidecar match is case-insensitive but only at the release root', () => {
+  assert.equal(isReleaseMetadataSidecar('RELEASE.ADD'), true)
+  assert.equal(isReleaseMetadataSidecar('Release.Manifest'), true)
+  // A real game asset is never treated as a sidecar.
+  assert.equal(isReleaseMetadataSidecar('com.example.game.apk'), false)
+  // A same-named file nested inside a package folder is still a real file.
+  assert.equal(isReleaseMetadataSidecar('com.example.game/release.add'), false)
 })
 
 test('stops treating rows as files after a later # section', () => {
