@@ -329,21 +329,6 @@ const LogUploadSettings: React.FC = () => {
       <div className={styles.cardContent}>
         <Text>{t('logUploadDesc')}</Text>
 
-        {/* Link to the wiki walkthrough so users who don't know how to send
-            logs can be pointed here instead of asking. The window-open handler
-            forwards target=_blank to the system browser. */}
-        <Text size={200}>
-          {t('logUploadGuide')}{' '}
-          <a
-            href="https://github.com/DeliciousMeatPop/VRCD/wiki/Have-an-issue%3F-SEND-YOUR-DAMN-LOGS"
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: tokens.colorBrandForegroundLink }}
-          >
-            {t('logUploadGuideLink')}
-          </a>
-        </Text>
-
         <div
           className={styles.formRow}
           style={{ gap: tokens.spacingHorizontalS, flexWrap: 'wrap' }}
