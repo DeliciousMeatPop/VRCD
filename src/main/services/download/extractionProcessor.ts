@@ -230,9 +230,17 @@ export class ExtractionProcessor {
       await this.extractNestedArchives(downloadPath, item.releaseName)
 
       const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      // A mismatch is a warning, not a hard failure: a release can ship a wrong
+      // manifest, and the user may want to install regardless. Record it (and
+      // clear any stale warning on success); the pipeline skips auto-install for
+      // a warned item so the user explicitly chooses whether to install anyway.
+      this.queueManager.updateItem(item.releaseName, {
+        manifestWarning: manifestCheck.ok ? undefined : manifestCheck.error
+      })
       if (!manifestCheck.ok) {
-        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
-        return false
+        console.warn(
+          `[ExtractProc] ${manifestCheck.error} — completing ${item.releaseName} with a warning; auto-install skipped.`
+        )
       }
 
       // Update final status to Completed
@@ -454,9 +462,17 @@ export class ExtractionProcessor {
       await this.extractNestedArchives(downloadPath, item.releaseName)
 
       const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      // A mismatch is a warning, not a hard failure: a release can ship a wrong
+      // manifest, and the user may want to install regardless. Record it (and
+      // clear any stale warning on success); the pipeline skips auto-install for
+      // a warned item so the user explicitly chooses whether to install anyway.
+      this.queueManager.updateItem(item.releaseName, {
+        manifestWarning: manifestCheck.ok ? undefined : manifestCheck.error
+      })
       if (!manifestCheck.ok) {
-        this.updateItemStatus(item.releaseName, 'Error', 100, manifestCheck.error)
-        return false
+        console.warn(
+          `[ExtractProc] ${manifestCheck.error} — completing ${item.releaseName} with a warning; auto-install skipped.`
+        )
       }
 
       // Update final status to Completed
@@ -570,17 +586,18 @@ export class ExtractionProcessor {
   }
 
   /**
-   * Verify the extracted files against the release's `release.manifest`, which
+   * Check the extracted files against the release's `release.manifest`, which
    * lists the exact byte size of every file in the release. A missing or
-   * size-mismatched file means the extraction is incomplete or corrupt and the
-   * game would launch with missing/partial resources (a common cause of
-   * crashes), so it fails the item.
+   * size-mismatched file usually means the extraction is incomplete or corrupt
+   * and the game may launch with missing/partial resources (a common cause of
+   * crashes).
    *
-   * The check is authoritative (exact byte sizes, no user input needed) but only
-   * runs when the manifest is present and parseable — older releases without a
-   * manifest, or an unreadable one, are skipped so this never blocks an
-   * otherwise-good install. Only files listed in the manifest are checked; extra
-   * files in the folder (including release.manifest itself) are ignored.
+   * Returns `{ ok: false, error }` describing the mismatching file(s) — the
+   * caller decides what to do (we surface it as a warning and let the user
+   * install anyway, since a release can also just ship a wrong manifest). Only
+   * runs when the manifest is present and parseable; older releases without a
+   * manifest, or an unreadable/empty one, return ok. The manifest never checks
+   * itself (it can't state its own size), and files not listed are ignored.
    */
   private async verifyAgainstReleaseManifest(
     downloadPath: string,
@@ -615,6 +632,12 @@ export class ExtractionProcessor {
 
     const mismatches: string[] = []
     for (const entry of files) {
+      // The manifest can't reliably state its own byte size (writing the size in
+      // changes the size), so some releases list release.manifest with a stale
+      // size. Never check the manifest against itself — it only ever produces a
+      // false mismatch.
+      if (entry.path.toLowerCase() === RELEASE_MANIFEST_FILENAME) continue
+
       const localPath = join(downloadPath, ...entry.path.split('/'))
       try {
         const stat = await fs.stat(localPath)

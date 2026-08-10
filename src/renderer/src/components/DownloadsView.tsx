@@ -396,9 +396,20 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
                   </>
                 )}
                 {item.status === 'Queued' && <Text className={styles.statusText}>Queued</Text>}
-                {item.status === 'Completed' && (
-                  <Text style={{ color: tokens.colorPaletteGreenForeground1 }}>Completed</Text>
-                )}
+                {item.status === 'Completed' &&
+                  (item.manifestWarning ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Text style={{ color: tokens.colorPaletteYellowForeground1 }}>
+                        Completed — manifest mismatch
+                      </Text>
+                      <Text size={100} style={{ color: tokens.colorPaletteYellowForeground1 }}>
+                        {item.manifestWarning}. The game may be broken; click Install to install
+                        anyway.
+                      </Text>
+                    </div>
+                  ) : (
+                    <Text style={{ color: tokens.colorPaletteGreenForeground1 }}>Completed</Text>
+                  ))}
                 {item.status === 'Cancelled' && (
                   <Text className={styles.statusText}>Cancelled</Text>
                 )}
