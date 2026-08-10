@@ -36,6 +36,39 @@ export interface ParsedReleaseManifest {
 export const RELEASE_MANIFEST_FILENAME = 'release.manifest'
 
 /**
+ * Release-metadata sidecar files that can appear at the release root and get
+ * listed in the manifest's #filelist, but are NOT part of the game payload and
+ * are frequently absent from the actual download:
+ *
+ *   - release.manifest — the manifest itself; it can't reliably state its own
+ *     byte size (writing the size in changes the size), so releases often list a
+ *     stale size for it.
+ *   - release.add — an uploader-side "additions" sidecar listed by some releases
+ *     (e.g. Beat Saber modding builds) but not shipped inside the archive, so it
+ *     reads as "missing" after extraction.
+ *
+ * None of these are APK/OBB/asset-config game assets, so a missing or
+ * size-mismatched sidecar can't cause the "game launches with missing
+ * resources" crash that manifest verification exists to catch. Verification
+ * skips them to avoid false mismatches. Matched (case-insensitively) against the
+ * entry's full root-relative path, so only a root-level sidecar is skipped — a
+ * same-named file nested inside a package folder is still checked.
+ */
+export const RELEASE_METADATA_SIDECARS: ReadonlySet<string> = new Set([
+  RELEASE_MANIFEST_FILENAME,
+  'release.add'
+])
+
+/**
+ * True if a manifest entry path refers to a release-metadata sidecar (see
+ * RELEASE_METADATA_SIDECARS) rather than a game-payload file, and should be
+ * excluded from extraction verification.
+ */
+export function isReleaseMetadataSidecar(path: string): boolean {
+  return RELEASE_METADATA_SIDECARS.has(path.toLowerCase())
+}
+
+/**
  * Parse the text of a `release.manifest`. Never throws — malformed or
  * unrecognised lines are skipped, so a partial/garbage manifest yields whatever
  * valid file rows it could find (possibly none).

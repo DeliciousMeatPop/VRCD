@@ -6,7 +6,11 @@ import dependencyService from '../dependencyService'
 import { DownloadItem, DownloadStatus } from '@shared/types'
 import mirrorService from '../mirrorService'
 import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
-import { parseReleaseManifest, RELEASE_MANIFEST_FILENAME } from './releaseManifest'
+import {
+  parseReleaseManifest,
+  RELEASE_MANIFEST_FILENAME,
+  isReleaseMetadataSidecar
+} from './releaseManifest'
 import { type DownloadedFile, validateDownloadCompletion } from './archiveDiscovery'
 
 // Type for VRP config - reuse or import
@@ -596,8 +600,9 @@ export class ExtractionProcessor {
    * caller decides what to do (we surface it as a warning and let the user
    * install anyway, since a release can also just ship a wrong manifest). Only
    * runs when the manifest is present and parseable; older releases without a
-   * manifest, or an unreadable/empty one, return ok. The manifest never checks
-   * itself (it can't state its own size), and files not listed are ignored.
+   * manifest, or an unreadable/empty one, return ok. Release-metadata sidecars
+   * (release.manifest, release.add) are never checked — they aren't game payload
+   * and are often absent from the download — and files not listed are ignored.
    */
   private async verifyAgainstReleaseManifest(
     downloadPath: string,
@@ -632,11 +637,10 @@ export class ExtractionProcessor {
 
     const mismatches: string[] = []
     for (const entry of files) {
-      // The manifest can't reliably state its own byte size (writing the size in
-      // changes the size), so some releases list release.manifest with a stale
-      // size. Never check the manifest against itself — it only ever produces a
-      // false mismatch.
-      if (entry.path.toLowerCase() === RELEASE_MANIFEST_FILENAME) continue
+      // Skip release-metadata sidecars (release.manifest, release.add): they're
+      // listed by some releases but aren't game payload and are often absent
+      // from the download, so checking them only ever produces a false mismatch.
+      if (isReleaseMetadataSidecar(entry.path)) continue
 
       const localPath = join(downloadPath, ...entry.path.split('/'))
       try {
