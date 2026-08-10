@@ -395,8 +395,6 @@ export interface ServerConfigInfo {
   password: string
 }
 
-export type AppLanguage = 'en' | 'es'
-
 export type ExistingDownloadAction = 'ask' | 'reinstall' | 'redownload'
 
 export interface WindowBounds {
@@ -414,7 +412,6 @@ export interface Settings {
   hideAdultContent: boolean
   colorScheme: 'light' | 'dark'
   serverConfig: ServerConfigInfo
-  language?: AppLanguage
   maxConcurrentDownloads: number
   existingDownloadAction?: ExistingDownloadAction
   windowBounds?: WindowBounds
@@ -431,8 +428,6 @@ export interface SettingsAPI {
   setColorScheme: (scheme: 'light' | 'dark') => void
   getServerConfig: () => ServerConfigInfo
   setServerConfig: (config: ServerConfigInfo) => void
-  getLanguage: () => AppLanguage
-  setLanguage: (lang: AppLanguage) => void
   getMaxConcurrentDownloads: () => number
   setMaxConcurrentDownloads: (n: number) => void
   getExistingDownloadAction: () => ExistingDownloadAction
@@ -453,8 +448,6 @@ export interface SettingsAPIRenderer
       setColorScheme: (scheme: 'light' | 'dark') => Promise<void>
       getServerConfig: () => Promise<ServerConfigInfo>
       setServerConfig: (config: ServerConfigInfo) => Promise<void>
-      getLanguage: () => Promise<AppLanguage>
-      setLanguage: (lang: AppLanguage) => Promise<void>
       getMaxConcurrentDownloads: () => Promise<number>
       setMaxConcurrentDownloads: (n: number) => Promise<void>
       getExistingDownloadAction: () => Promise<ExistingDownloadAction>

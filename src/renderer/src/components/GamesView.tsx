@@ -16,7 +16,6 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useAdb } from '../hooks/useAdb'
 import { useGames } from '../hooks/useGames'
 import { useDownload } from '../hooks/useDownload'
-import { useLanguage } from '../hooks/useLanguage'
 import { GameInfo, isSignatureMismatchError } from '@shared/types'
 import placeholderImage from '../assets/images/game-placeholder.png'
 import sideloaderBg from '../assets/images/sideloader-bg.png'
@@ -542,7 +541,6 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   } = useDownload()
 
   const styles = useStyles()
-  const { t } = useLanguage()
   const { serverConfig } = useSettings()
   const { activeMirror } = useMirrors()
   // A server (public server JSON or an rclone config) has been configured.
@@ -792,7 +790,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         cell: ({ row }) => {
           const packageName = row.original.packageName ?? ''
           const starred = isStarred(packageName)
-          const label = starred ? t('unstarGame') : t('starGame')
+          const label = starred ? 'Unstar game' : 'Star game'
           return (
             <Button
               className={mergeClasses('game-row-star', starred && 'is-starred')}
@@ -881,7 +879,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       },
       {
         accessorKey: 'name',
-        header: () => t('namePackage'),
+        header: () => 'Name / Package',
         size: nameColumnWidth > 0 ? nameColumnWidth : COLUMN_WIDTHS.MIN_NAME_PACKAGE,
         sortingFn: (rowA, rowB) => {
           const a = (rowA.original.name ?? '').toLowerCase()
@@ -963,7 +961,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 })()}
                 {isQueued && (
                   <Badge shape="rounded" color="informative" appearance="outline">
-                    {t('queued')}
+                    {'Queued'}
                   </Badge>
                 )}
                 {(isDownloading || isExtracting || isInstalling) && (
@@ -995,7 +993,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 )}
                 {isInstallError && (
                   <Badge shape="rounded" color="danger" appearance="outline">
-                    {isSigMismatch ? t('signatureMismatch') : t('installError')}
+                    {isSigMismatch ? 'Signature Mismatch' : 'Install Error'}
                   </Badge>
                 )}
               </div>
@@ -1016,7 +1014,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       },
       {
         accessorKey: 'version',
-        header: () => t('version'),
+        header: () => 'Version',
         size: COLUMN_WIDTHS.VERSION,
         cell: ({ row }) => {
           const listVersion = row.original.version
@@ -1038,7 +1036,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       },
       {
         accessorKey: 'downloads',
-        header: () => t('popularity'),
+        header: () => 'Popularity',
         size: COLUMN_WIDTHS.POPULARITY,
         cell: (info) => {
           const count = info.getValue()
@@ -1048,7 +1046,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       },
       {
         accessorKey: 'size',
-        header: () => t('size'),
+        header: () => 'Size',
         size: COLUMN_WIDTHS.SIZE,
         sortingFn: (a, b) =>
           parseSizeBytes(a.original.size ?? '') - parseSizeBytes(b.original.size ?? ''),
@@ -1064,7 +1062,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       },
       {
         accessorKey: 'lastUpdated',
-        header: () => t('lastUpdated'),
+        header: () => 'Last Updated',
         size: COLUMN_WIDTHS.LAST_UPDATED,
         sortingFn: (a, b) => {
           const da = a.original.lastUpdated ? new Date(a.original.lastUpdated).getTime() : 0
@@ -1086,7 +1084,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
       }
     ]
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStarred, styles, tableWidth, t, toggleStarred])
+  }, [isStarred, styles, tableWidth, toggleStarred])
 
   const table = useReactTable({
     data: filteredGames,
@@ -1164,7 +1162,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   }, [rows.length])
 
   const formatDate = (date: Date | null): string => {
-    if (!date) return t('never')
+    if (!date) return 'Never'
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'short',
@@ -1176,11 +1174,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
 
   const getProcessMessage = (): string => {
     if (downloadProgress > 0 && downloadProgress < 100) {
-      return `${t('downloadingGameData')} ${downloadProgress}%`
+      return `${'Downloading game data...'} ${downloadProgress}%`
     } else if (extractProgress > 0 && extractProgress < 100) {
-      return `${t('extractingGameData')} ${extractProgress}%`
+      return `${'Extracting game data...'} ${extractProgress}%`
     } else if (loadingGames) {
-      return t('preparingLibrary')
+      return 'Preparing game library...'
     }
     return ''
   }
@@ -1835,7 +1833,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           }}
         >
           <DialogBody>
-            <DialogTitle>{t('manualOperation')}</DialogTitle>
+            <DialogTitle>{'Manual Operation'}</DialogTitle>
             <DialogContent>
               <div style={{ marginBottom: tokens.spacingVerticalM }}>
                 <Text>{installStatusMessage}</Text>
@@ -1850,7 +1848,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   }}
                 >
                   <Spinner size="small" />
-                  <Text>{t('processing')}</Text>
+                  <Text>{'Processing...'}</Text>
                 </div>
               )}
               {installSuccess !== null && (
@@ -1868,11 +1866,11 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   }}
                 >
                   <Text weight="semibold">
-                    {installSuccess ? t('operationSuccess') : t('operationFailed')}
+                    {installSuccess ? '✅ Operation Successful!' : '❌ Operation Failed'}
                   </Text>
                   {!installSuccess && (
                     <div style={{ marginTop: tokens.spacingVerticalXS }}>
-                      <Text size={200}>{t('checkLogs')}</Text>
+                      <Text size={200}>{'Please check the logs for more details.'}</Text>
                     </div>
                   )}
                 </div>
@@ -1884,7 +1882,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 onClick={closeInstallDialog}
                 disabled={isManualInstalling}
               >
-                {isManualInstalling ? t('processing') : t('close')}
+                {isManualInstalling ? 'Processing...' : 'Close'}
               </Button>
             </DialogActions>
           </DialogBody>
@@ -1979,14 +1977,19 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           }}
         >
           <DialogBody>
-            <DialogTitle>{t('confirmObbCopy')}</DialogTitle>
+            <DialogTitle>{'Confirm OBB Folder Copy'}</DialogTitle>
             <DialogContent>
               <div style={{ marginBottom: tokens.spacingVerticalM }}>
                 <Text>
-                  {t('obbNoPackageFound')} &quot;{obbFolderToConfirm?.split(/[/\\]/).pop()}&quot;.
+                  {'No corresponding package was found for folder'} &quot;
+                  {obbFolderToConfirm?.split(/[/\\]/).pop()}&quot;.
                 </Text>
                 <div style={{ marginTop: tokens.spacingVerticalS }}>
-                  <Text>{t('obbCopyConfirm')}</Text>
+                  <Text>
+                    {
+                      'Do you still want to copy this folder to the OBB directory? This is usually only useful if the matching app is already installed.'
+                    }
+                  </Text>
                 </div>
               </div>
             </DialogContent>
@@ -1996,14 +1999,14 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 onClick={handleObbConfirmCopy}
                 disabled={isManualInstalling}
               >
-                {t('copyAnyway')}
+                {'Copy Anyway'}
               </Button>
               <Button
                 appearance="secondary"
                 onClick={handleObbCancelCopy}
                 disabled={isManualInstalling}
               >
-                {t('cancel')}
+                {'Cancel'}
               </Button>
             </DialogActions>
           </DialogBody>
@@ -2048,7 +2051,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   {isConnected && (
                     <button
                       className="chip-x"
-                      title={t('disconnectFromDevice')}
+                      title={'Disconnect from device'}
                       onClick={() => {
                         requestUploadCheck()
                         disconnectDevice()
@@ -2104,7 +2107,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 />
               </svg>
               <div className="dz-title">
-                {isManualInstalling ? t('manualInstalling') : 'DROP TO SIDELOAD'}
+                {isManualInstalling ? 'Installing...' : 'DROP TO SIDELOAD'}
               </div>
               <div className="dz-sub">
                 Drag an <b>APK</b>, a <b>.zip</b>, a game <b>folder</b> (APK + OBB + install.txt),
@@ -2122,7 +2125,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 onClick={() => handleManualInstall('apk')}
               >
                 <DocumentRegular />
-                <span>{t('installApkFile')}</span>
+                <span>{'Install APK File'}</span>
               </button>
               <button
                 className="cyber-deck-btn"
@@ -2130,7 +2133,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 onClick={() => handleManualInstall('folder')}
               >
                 <FolderAddRegular />
-                <span>{t('installFolder')}</span>
+                <span>{'Install Folder'}</span>
               </button>
               <button
                 className="cyber-deck-btn"
@@ -2138,7 +2141,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 onClick={handleCopyObbFolder}
               >
                 <CopyRegular />
-                <span>{t('copyObbFolder')}</span>
+                <span>{'Copy OBB Folder'}</span>
               </button>
             </div>
 
@@ -2364,7 +2367,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                         requestUploadCheck()
                         disconnectDevice()
                       }}
-                      title={t('disconnectFromDevice')}
+                      title={'Disconnect from device'}
                       style={CB}
                     >
                       Disconnect
@@ -2434,7 +2437,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                       disabled={isBusy}
                       style={CB}
                     >
-                      {isBusy ? t('working') : t('refreshQuest')}
+                      {isBusy ? 'Working...' : 'Refresh Quest'}
                     </Button>
                   )}
                 </div>
@@ -2496,7 +2499,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 disabled={isBusy}
                 style={CB}
               >
-                {isBusy ? t('working') : t('refreshGames')}
+                {isBusy ? 'Working...' : 'Refresh Games'}
               </Button>
               <Button
                 appearance="subtle"
@@ -2561,7 +2564,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                     disabled={isBusy || !isConnected}
                     style={CB}
                   >
-                    {isManualInstalling ? t('manualInstalling') : 'Manual Install'}
+                    {isManualInstalling ? 'Installing...' : 'Manual Install'}
                   </Button>
                 </MenuTrigger>
                 <MenuPopover
@@ -2582,21 +2585,21 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                       onClick={() => handleManualInstall('apk')}
                       disabled={isManualInstalling}
                     >
-                      {t('installApkFile')}
+                      {'Install APK File'}
                     </MenuItem>
                     <MenuItem
                       icon={<FolderAddRegular />}
                       onClick={() => handleManualInstall('folder')}
                       disabled={isManualInstalling}
                     >
-                      {t('installFolder')}
+                      {'Install Folder'}
                     </MenuItem>
                     <MenuItem
                       icon={<CopyRegular />}
                       onClick={handleCopyObbFolder}
                       disabled={isManualInstalling}
                     >
-                      {t('copyObbFolder')}
+                      {'Copy OBB Folder'}
                     </MenuItem>
                   </MenuList>
                 </MenuPopover>
@@ -2656,7 +2659,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 fontSize: '8px'
               }}
             >
-              {t('lastSynced')} {formatDate(lastSyncTime)}
+              {'Last synced:'} {formatDate(lastSyncTime)}
             </Text>
           </div>
         </div>
@@ -2669,7 +2672,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               <Input
                 value={searchInput}
                 onChange={handleSearchChange}
-                placeholder={t('searchPlaceholder')}
+                placeholder={'Search name/package...'}
                 type="search"
                 style={{ width: '100%' }}
               />
@@ -2679,30 +2682,30 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 onClick={() => setActiveFilter('all')}
                 className={activeFilter === 'all' ? 'active' : ''}
               >
-                {t('filterAll')} ({counts.total})
+                {'All'} ({counts.total})
               </button>
               <button
                 onClick={() => setActiveFilter('installed')}
                 className={activeFilter === 'installed' ? 'active' : ''}
               >
-                {t('filterInstalled')} ({counts.installed})
+                {'Installed'} ({counts.installed})
               </button>
               <button
                 onClick={() => setActiveFilter('update')}
                 className={activeFilter === 'update' ? 'active' : ''}
                 disabled={counts.updates === 0}
               >
-                {t('filterUpdates')} ({counts.updates})
+                {'Updates'} ({counts.updates})
               </button>
               <button
                 onClick={() => setActiveFilter('starred')}
                 className={activeFilter === 'starred' ? 'active' : ''}
               >
-                {t('filterStarred')} ({counts.starred})
+                {'Starred'} ({counts.starred})
               </button>
             </div>
             <span className="game-count">
-              {table.getFilteredRowModel().rows.length} {t('displayed')}
+              {table.getFilteredRowModel().rows.length} {'displayed'}
             </span>
             <Button
               appearance="subtle"
@@ -2919,7 +2922,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
 
           {/* Status messages */}
           {isBusy && !loadingGames && !downloadProgress && !extractProgress && (
-            <div className="loading-indicator">{t('processing')}</div>
+            <div className="loading-indicator">{'Processing...'}</div>
           )}
           {installStatusMessage && <div className="loading-indicator">{installStatusMessage}</div>}
           {loadingGames && (downloadProgress > 0 || extractProgress > 0) && (
@@ -2989,7 +2992,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           {/* Content area */}
           <div className={styles.contentArea}>
             {loadingGames ? (
-              <div className="loading-indicator">{t('loadingGamesLibrary')}</div>
+              <div className="loading-indicator">{'Loading games library...'}</div>
             ) : gamesError ? (
               <div className="error-message">{gamesError}</div>
             ) : games.length === 0 && !loadingGames ? (
@@ -3072,7 +3075,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                     boxShadow: '0 0 6px rgba(var(--vrcd-neon-raw),0.12)'
                   }}
                 >
-                  {isBusy ? t('working') : t('refreshGames')}
+                  {isBusy ? 'Working...' : 'Refresh Games'}
                 </Button>
               </div>
             ) : activeFilter === 'starred' && counts.starred === 0 ? (
@@ -3090,10 +3093,10 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               >
                 <StarRegular fontSize={56} color="rgba(var(--vrcd-neon-raw),0.45)" />
                 <Text size={500} weight="semibold">
-                  {t('noStarredGames')}
+                  {'No starred games'}
                 </Text>
                 <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
-                  {t('noStarredGamesHint')}
+                  {'Use the star button on a game to add it here.'}
                 </Text>
               </div>
             ) : (
@@ -3143,10 +3146,10 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                                 isStarred(game.packageName ?? '') ? <StarFilled /> : <StarRegular />
                               }
                               aria-label={
-                                isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')
+                                isStarred(game.packageName ?? '') ? 'Unstar game' : 'Star game'
                               }
                               title={
-                                isStarred(game.packageName ?? '') ? t('unstarGame') : t('starGame')
+                                isStarred(game.packageName ?? '') ? 'Unstar game' : 'Star game'
                               }
                               disabled={!game.packageName}
                               onClick={(event) => {

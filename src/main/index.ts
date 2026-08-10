@@ -815,8 +815,6 @@ app.whenReady().then(async () => {
     await gameService.setServerConfig(config)
     downloadService.updateVrpConfig(config)
   })
-  typedIpcMain.handle('settings:get-language', () => settingsService.getLanguage())
-  typedIpcMain.handle('settings:set-language', (_event, lang) => settingsService.setLanguage(lang))
 
   typedIpcMain.handle('settings:get-max-concurrent-downloads', () =>
     settingsService.getMaxConcurrentDownloads()

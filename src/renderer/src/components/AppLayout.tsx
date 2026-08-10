@@ -41,8 +41,6 @@ import { UploadProvider } from '@renderer/context/UploadProvider'
 import { useUpload } from '@renderer/hooks/useUpload'
 import { GameDialogProvider } from '@renderer/context/GameDialogProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { LanguageProvider } from '@renderer/context/LanguageProvider'
-import { useLanguage } from '@renderer/hooks/useLanguage'
 import CreditsDialog from './CreditsDialog'
 import HackerConsole from './HackerConsole'
 import TransferStrip from './TransferStrip'
@@ -591,7 +589,6 @@ const AppLayout: React.FC = () => {
   const styles = useStyles()
   const { queue: downloadQueue, storageStatus } = useDownload()
   const { queue: uploadQueue } = useUpload()
-  const { t } = useLanguage()
 
   useEffect(() => {
     window.api.app
@@ -1044,7 +1041,7 @@ const AppLayout: React.FC = () => {
                     action={
                       <Button
                         appearance="subtle"
-                        aria-label={t('close')}
+                        aria-label={'Close'}
                         icon={<CloseIcon />}
                         onClick={() => setIsTransfersOpen(false)}
                         style={{ color: 'var(--vrcd-neon)' }}
@@ -1086,11 +1083,11 @@ const AppLayout: React.FC = () => {
                     }}
                   >
                     <Tab value="downloads" icon={<DownloadIcon />}>
-                      {t('downloads')}
+                      {'Downloads'}
                     </Tab>
                     <Tab value="uploads" icon={<UploadIcon />}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {t('uploads')}
+                        {'Uploads'}
                         {uploadQueue.filter(
                           (i) =>
                             i.status === 'Queued' ||
@@ -1268,7 +1265,7 @@ const AppLayout: React.FC = () => {
                     <Button
                       appearance="subtle"
                       icon={<CloseIcon />}
-                      aria-label={t('close')}
+                      aria-label={'Close'}
                       onClick={() => setIsSettingsOpen(false)}
                       style={{
                         position: 'absolute',
@@ -1309,15 +1306,13 @@ const AppLayoutWithProviders: React.FC = () => {
   return (
     <ErrorBoundary>
       <SettingsProvider>
-        <LanguageProvider>
-          <DependencyProvider>
-            <DownloadProvider>
-              <UploadProvider>
-                <AppLayout />
-              </UploadProvider>
-            </DownloadProvider>
-          </DependencyProvider>
-        </LanguageProvider>
+        <DependencyProvider>
+          <DownloadProvider>
+            <UploadProvider>
+              <AppLayout />
+            </UploadProvider>
+          </DownloadProvider>
+        </DependencyProvider>
       </SettingsProvider>
     </ErrorBoundary>
   )

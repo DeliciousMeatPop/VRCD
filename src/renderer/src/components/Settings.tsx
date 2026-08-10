@@ -37,7 +37,6 @@ import {
 import { useSettings } from '../hooks/useSettings'
 import { useGames } from '../hooks/useGames'
 import { useLogs } from '../hooks/useLogs'
-import { useLanguage } from '../hooks/useLanguage'
 import { useAdb } from '../hooks/useAdb'
 import {
   useExtrasSettings,
@@ -187,7 +186,6 @@ const useStyles = makeStyles({
 
 const BlacklistSettings: React.FC = () => {
   const styles = useStyles()
-  const { t } = useLanguage()
   const { getBlacklistGames, removeGameFromBlacklist } = useGames()
   const [blacklistGames, setBlacklistGames] = useState<
     { packageName: string; version: number | 'any' }[]
@@ -224,35 +222,35 @@ const BlacklistSettings: React.FC = () => {
       setTimeout(() => setRemoveSuccess(false), 3000)
     } catch (err) {
       console.error('Error removing game from blacklist:', err)
-      setError(t('blacklistRemoveError'))
+      setError('Failed to remove game from blacklist')
     }
   }
 
   return (
     <Card className={styles.card}>
-      <CardHeader description={<Subtitle1>{t('blacklistedGames')}</Subtitle1>} />
+      <CardHeader description={<Subtitle1>{'Blacklisted Games'}</Subtitle1>} />
       <div className={styles.cardContent}>
-        <Text>{t('blacklistedGamesDesc')}</Text>
+        <Text>{'Manage games that will not prompt for uploads'}</Text>
 
         {isLoading ? (
           <div
             style={{ display: 'flex', justifyContent: 'center', padding: tokens.spacingVerticalL }}
           >
-            <Spinner size="small" label={t('loadingBlacklist')} />
+            <Spinner size="small" label={'Loading blacklisted games...'} />
           </div>
         ) : (
           <>
             {blacklistGames.length === 0 ? (
               <div className={styles.emptyState}>
-                <Text>{t('noBlacklistedGames')}</Text>
+                <Text>{'No blacklisted games found'}</Text>
               </div>
             ) : (
               <Table className={styles.blacklistTable}>
                 <TableHeader>
                   <TableRow>
-                    <TableHeaderCell>{t('packageName')}</TableHeaderCell>
-                    <TableHeaderCell>{t('version')}</TableHeaderCell>
-                    <TableHeaderCell style={{ width: '100px' }}>{t('actions')}</TableHeaderCell>
+                    <TableHeaderCell>{'Package Name'}</TableHeaderCell>
+                    <TableHeaderCell>{'Version'}</TableHeaderCell>
+                    <TableHeaderCell style={{ width: '100px' }}>{'Actions'}</TableHeaderCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -263,7 +261,7 @@ const BlacklistSettings: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <TableCellLayout>
-                          {game.version === 'any' ? t('allVersions') : game.version}
+                          {game.version === 'any' ? 'All Versions' : game.version}
                         </TableCellLayout>
                       </TableCell>
                       <TableCell>
@@ -272,7 +270,7 @@ const BlacklistSettings: React.FC = () => {
                           appearance="subtle"
                           className={styles.actionButton}
                           onClick={() => handleRemoveFromBlacklist(game.packageName)}
-                          aria-label={t('remove')}
+                          aria-label={'Remove'}
                         />
                       </TableCell>
                     </TableRow>
@@ -285,7 +283,7 @@ const BlacklistSettings: React.FC = () => {
             {removeSuccess && (
               <Text className={styles.success}>
                 <CheckmarkCircleRegular />
-                {t('blacklistRemoveSuccess')}
+                {'Game removed from blacklist successfully'}
               </Text>
             )}
           </>
@@ -297,7 +295,6 @@ const BlacklistSettings: React.FC = () => {
 
 const LogUploadSettings: React.FC = () => {
   const styles = useStyles()
-  const { t } = useLanguage()
   const {
     isUploading,
     uploadError,
@@ -325,9 +322,9 @@ const LogUploadSettings: React.FC = () => {
 
   return (
     <Card className={styles.card}>
-      <CardHeader description={<Subtitle1>{t('logUpload')}</Subtitle1>} />
+      <CardHeader description={<Subtitle1>{'Log Upload'}</Subtitle1>} />
       <div className={styles.cardContent}>
-        <Text>{t('logUploadDesc')}</Text>
+        <Text>{'Upload the current log file to rentry.co and share the code with support'}</Text>
 
         <div
           className={styles.formRow}
@@ -339,7 +336,7 @@ const LogUploadSettings: React.FC = () => {
             size="medium"
             icon={<FolderOpenRegular />}
           >
-            {t('openLogFolder')}
+            {'Open Log Folder'}
           </Button>
           <Button
             onClick={() => openLogFile()}
@@ -347,7 +344,7 @@ const LogUploadSettings: React.FC = () => {
             size="medium"
             icon={<DocumentTextRegular />}
           >
-            {t('openLogFile')}
+            {'Open Log File'}
           </Button>
           <Button
             onClick={handleUploadLog}
@@ -356,7 +353,7 @@ const LogUploadSettings: React.FC = () => {
             disabled={isUploading}
             icon={<ShareRegular />}
           >
-            {isUploading ? t('uploading_log') : t('uploadCurrentLog')}
+            {isUploading ? 'Uploading...' : 'Upload to rentry.co'}
           </Button>
         </div>
 
@@ -366,7 +363,7 @@ const LogUploadSettings: React.FC = () => {
           <div className={styles.success}>
             <CheckmarkCircleRegular />
             <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS }}>
-              <Text>{t('logUploadSuccess')}</Text>
+              <Text>{'Log uploaded to rentry.co! Code copied to clipboard.'}</Text>
 
               {/* Rentry share code — prominently displayed, auto-copied on upload */}
               {slug && (
@@ -377,7 +374,7 @@ const LogUploadSettings: React.FC = () => {
                     gap: tokens.spacingVerticalXS
                   }}
                 >
-                  <Text weight="semibold">{t('rentryCode')}</Text>
+                  <Text weight="semibold">{'Share Code (copied!):'}</Text>
                   <div
                     style={{
                       display: 'flex',
@@ -401,11 +398,11 @@ const LogUploadSettings: React.FC = () => {
                       appearance="primary"
                       icon={<CopyRegular />}
                     >
-                      {t('copyCode')}
+                      {'Copy Code'}
                     </Button>
                   </div>
                   <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                    {t('rentryCodeHint')}
+                    {'Send this code to the dev — they can view it at rentry.co/code'}
                   </Text>
                 </div>
               )}
@@ -413,7 +410,7 @@ const LogUploadSettings: React.FC = () => {
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS }}
               >
-                <Text weight="semibold">{t('url')}</Text>
+                <Text weight="semibold">{'Full URL:'}</Text>
                 <div
                   style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}
                 >
@@ -428,7 +425,7 @@ const LogUploadSettings: React.FC = () => {
                     appearance="secondary"
                     icon={<CopyRegular />}
                   >
-                    {t('copyUrl')}
+                    {'Copy URL'}
                   </Button>
                 </div>
               </div>
@@ -438,7 +435,9 @@ const LogUploadSettings: React.FC = () => {
 
         <Text className={styles.hint}>
           <InfoRegular />
-          {t('logUploadHint')}
+          {
+            'The log is uploaded to rentry.co as plain text. Share the short code (e.g. abc12345) with support so they can open rentry.co/abc12345.'
+          }
         </Text>
       </div>
     </Card>
@@ -447,7 +446,6 @@ const LogUploadSettings: React.FC = () => {
 
 // ─── Reset App Data ───────────────────────────────────────────────────────────
 const ResetAppDataSettings: React.FC = () => {
-  const { t } = useLanguage()
   const styles = useStyles()
   const [status, setStatus] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -466,9 +464,13 @@ const ResetAppDataSettings: React.FC = () => {
 
   return (
     <Card className={styles.card}>
-      <CardHeader description={<Subtitle1>{t('resetAppData')}</Subtitle1>} />
+      <CardHeader description={<Subtitle1>{'Reset App Data'}</Subtitle1>} />
       <div className={styles.cardContent}>
-        <Text>{t('resetAppDataDesc')}</Text>
+        <Text>
+          {
+            'Removes cached files, old binaries, and stored app state from the app data folder. Your downloaded games are NOT deleted. Use this if the app is misbehaving after an upgrade.'
+          }
+        </Text>
         <div className={styles.formRow} style={{ gap: tokens.spacingHorizontalS }}>
           <Button
             appearance="primary"
@@ -477,7 +479,7 @@ const ResetAppDataSettings: React.FC = () => {
             disabled={status === 'busy' || status === 'done'}
             onClick={handleReset}
           >
-            {status === 'busy' ? <Spinner size="tiny" /> : t('resetAppDataConfirm')}
+            {status === 'busy' ? <Spinner size="tiny" /> : 'Reset App Data'}
           </Button>
         </div>
         {status === 'done' && (
@@ -486,12 +488,12 @@ const ResetAppDataSettings: React.FC = () => {
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <CheckmarkCircleRegular />
-            {t('resetAppDataSuccess')}
+            {'Restarting…'}
           </Text>
         )}
         {status === 'error' && (
           <Text className={styles.error}>
-            {t('resetAppDataError')}
+            {'Reset failed'}
             {errorMsg ? `: ${errorMsg}` : ''}
           </Text>
         )}
@@ -1708,7 +1710,7 @@ const Settings: React.FC = () => {
 
   const handleSaveDownloadPath = async (): Promise<void> => {
     if (!editedDownloadPath) {
-      setLocalError(t('downloadPathEmpty'))
+      setLocalError('Download path cannot be empty')
       return
     }
 
@@ -1726,7 +1728,7 @@ const Settings: React.FC = () => {
       }, 3000)
     } catch (err) {
       console.error('Error saving download path:', err)
-      setLocalError(t('failedToSavePath'))
+      setLocalError('Failed to save download path')
     }
   }
 
@@ -1746,7 +1748,7 @@ const Settings: React.FC = () => {
       } else {
         const inputValue = parseFloat(downloadSpeedInput)
         if (isNaN(inputValue)) {
-          setLocalError(t('invalidNumbers'))
+          setLocalError('Please enter valid numbers for speed limits')
           return
         }
         const factor = SPEED_UNITS.find((u) => u.value === downloadSpeedUnit)?.factor || 1
@@ -1760,7 +1762,7 @@ const Settings: React.FC = () => {
       } else {
         const inputValue = parseFloat(uploadSpeedInput)
         if (isNaN(inputValue)) {
-          setLocalError(t('invalidNumbers'))
+          setLocalError('Please enter valid numbers for speed limits')
           return
         }
         const factor = SPEED_UNITS.find((u) => u.value === uploadSpeedUnit)?.factor || 1
@@ -1787,7 +1789,7 @@ const Settings: React.FC = () => {
       }, 3000)
     } catch (err) {
       console.error('Error saving speed limits:', err)
-      setLocalError(t('failedToSaveSpeed'))
+      setLocalError('Failed to save speed limits')
     }
   }
 
@@ -1945,8 +1947,6 @@ const Settings: React.FC = () => {
     }
   }
 
-  const { t } = useLanguage()
-
   return (
     <div
       className={styles.root}
@@ -2010,7 +2010,7 @@ const Settings: React.FC = () => {
               Hacks
             </span>
           </span>
-          {isLoading && <Spinner size="large" label={t('loadingSettings')} />}
+          {isLoading && <Spinner size="large" label={'Loading settings...'} />}
         </div>
         <span
           style={{
@@ -2021,7 +2021,7 @@ const Settings: React.FC = () => {
             display: 'block'
           }}
         >
-          {t('configurePreferences')}
+          {'Configure application preferences and manage your downloads'}
           {appVersion && ` • Version ${appVersion}`}
         </span>
 
@@ -2073,42 +2073,42 @@ const Settings: React.FC = () => {
         />
         {openSections.download && (
           <Card className={styles.card}>
-            <CardHeader description={<Subtitle1>{t('downloadSettings')}</Subtitle1>} />
+            <CardHeader description={<Subtitle1>{'Download Settings'}</Subtitle1>} />
             <div className={styles.cardContent}>
-              <Text>{t('downloadSettingsDesc')}</Text>
+              <Text>{'Set where your games will be downloaded and stored on your device'}</Text>
 
               <div className={styles.formRow}>
                 <Input
                   className={styles.input}
                   value={editedDownloadPath}
                   onChange={(_, data) => setEditedDownloadPath(data.value)}
-                  placeholder={t('downloadPath')}
+                  placeholder={'Download path'}
                   contentAfter={
                     <Button
                       icon={<FolderOpenRegular />}
                       onClick={handleSelectFolder}
-                      aria-label={t('browseFolders')}
+                      aria-label={'Browse folders'}
                     />
                   }
                   size="large"
                 />
                 <button onClick={handleSaveDownloadPath} style={neonBtn}>
-                  {t('savePath')}
+                  {'Save Path'}
                 </button>
               </div>
 
               <div className={styles.speedLimitSection}>
-                <Text>{t('unlimitedHint')}</Text>
+                <Text>{'Leave empty for unlimited speed'}</Text>
 
                 <div className={styles.speedFormRow}>
                   <div className={styles.speedControl}>
-                    <Text>{t('downloadSpeedLimit')}</Text>
+                    <Text>{'Download Speed Limit'}</Text>
                     <div className={styles.speedInputGroup}>
                       <Input
                         className={styles.speedInput}
                         value={downloadSpeedInput}
                         onChange={(_, data) => handleDownloadInputChange(data.value)}
-                        placeholder={t('unlimited')}
+                        placeholder={'Unlimited'}
                       />
                       <Dropdown
                         className={styles.unitDropdown}
@@ -2131,18 +2131,18 @@ const Settings: React.FC = () => {
                     </div>
                     <Text className={styles.hint}>
                       <InfoRegular />
-                      {t('unlimitedHint')}
+                      {'Leave empty for unlimited speed'}
                     </Text>
                   </div>
 
                   <div className={styles.speedControl}>
-                    <Text>{t('uploadSpeedLimit')}</Text>
+                    <Text>{'Upload Speed Limit'}</Text>
                     <div className={styles.speedInputGroup}>
                       <Input
                         className={styles.speedInput}
                         value={uploadSpeedInput}
                         onChange={(_, data) => handleUploadInputChange(data.value)}
-                        placeholder={t('unlimited')}
+                        placeholder={'Unlimited'}
                       />
                       <Dropdown
                         className={styles.unitDropdown}
@@ -2164,7 +2164,7 @@ const Settings: React.FC = () => {
                     </div>
                     <Text className={styles.hint}>
                       <InfoRegular />
-                      {t('unlimitedHint')}
+                      {'Leave empty for unlimited speed'}
                     </Text>
                   </div>
                 </div>
@@ -2174,7 +2174,7 @@ const Settings: React.FC = () => {
                   style={{ justifyContent: 'flex-end', marginTop: tokens.spacingVerticalM }}
                 >
                   <button onClick={handleSaveSpeedLimits} style={neonBtn}>
-                    {t('saveSpeedLimits')}
+                    {'Save Speed Limits'}
                   </button>
                 </div>
               </div>
@@ -2184,7 +2184,7 @@ const Settings: React.FC = () => {
               {saveSuccess && (
                 <Text className={styles.success}>
                   <CheckmarkCircleRegular />
-                  {t('settingsSaved')}
+                  {'Settings saved successfully'}
                 </Text>
               )}
             </div>
