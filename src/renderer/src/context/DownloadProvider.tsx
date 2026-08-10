@@ -31,6 +31,14 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
   const [rememberChoice, setRememberChoice] = useState<boolean>(false)
   // Prevent double-resolving the prompt promise if the user clicks twice
   const resolvedRef = useRef(false)
+  // Release names we've already fired a "download complete" notification for, so
+  // each completion notifies exactly once. This must persist across queue-update
+  // events, so it lives in a ref: the onQueueUpdated effect runs once, so reading
+  // `queue` state from inside its closure sees a permanently stale value (the
+  // empty initial queue) and treats every already-completed item as newly
+  // completed on every update — which spammed the click sound and Windows
+  // notifications the moment the first of several parallel downloads finished (#31).
+  const notifiedCompletedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let isMounted = true
@@ -39,6 +47,12 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
     Promise.all([window.api.downloads.getQueue(), window.api.downloads.getStorageStatus()])
       .then(([initialQueue, initialStorageStatus]) => {
         if (isMounted) {
+          // Seed the notified set from items already Completed at load time, so
+          // downloads that finished in a previous session don't fire a
+          // notification the first time the queue updates.
+          notifiedCompletedRef.current = new Set(
+            initialQueue.filter((i) => i.status === 'Completed').map((i) => i.releaseName)
+          )
           setQueue(initialQueue)
           setStorageStatus(initialStorageStatus)
         }
@@ -52,23 +66,31 @@ export const DownloadProvider: React.FC<DownloadProviderProps> = ({ children }) 
       })
 
     const removeUpdateListener = window.api.downloads.onQueueUpdated((updatedQueue) => {
-      // Detect newly-completed items for notification
-      const prevCompleted = new Set(
-        queue.filter((i) => i.status === 'Completed').map((i) => i.releaseName)
-      )
+      // Fire the notification + sound once per completion. Track which releases
+      // we've already notified in a ref (see notifiedCompletedRef) so this
+      // survives across events — a fresh compare against component state here
+      // would be stale and re-notify on every update.
+      const notified = notifiedCompletedRef.current
+      const stillCompleted = new Set<string>()
       for (const item of updatedQueue) {
-        if (item.status === 'Completed' && !prevCompleted.has(item.releaseName)) {
-          // Fire notification + sound for newly completed download
-          playSound('click')
-          try {
-            window.api.app.showNotification(
-              'Download Complete',
-              `${item.gameName} finished downloading.`
-            )
-          } catch {
-            /* ignore */
-          }
+        if (item.status !== 'Completed') continue
+        stillCompleted.add(item.releaseName)
+        if (notified.has(item.releaseName)) continue
+        notified.add(item.releaseName)
+        playSound('click')
+        try {
+          window.api.app.showNotification(
+            'Download Complete',
+            `${item.gameName} finished downloading.`
+          )
+        } catch {
+          /* ignore */
         }
+      }
+      // Forget releases that are no longer Completed (removed, or re-downloading)
+      // so a later re-completion of the same release notifies again.
+      for (const name of notified) {
+        if (!stillCompleted.has(name)) notified.delete(name)
       }
       setQueue(updatedQueue)
       setError(null)
