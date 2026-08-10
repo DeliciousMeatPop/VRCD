@@ -470,6 +470,30 @@ const CARD_COLS_MAX = 12
  * width cannot prevent that (`1fr` still stretches) and only costs slider
  * travel, so the column floor is the lever that actually works.
  */
+const LOGS_WIKI_URL =
+  'https://github.com/DeliciousMeatPop/VRCD/wiki/Have-an-issue%3F-SEND-YOUR-DAMN-LOGS'
+
+/** Small inline link to the "how to send your logs" wiki guide. Opens in the
+ *  system browser via the main window's window-open handler. */
+const SendLogsHelpLink: React.FC = () => (
+  <a
+    href={LOGS_WIKI_URL}
+    target="_blank"
+    rel="noreferrer"
+    style={{
+      display: 'block',
+      textAlign: 'center',
+      marginTop: 6,
+      color: 'rgba(var(--vrcd-neon-raw),0.6)',
+      fontFamily: 'var(--vrcd-font-mono)',
+      fontSize: 11,
+      letterSpacing: '0.04em'
+    }}
+  >
+    Having an issue? How to send logs →
+  </a>
+)
+
 function cardColumns(cardSize: number): number {
   const size = Math.min(100, Math.max(0, cardSize))
   const span = CARD_COLS_MAX - CARD_COLS_MIN
@@ -2209,6 +2233,8 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               </div>
             )}
 
+            <SendLogsHelpLink />
+
             {/* Footer: version + github */}
             <div className="sideloader-footer">
               {appVersion && <span className="ver">v{appVersion}</span>}
@@ -2575,6 +2601,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   </MenuList>
                 </MenuPopover>
               </Menu>
+              <SendLogsHelpLink />
             </section>
           </div>
 
