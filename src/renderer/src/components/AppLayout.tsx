@@ -238,6 +238,24 @@ const DependencyErrorLogActions: React.FC = () => {
           {uploading ? 'Uploading…' : 'Upload Log'}
         </Button>
       </div>
+      <Text
+        style={{
+          display: 'block',
+          marginTop: tokens.spacingVerticalS,
+          textAlign: 'center',
+          fontSize: '12px'
+        }}
+      >
+        Not sure how?{' '}
+        <a
+          href="https://github.com/DeliciousMeatPop/VRCD/wiki/Have-an-issue%3F-SEND-YOUR-DAMN-LOGS"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: tokens.colorBrandForegroundLink }}
+        >
+          How to send your logs →
+        </a>
+      </Text>
       {result && (
         <Text
           style={{
