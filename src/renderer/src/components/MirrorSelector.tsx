@@ -24,7 +24,6 @@ import {
   PlayRegular
 } from '@fluentui/react-icons'
 import { useMirrors } from '../hooks/useMirrors'
-import { useLanguage } from '../hooks/useLanguage'
 import MirrorManagement from './MirrorManagement'
 
 const useStyles = makeStyles({
@@ -60,7 +59,6 @@ const useStyles = makeStyles({
 
 const MirrorSelector: React.FC = () => {
   const styles = useStyles()
-  const { t } = useLanguage()
   const {
     mirrors,
     activeMirror,
@@ -111,7 +109,7 @@ const MirrorSelector: React.FC = () => {
     return (
       <div className={styles.container}>
         <Spinner size="tiny" />
-        <Text>{t('loadingMirrors')}</Text>
+        <Text>{'Loading remotes...'}</Text>
       </div>
     )
   }
@@ -123,18 +121,18 @@ const MirrorSelector: React.FC = () => {
         {getStatusIcon()}
         <Dropdown
           className={styles.mirrorSelector}
-          value={activeMirror?.name || t('publicMirror')}
+          value={activeMirror?.name || 'Public Server'}
           selectedOptions={[activeMirror?.id || 'public']}
-          button={{ children: activeMirror?.name || t('publicMirror') }}
+          button={{ children: activeMirror?.name || 'Public Server' }}
           onOptionSelect={(_, data) => {
             if (data.optionValue) {
               handleMirrorChange(data.optionValue)
             }
           }}
-          placeholder={t('selectMirror')}
+          placeholder={'Select remote...'}
         >
-          <Option value="public" text={t('publicMirror')}>
-            {t('publicMirror')}
+          <Option value="public" text={'Public Server'}>
+            {'Public Server'}
           </Option>
           {mirrors.map((mirror) => (
             <Option key={mirror.id} value={mirror.id} text={mirror.name}>
@@ -153,9 +151,9 @@ const MirrorSelector: React.FC = () => {
             icon={<PlayRegular />}
             onClick={handleTestMirror}
             disabled={testingMirrors.has(activeMirror.id)}
-            title={t('testMirrorConnectivity')}
+            title={'Test remote connectivity'}
           >
-            {t('test')}
+            {'Test'}
           </Button>
         )}
 
@@ -165,14 +163,14 @@ const MirrorSelector: React.FC = () => {
               appearance="subtle"
               size="small"
               icon={<SettingsRegular />}
-              title={t('manageMirrors')}
+              title={'Manage remotes'}
               style={{ flex: 1, justifyContent: 'flex-start' }}
             >
-              {t('manage')} Remotes
+              {'Manage'} Remotes
             </Button>
           </DialogTrigger>
           <DialogSurface className={styles.managementDialog}>
-            <DialogTitle>{t('mirrorManagement')}</DialogTitle>
+            <DialogTitle>{'Server & Remotes'}</DialogTitle>
             <DialogContent
               style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
             >
@@ -181,7 +179,7 @@ const MirrorSelector: React.FC = () => {
               </DialogBody>
               <DialogActions>
                 <Button appearance="secondary" onClick={() => setShowManagement(false)}>
-                  {t('close')}
+                  {'Close'}
                 </Button>
               </DialogActions>
             </DialogContent>

@@ -12,7 +12,6 @@ import {
   tokens
 } from '@fluentui/react-components'
 import { useUpload } from '../hooks/useUpload'
-import { useLanguage } from '../hooks/useLanguage'
 import { UploadItem } from '@shared/types'
 import {
   DismissRegular,
@@ -45,7 +44,6 @@ const useStyles = makeStyles({
 const UploadRow: React.FC<{ item: UploadItem }> = ({ item }) => {
   const styles = useStyles()
   const { removeFromQueue, cancelUpload, retryUpload } = useUpload()
-  const { t } = useLanguage()
 
   let statusElement = <Text>{item.status}</Text>
   let actions: React.ReactNode = null
@@ -54,13 +52,13 @@ const UploadRow: React.FC<{ item: UploadItem }> = ({ item }) => {
 
   switch (item.status) {
     case 'Queued':
-      statusElement = <Text>{t('waitingInQueue')}</Text>
+      statusElement = <Text>{'Waiting in queue'}</Text>
       actions = (
         <Button
           icon={<DismissRegular />}
           appearance="subtle"
           onClick={() => removeFromQueue(item.packageName)}
-          aria-label={t('removeFromQueue')}
+          aria-label={'Remove from queue'}
         />
       )
       break
@@ -82,19 +80,19 @@ const UploadRow: React.FC<{ item: UploadItem }> = ({ item }) => {
           icon={<DismissRegular />}
           appearance="subtle"
           onClick={() => cancelUpload(item.packageName)}
-          aria-label={t('cancelUpload')}
+          aria-label={'Cancel upload'}
         />
       )
       break
 
     case 'Completed':
-      statusElement = <Text weight="semibold">{t('completed')}</Text>
+      statusElement = <Text weight="semibold">{'Completed'}</Text>
       actions = (
         <Button
           icon={<DeleteRegular />}
           appearance="subtle"
           onClick={() => removeFromQueue(item.packageName)}
-          aria-label={t('removeFromHistory')}
+          aria-label={'Remove from history'}
         />
       )
       break
@@ -106,7 +104,7 @@ const UploadRow: React.FC<{ item: UploadItem }> = ({ item }) => {
             weight="semibold"
             style={{ color: tokens.colorPaletteRedForeground1, marginRight: '4px' }}
           >
-            {t('error')}
+            {'Error'}
           </Text>
           {item.error && <Text size={200}>{item.error}</Text>}
         </>
@@ -117,35 +115,35 @@ const UploadRow: React.FC<{ item: UploadItem }> = ({ item }) => {
             icon={<ArrowCounterclockwiseRegular />}
             appearance="subtle"
             onClick={() => retryUpload(item.packageName)}
-            aria-label={t('retryUpload')}
-            title={t('retryUpload')}
+            aria-label={'Retry upload'}
+            title={'Retry upload'}
           />
           <Button
             icon={<DeleteRegular />}
             appearance="subtle"
             onClick={() => removeFromQueue(item.packageName)}
-            aria-label={t('removeFromQueue')}
+            aria-label={'Remove from queue'}
           />
         </>
       )
       break
 
     case 'Cancelled':
-      statusElement = <Text>{t('cancelled')}</Text>
+      statusElement = <Text>{'Cancelled'}</Text>
       actions = (
         <>
           <Button
             icon={<ArrowCounterclockwiseRegular />}
             appearance="subtle"
             onClick={() => retryUpload(item.packageName)}
-            aria-label={t('retryUpload')}
-            title={t('retryUpload')}
+            aria-label={'Retry upload'}
+            title={'Retry upload'}
           />
           <Button
             icon={<DeleteRegular />}
             appearance="subtle"
             onClick={() => removeFromQueue(item.packageName)}
-            aria-label={t('removeFromQueue')}
+            aria-label={'Remove from queue'}
           />
         </>
       )
@@ -172,7 +170,6 @@ const UploadRow: React.FC<{ item: UploadItem }> = ({ item }) => {
 const UploadsView: React.FC = () => {
   const styles = useStyles()
   const { queue, clearCompleted } = useUpload()
-  const { t } = useLanguage()
 
   const hasClearable = queue.some((i) => i.status === 'Completed' || i.status === 'Cancelled')
 
@@ -199,18 +196,18 @@ const UploadsView: React.FC = () => {
       {queue.length === 0 ? (
         <div className={styles.emptyState}>
           <Text size={200} weight="semibold">
-            {t('noUploadsInQueue')}
+            {'No uploads in queue'}
           </Text>
         </div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHeaderCell>{t('game')}</TableHeaderCell>
-              <TableHeaderCell>{t('packageName')}</TableHeaderCell>
-              <TableHeaderCell>{t('version')}</TableHeaderCell>
-              <TableHeaderCell>{t('status')}</TableHeaderCell>
-              <TableHeaderCell>{t('actions')}</TableHeaderCell>
+              <TableHeaderCell>{'Game'}</TableHeaderCell>
+              <TableHeaderCell>{'Package Name'}</TableHeaderCell>
+              <TableHeaderCell>{'Version'}</TableHeaderCell>
+              <TableHeaderCell>{'Status'}</TableHeaderCell>
+              <TableHeaderCell>{'Actions'}</TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>

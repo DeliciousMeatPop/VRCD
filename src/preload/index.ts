@@ -25,7 +25,6 @@ import {
   ServerConfigInfo,
   WiFiBookmark,
   LocalUploadError,
-  AppLanguage,
   BackupAPIRenderer
 } from '@shared/types'
 import { typedIpcRenderer } from '@shared/ipc-utils'
@@ -289,9 +288,6 @@ const api = {
       typedIpcRenderer.invoke('settings:get-server-config'),
     setServerConfig: (config: ServerConfigInfo): Promise<void> =>
       typedIpcRenderer.invoke('settings:set-server-config', config),
-    getLanguage: (): Promise<AppLanguage> => typedIpcRenderer.invoke('settings:get-language'),
-    setLanguage: (lang: AppLanguage): Promise<void> =>
-      typedIpcRenderer.invoke('settings:set-language', lang),
     getMaxConcurrentDownloads: (): Promise<number> =>
       typedIpcRenderer.invoke('settings:get-max-concurrent-downloads'),
     setMaxConcurrentDownloads: (n: number): Promise<void> =>

@@ -23,7 +23,6 @@ import {
   DeleteRegular,
   ArrowUploadRegular
 } from '@fluentui/react-icons'
-import { useLanguage } from '../hooks/useLanguage'
 import { LocalUploadError } from '@shared/types'
 
 const useStyles = makeStyles({
@@ -77,7 +76,6 @@ function basename(path: string): string {
 }
 
 const LocalUploadDialog: React.FC = () => {
-  const { t } = useLanguage()
   const styles = useStyles()
 
   const [isOpen, setIsOpen] = useState(false)
@@ -158,7 +156,7 @@ const LocalUploadDialog: React.FC = () => {
           border: '1px solid rgba(var(--vrcd-neon-raw),0.45)'
         }}
       >
-        {t('uploadLocalFiles')}
+        {'Upload Local Files'}
       </Button>
 
       <Dialog
@@ -183,28 +181,34 @@ const LocalUploadDialog: React.FC = () => {
           }}
         >
           <DialogBody>
-            <DialogTitle>{t('localUploadTitle')}</DialogTitle>
+            <DialogTitle>{'Upload Local Files'}</DialogTitle>
             <DialogContent>
-              <Text className={styles.description}>{t('localUploadDescription')}</Text>
+              <Text className={styles.description}>
+                {
+                  'Select folders containing APK files or ZIP archives to upload to the server. Each folder must contain exactly one APK file.'
+                }
+              </Text>
 
               <div className={styles.actionRow}>
                 <Button icon={<FolderOpenRegular />} onClick={handleAddFolders}>
-                  {t('addFolders')}
+                  {'Add Folders'}
                 </Button>
                 <Button icon={<DocumentRegular />} onClick={handleAddZips}>
-                  {t('addZipFiles')}
+                  {'Add ZIP Files'}
                 </Button>
               </div>
 
               {selectedPaths.length === 0 ? (
-                <Text className={styles.emptyState}>{t('noItemsSelected')}</Text>
+                <Text className={styles.emptyState}>
+                  {'No items selected. Add folders or ZIP files above.'}
+                </Text>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHeaderCell>{t('name')}</TableHeaderCell>
-                      <TableHeaderCell style={{ width: '80px' }}>{t('type')}</TableHeaderCell>
-                      <TableHeaderCell style={{ width: '60px' }}>{t('actions')}</TableHeaderCell>
+                      <TableHeaderCell>{'Name'}</TableHeaderCell>
+                      <TableHeaderCell style={{ width: '80px' }}>{'Type'}</TableHeaderCell>
+                      <TableHeaderCell style={{ width: '60px' }}>{'Actions'}</TableHeaderCell>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -213,7 +217,7 @@ const LocalUploadDialog: React.FC = () => {
                         <TableCell style={{ wordBreak: 'break-all' }}>{basename(path)}</TableCell>
                         <TableCell>
                           <span className={styles.typeTag}>
-                            {isZip(path) ? t('zipFile') : t('folder')}
+                            {isZip(path) ? 'ZIP file' : 'Folder'}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -222,7 +226,7 @@ const LocalUploadDialog: React.FC = () => {
                             appearance="subtle"
                             size="small"
                             onClick={() => handleRemovePath(path)}
-                            aria-label={t('remove')}
+                            aria-label={'Remove'}
                           />
                         </TableCell>
                       </TableRow>
@@ -234,7 +238,7 @@ const LocalUploadDialog: React.FC = () => {
               {validationErrors.length > 0 && (
                 <div className={styles.errorBox}>
                   <Text weight="semibold" className={styles.errorTitle}>
-                    {t('uploadFailedValidation')}
+                    {'Upload refused — validation errors:'}
                   </Text>
                   {validationErrors.map((err, i) => (
                     <div key={i} className={styles.errorItem}>
@@ -248,7 +252,9 @@ const LocalUploadDialog: React.FC = () => {
                   ))}
                   <div style={{ marginTop: tokens.spacingVerticalM }}>
                     <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
-                      {t('localUploadRules')}
+                      {
+                        'How it works: Each selected folder must contain exactly one APK file. It can also contain an OBB folder, instruction files, or other related content. If you have multiple APKs, put each in its own separate folder.'
+                      }
                     </Text>
                   </div>
                 </div>
@@ -256,14 +262,18 @@ const LocalUploadDialog: React.FC = () => {
 
               {selectedPaths.length > 0 && validationErrors.length === 0 && (
                 <div className={styles.rulesBox}>
-                  <Text size={200}>{t('localUploadRules')}</Text>
+                  <Text size={200}>
+                    {
+                      'How it works: Each selected folder must contain exactly one APK file. It can also contain an OBB folder, instruction files, or other related content. If you have multiple APKs, put each in its own separate folder.'
+                    }
+                  </Text>
                 </div>
               )}
             </DialogContent>
 
             <DialogActions>
               <Button appearance="secondary" onClick={handleClose}>
-                {t('cancel')}
+                {'Cancel'}
               </Button>
               <Button
                 appearance="primary"
@@ -271,7 +281,7 @@ const LocalUploadDialog: React.FC = () => {
                 disabled={selectedPaths.length === 0 || isProcessing}
                 icon={<ArrowUploadRegular />}
               >
-                {isProcessing ? t('validating') : `${t('uploadItems')} (${selectedPaths.length})`}
+                {isProcessing ? 'Validating...' : `${'Upload'} (${selectedPaths.length})`}
               </Button>
             </DialogActions>
           </DialogBody>

@@ -32,7 +32,6 @@ import { getSideloadingDisabled } from '@renderer/hooks/useExtrasSettings'
 import ErrorDetailDialog, { ErrorPhase } from './ErrorDetailDialog'
 import NoteRenderer from './NoteRenderer'
 import GameSaveBackupControls from './backup/GameSaveBackupControls'
-import { useLanguage } from '@renderer/hooks/useLanguage'
 
 const NEON = 'var(--vrcd-neon)'
 const PURPLE = 'var(--vrcd-purple)'
@@ -99,7 +98,6 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 }) => {
   const { getTrailerUrl } = useGames()
   const { selectedDevice } = useAdb()
-  const { t } = useLanguage()
   const [currentGameNote, setCurrentGameNote] = useState<string | null>(null)
   const [loadingNote, setLoadingNote] = useState(false)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
@@ -550,8 +548,8 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                   appearance="subtle"
                   size="small"
                   icon={isStarred ? <StarFilled /> : <StarRegular />}
-                  aria-label={isStarred ? t('unstarGame') : t('starGame')}
-                  title={isStarred ? t('unstarGame') : t('starGame')}
+                  aria-label={isStarred ? 'Unstar game' : 'Star game'}
+                  title={isStarred ? 'Unstar game' : 'Star game'}
                   disabled={!game.packageName}
                   onClick={onToggleStarred}
                   style={{

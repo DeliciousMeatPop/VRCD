@@ -2,7 +2,6 @@ import {
   Settings,
   SettingsAPI,
   ServerConfigInfo,
-  AppLanguage,
   ExistingDownloadAction,
   WindowBounds
 } from '@shared/types'
@@ -20,10 +19,6 @@ class SettingsService extends EventEmitter implements SettingsAPI {
     super()
     this.settingsPath = join(app.getPath('userData'), 'settings.json')
 
-    // Detect system language — default to Spanish if system locale starts with 'es'
-    const systemLocale = app.getLocale()
-    const defaultLanguage: AppLanguage = systemLocale.toLowerCase().startsWith('es') ? 'es' : 'en'
-
     // Default settings
     this.settings = {
       downloadPath: join(app.getPath('userData'), 'downloads'),
@@ -32,7 +27,6 @@ class SettingsService extends EventEmitter implements SettingsAPI {
       hideAdultContent: true,
       colorScheme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
       serverConfig: { baseUri: '', password: '' },
-      language: defaultLanguage,
       maxConcurrentDownloads: 3,
       existingDownloadAction: 'ask'
     }
@@ -99,16 +93,6 @@ class SettingsService extends EventEmitter implements SettingsAPI {
     }
     this.saveSettings()
     this.emit('server-config-changed', this.settings.serverConfig)
-  }
-
-  getLanguage(): AppLanguage {
-    return this.settings.language ?? 'en'
-  }
-
-  setLanguage(lang: AppLanguage): void {
-    this.settings.language = lang
-    this.saveSettings()
-    this.emit('language-changed', lang)
   }
 
   getMaxConcurrentDownloads(): number {

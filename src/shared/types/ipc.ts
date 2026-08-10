@@ -15,7 +15,6 @@ import {
   ServerConfigInfo,
   WiFiBookmark,
   LocalUploadError,
-  AppLanguage,
   ExistingDownloadAction,
   AddToQueueResult,
   DownloadStorageStatus,
@@ -133,8 +132,6 @@ export interface IPCChannels {
   'settings:set-color-scheme': DefineChannel<[scheme: 'light' | 'dark'], void>
   'settings:get-server-config': DefineChannel<[], ServerConfigInfo>
   'settings:set-server-config': DefineChannel<[config: ServerConfigInfo], void>
-  'settings:get-language': DefineChannel<[], AppLanguage>
-  'settings:set-language': DefineChannel<[lang: AppLanguage], void>
   'settings:get-max-concurrent-downloads': DefineChannel<[], number>
   'settings:set-max-concurrent-downloads': DefineChannel<[n: number], void>
   'settings:get-existing-download-action': DefineChannel<[], ExistingDownloadAction>
