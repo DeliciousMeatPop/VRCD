@@ -166,6 +166,12 @@ export interface DownloadItem {
   eta?: string
   extractProgress?: number
   size?: string
+  /**
+   * Set when the extracted files didn't match the release's release.manifest.
+   * Non-fatal: extraction still completes, but auto-install is skipped so the
+   * user can choose to install anyway. Describes the mismatching file(s).
+   */
+  manifestWarning?: string
 }
 
 export interface DownloadProgress {

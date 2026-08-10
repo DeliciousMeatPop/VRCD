@@ -569,6 +569,13 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         return
       }
 
+      if (itemAfterExtraction.manifestWarning) {
+        console.warn(
+          `[Service ProcessQueue] ${itemAfterExtraction.releaseName} completed with a manifest mismatch - leaving in Completed state and skipping auto-install so the user can choose to install anyway.`
+        )
+        return
+      }
+
       console.log(
         `[Service ProcessQueue] Extraction successful for ${itemAfterExtraction.releaseName}. Queuing installation on ${finalTargetDeviceId}...`
       )
@@ -663,6 +670,13 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       if (this.sideloadingDisabled) {
         console.log(
           `[Service ResumeQueue] Sideloading disabled - leaving ${itemAfterExtraction.releaseName} in Completed state.`
+        )
+        return
+      }
+
+      if (itemAfterExtraction.manifestWarning) {
+        console.warn(
+          `[Service ResumeQueue] ${itemAfterExtraction.releaseName} completed with a manifest mismatch - leaving in Completed state so the user can choose to install anyway.`
         )
         return
       }
@@ -1180,6 +1194,13 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     if (!item) {
       console.error(`[Service installFromCompleted] Item not found: ${releaseName}`)
       throw new Error(`Item not found: ${releaseName}`)
+    }
+
+    // The user is explicitly choosing to install. If this item had a manifest
+    // mismatch warning, clear it — they've accepted the risk and it shouldn't
+    // linger on the item after installing.
+    if (item.manifestWarning) {
+      this.queueManager.updateItem(releaseName, { manifestWarning: undefined })
     }
 
     if (item.status !== 'Completed') {
