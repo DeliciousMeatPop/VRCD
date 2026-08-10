@@ -475,7 +475,7 @@ const LOGS_WIKI_URL =
 
 /** Small inline link to the "how to send your logs" wiki guide. Opens in the
  *  system browser via the main window's window-open handler. */
-const SendLogsHelpLink: React.FC<{ label: string }> = ({ label }) => (
+const SendLogsHelpLink: React.FC = () => (
   <a
     href={LOGS_WIKI_URL}
     target="_blank"
@@ -490,7 +490,7 @@ const SendLogsHelpLink: React.FC<{ label: string }> = ({ label }) => (
       letterSpacing: '0.04em'
     }}
   >
-    {label}
+    Having an issue? How to send logs →
   </a>
 )
 
@@ -2233,7 +2233,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               </div>
             )}
 
-            <SendLogsHelpLink label={t('sendLogsHelp')} />
+            <SendLogsHelpLink />
 
             {/* Footer: version + github */}
             <div className="sideloader-footer">
@@ -2601,7 +2601,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                   </MenuList>
                 </MenuPopover>
               </Menu>
-              <SendLogsHelpLink label={t('sendLogsHelp')} />
+              <SendLogsHelpLink />
             </section>
           </div>
 
