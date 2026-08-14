@@ -1381,11 +1381,12 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       const stats = await fs.stat(filePath)
 
       if (stats.isFile() && filePath.toLowerCase().endsWith('.apk')) {
-        // Single APK file installation
+        // Single APK file installation. Route through the installation processor
+        // so that if an OBB folder sits alongside the chosen APK (i.e. the user
+        // picked/dropped the APK from inside an extracted game folder) it gets
+        // pushed too, instead of installing a data-less app.
         console.log(`[Service installManualFile] Installing single APK: ${filePath}`)
-        const success = await this.adbService.installPackage(deviceId, filePath, {
-          flags: ['-r', '-g']
-        })
+        const success = await this.installationProcessor.installSingleApk(filePath, deviceId)
         if (success) {
           console.log(`[Service installManualFile] Successfully installed APK: ${filePath}`)
           this.emit('installation:success', deviceId)
