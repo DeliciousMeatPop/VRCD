@@ -859,6 +859,71 @@
   color: #ff6a6a;
 }
 
+/* ── full-window "drop to install" overlay ── */
+.global-drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 5, 20, 0.82);
+  backdrop-filter: blur(3px);
+  animation: gdo-fade-in 0.12s ease;
+}
+@keyframes gdo-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.global-drop-overlay .gdo-inner {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding: 48px 64px;
+  color: var(--vrcd-neon);
+  border: 2px dashed var(--vrcd-neon);
+  border-radius: 18px;
+  box-shadow:
+    0 0 60px rgba(var(--vrcd-neon-raw), 0.35),
+    inset 0 0 40px rgba(var(--vrcd-neon-raw), 0.12);
+  background: rgba(var(--vrcd-neon-raw), 0.06);
+  animation: dz-bounce 0.9s ease-in-out infinite;
+}
+.global-drop-overlay.is-disabled .gdo-inner {
+  color: #ff6a6a;
+  border-color: #ff6a6a;
+  box-shadow:
+    0 0 60px rgba(255, 106, 106, 0.3),
+    inset 0 0 40px rgba(255, 106, 106, 0.1);
+  background: rgba(255, 106, 106, 0.06);
+  animation: none;
+}
+.global-drop-overlay .gdo-title {
+  font-family: var(--vrcd-font-mono, monospace);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-shadow: 0 0 18px rgba(var(--vrcd-neon-raw), 0.7);
+}
+.global-drop-overlay .gdo-sub {
+  font-family: var(--vrcd-font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 420px;
+  color: rgba(var(--vrcd-neon-raw), 0.75);
+  letter-spacing: 0.03em;
+}
+.global-drop-overlay.is-disabled .gdo-sub {
+  color: rgba(255, 106, 106, 0.8);
+}
+
 /* ── action button rows ── */
 .sideloader-actions {
   width: 100%;

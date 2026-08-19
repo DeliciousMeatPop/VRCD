@@ -230,6 +230,7 @@ export interface IPCEvents {
   'adb:device-changed': [device: DeviceInfo]
   'adb:device-tracker-error': [error: string]
   'adb:installation-completed': [deviceId: string]
+  'manual-install:progress': [progress: { step: string; percent?: number }]
   'games:download-progress': [progress: DownloadProgress]
   'games:background-sync-complete': [games: GameInfo[]]
   'games:background-sync-error': [error: string]

@@ -60,6 +60,15 @@ downloadService.on('installation:success', (deviceId) => {
   }
 })
 
+// Forward per-step manual-install progress to the renderer so the install
+// dialog can show what's happening ("Installing game.apk… 40%") rather than a
+// static "Processing".
+downloadService.on('installation:progress', (payload) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    typedWebContentsSend.send(mainWindow, 'manual-install:progress', payload)
+  }
+})
+
 // Function to send dependency progress to renderer
 function sendDependencyProgress(
   status: DependencyStatus,

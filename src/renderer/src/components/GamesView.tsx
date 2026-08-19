@@ -601,6 +601,9 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
   const [isManualInstalling, setIsManualInstalling] = useState<boolean>(false)
   const [installStatusMessage, setInstallStatusMessage] = useState<string>('')
+  const [installProgress, setInstallProgress] = useState<{ step: string; percent?: number } | null>(
+    null
+  )
   const [showInstallDialog, setShowInstallDialog] = useState<boolean>(false)
   const [installSuccess, setInstallSuccess] = useState<boolean | null>(null)
   const [showObbConfirmDialog, setShowObbConfirmDialog] = useState<boolean>(false)
@@ -609,6 +612,10 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   const [appVersion, setAppVersion] = useState('')
   const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  // True while an OS file drag is anywhere over the app window, used to show a
+  // full-window "drop to install" overlay so it's obvious a drop will do
+  // something (matching Rookie's behaviour).
+  const [isWindowDragging, setIsWindowDragging] = useState(false)
 
   const baseVisibleGames = useMemo(() => {
     let hideAdult = true
@@ -1522,6 +1529,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         setShowInstallDialog(true)
         setIsManualInstalling(true)
         setInstallStatusMessage(`Installing ${itemName}: ${fileName}...`)
+        setInstallProgress(null)
         setInstallSuccess(null)
 
         const success = await window.api.downloads.installManualFile(filePath, selectedDevice)
@@ -1543,6 +1551,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         setInstallSuccess(false)
       } finally {
         setIsManualInstalling(false)
+        setInstallProgress(null)
       }
     },
     [isConnected, selectedDevice, loadPackages]
@@ -1716,6 +1725,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     setShowInstallDialog(false)
     setInstallSuccess(null)
     setInstallStatusMessage('')
+    setInstallProgress(null)
   }, [])
 
   // Drag-and-drop sideload: resolve each dropped item's real path, classify it,
@@ -1780,6 +1790,70 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     }
   }, [])
 
+  // Live manual-install progress: the main process reports each step (and an
+  // optional percent) so the install dialog shows what's happening instead of a
+  // static "Processing".
+  useEffect(() => {
+    const unsubscribe = window.api.downloads.onManualInstallProgress((progress) => {
+      setInstallProgress(progress)
+    })
+    return unsubscribe
+  }, [])
+
+  // Window-wide file-drag detection. Two jobs:
+  //  1. Show a big "drop to install" overlay the moment a file is dragged over
+  //     the app, so it's obvious a drop will be handled (Rookie-style).
+  //  2. Prevent Electron's default behaviour of navigating the window to a
+  //     dropped file when the drop lands outside the dropzone — that default
+  //     both loses the drop and blanks the app.
+  // A depth counter avoids flicker: dragenter/dragleave fire for every child
+  // element the cursor crosses, so we only hide the overlay when the last one
+  // leaves (or on drop).
+  useEffect(() => {
+    let dragDepth = 0
+    const hasFiles = (e: DragEvent): boolean =>
+      Array.from(e.dataTransfer?.types ?? []).includes('Files')
+
+    const onDragEnter = (e: DragEvent): void => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      dragDepth++
+      setIsWindowDragging(true)
+    }
+    const onDragOver = (e: DragEvent): void => {
+      if (!hasFiles(e)) return
+      // Required so the drop is accepted anywhere in the window rather than the
+      // OS rejecting it (and navigating on drop).
+      e.preventDefault()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = isConnected ? 'copy' : 'none'
+    }
+    const onDragLeave = (e: DragEvent): void => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      dragDepth = Math.max(0, dragDepth - 1)
+      if (dragDepth === 0) setIsWindowDragging(false)
+    }
+    const onDrop = (e: DragEvent): void => {
+      // Always swallow the window-level drop so Electron never navigates to the
+      // file. The dropzone's own React onDrop still handles drops that land on
+      // it (this listener runs after, and the dropzone stops propagation).
+      e.preventDefault()
+      dragDepth = 0
+      setIsWindowDragging(false)
+    }
+
+    window.addEventListener('dragenter', onDragEnter)
+    window.addEventListener('dragover', onDragOver)
+    window.addEventListener('dragleave', onDragLeave)
+    window.addEventListener('drop', onDrop)
+    return () => {
+      window.removeEventListener('dragenter', onDragEnter)
+      window.removeEventListener('dragover', onDragOver)
+      window.removeEventListener('dragleave', onDragLeave)
+      window.removeEventListener('drop', onDrop)
+    }
+  }, [isConnected])
+
   const isBusy = adbLoading || loadingGames || isLoading || isManualInstalling
 
   const storageFreeGB = parseStorageGB(selectedDeviceDetails?.storageFree)
@@ -1819,6 +1893,49 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   // OBB-copy confirmation.
   const installDialogs = (
     <>
+      {/* Full-window "drop to install" overlay, shown while a file is dragged
+          anywhere over the app. Dropping on it installs, so the user doesn't
+          have to hit the small dropzone precisely. */}
+      {isWindowDragging && (
+        <div
+          className={`global-drop-overlay${isConnected ? '' : ' is-disabled'}`}
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = isConnected ? 'copy' : 'none'
+          }}
+          onDrop={(e) => {
+            setIsWindowDragging(false)
+            handleSideloadDrop(e)
+          }}
+        >
+          <div className="gdo-inner">
+            <svg width="72" height="72" viewBox="0 0 64 64" fill="none">
+              <path d="M32 8v30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              <path
+                d="M20 28l12 12 12-12"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 46v6a4 4 0 0 0 4 4h32a4 4 0 0 0 4-4v-6"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="gdo-title">
+              {isConnected ? 'DROP TO INSTALL' : 'CONNECT A HEADSET FIRST'}
+            </div>
+            <div className="gdo-sub">
+              {isConnected
+                ? 'Release to install an APK, ZIP, or game folder (install.txt supported)'
+                : 'A device must be connected before you can sideload'}
+            </div>
+          </div>
+        </div>
+      )}
       <Dialog
         open={showInstallDialog}
         onOpenChange={(_, data) => !data.open && closeInstallDialog()}
@@ -1839,16 +1956,46 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 <Text>{installStatusMessage}</Text>
               </div>
               {isManualInstalling && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: tokens.spacingHorizontalS,
-                    marginBottom: tokens.spacingVerticalM
-                  }}
-                >
-                  <Spinner size="small" />
-                  <Text>{'Processing...'}</Text>
+                <div style={{ marginBottom: tokens.spacingVerticalM }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: tokens.spacingHorizontalS,
+                      marginBottom: tokens.spacingVerticalXS
+                    }}
+                  >
+                    <Spinner size="small" />
+                    <Text weight="semibold">{installProgress?.step ?? 'Processing…'}</Text>
+                    {typeof installProgress?.percent === 'number' && (
+                      <Text size={200} style={{ marginLeft: 'auto' }}>
+                        {`${Math.round(installProgress.percent)}%`}
+                      </Text>
+                    )}
+                  </div>
+                  {/* Progress bar for the current step. Indeterminate until the
+                      first percent arrives so the user always sees motion. */}
+                  <div
+                    style={{
+                      height: 6,
+                      borderRadius: 3,
+                      overflow: 'hidden',
+                      background: 'rgba(var(--vrcd-neon-raw),0.12)'
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '100%',
+                        width:
+                          typeof installProgress?.percent === 'number'
+                            ? `${Math.max(0, Math.min(100, installProgress.percent))}%`
+                            : '100%',
+                        background: 'var(--vrcd-neon)',
+                        opacity: typeof installProgress?.percent === 'number' ? 1 : 0.4,
+                        transition: 'width 0.2s ease'
+                      }}
+                    />
+                  </div>
                 </div>
               )}
               {installSuccess !== null && (
@@ -2077,9 +2224,19 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             {/* Drag & drop deck */}
             <div
               className={`sideloader-dropzone${isDragOver ? ' is-dragover' : ''}${!isConnected ? ' is-disabled' : ''}`}
+              onDragEnter={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (isConnected) setIsDragOver(true)
+              }}
               onDragOver={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                // Setting dropEffect is what tells Chromium the drop is allowed.
+                // Without it the OS shows a "no-drop" (⊘) cursor and, on Windows,
+                // the drop event may never fire — which is why drag-and-drop
+                // appeared broken.
+                e.dataTransfer.dropEffect = isConnected ? 'copy' : 'none'
                 if (isConnected) setIsDragOver(true)
               }}
               onDragLeave={(e) => {

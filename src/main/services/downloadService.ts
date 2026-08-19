@@ -1301,7 +1301,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     }
   }
 
-  private async installSingleManualFolder(folderPath: string, deviceId: string): Promise<boolean> {
+  private async installSingleManualFolder(
+    folderPath: string,
+    deviceId: string,
+    onProgress?: (step: string, percent?: number) => void
+  ): Promise<boolean> {
     console.log(`[Service installManualFile] Installing folder: ${folderPath}`)
 
     const manualId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
@@ -1329,7 +1333,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       downloadPath: folderPath
     }
 
-    const success = await this.installationProcessor.startInstallation(tempItem, deviceId)
+    const success = await this.installationProcessor.startInstallation(
+      tempItem,
+      deviceId,
+      onProgress
+    )
     if (success) {
       console.log(`[Service installManualFile] Successfully installed folder: ${folderPath}`)
       this.emit('installation:success', deviceId)
@@ -1339,6 +1347,14 @@ class DownloadService extends EventEmitter implements DownloadAPI {
 
   public async installManualFile(filePath: string, deviceId: string): Promise<boolean> {
     console.log(`[Service] Manual install requested for ${filePath} on device ${deviceId}`)
+
+    // Report each install step (and its 0–100 percent) to the renderer so the
+    // manual-install dialog shows live progress ("Installing game.apk… 40%")
+    // instead of a static "Processing".
+    const onProgress = (step: string, percent?: number): void => {
+      this.emit('installation:progress', { step, percent })
+    }
+    onProgress('Starting…')
 
     // Check if the app is connected to the target device
     const targetDeviceForInstall = this.getTargetDeviceForInstallation()
@@ -1386,7 +1402,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         // picked/dropped the APK from inside an extracted game folder) it gets
         // pushed too, instead of installing a data-less app.
         console.log(`[Service installManualFile] Installing single APK: ${filePath}`)
-        const success = await this.installationProcessor.installSingleApk(filePath, deviceId)
+        const success = await this.installationProcessor.installSingleApk(
+          filePath,
+          deviceId,
+          onProgress
+        )
         if (success) {
           console.log(`[Service installManualFile] Successfully installed APK: ${filePath}`)
           this.emit('installation:success', deviceId)
@@ -1412,7 +1432,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         }
 
         if (await isGameFolder(filePath)) {
-          return await this.installSingleManualFolder(filePath, deviceId)
+          return await this.installSingleManualFolder(filePath, deviceId, onProgress)
         }
 
         // Not a game folder itself — look one level down for game subfolders
@@ -1437,8 +1457,13 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         )
 
         let successCount = 0
+        let batchIndex = 0
         for (const sub of gameSubfolders) {
-          const ok = await this.installSingleManualFolder(sub, deviceId)
+          batchIndex++
+          const label = sub.split(/[/\\]/).pop() || sub
+          const ok = await this.installSingleManualFolder(sub, deviceId, (step, percent) =>
+            onProgress(`[${batchIndex}/${gameSubfolders.length}] ${label}: ${step}`, percent)
+          )
           if (ok) successCount++
         }
         console.log(
@@ -1462,7 +1487,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         try {
           // Tolerate benign 7-Zip stderr noise (e.g. dylibs injected into the
           // 7zz child by macOS tweak frameworks); only a real ERROR rejects.
-          await awaitSevenZipStream(SevenZip.extractFull(filePath, tmpDir, { $bin: sevenZipPath }))
+          onProgress('Extracting ZIP…')
+          await awaitSevenZipStream(
+            SevenZip.extractFull(filePath, tmpDir, { $bin: sevenZipPath }),
+            (percent) => onProgress('Extracting ZIP…', percent)
+          )
 
           const manualId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
           const tempItem: DownloadItem = {
@@ -1477,7 +1506,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
             downloadPath: tmpDir
           }
 
-          const success = await this.installationProcessor.startInstallation(tempItem, deviceId)
+          const success = await this.installationProcessor.startInstallation(
+            tempItem,
+            deviceId,
+            onProgress
+          )
           if (success) {
             console.log(`[Service installManualFile] Successfully installed from ZIP: ${filePath}`)
             this.emit('installation:success', deviceId)

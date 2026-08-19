@@ -191,6 +191,14 @@ const api = {
       typedIpcRenderer.on('download:storage-status-changed', listener)
       return () => typedIpcRenderer.removeListener('download:storage-status-changed', listener)
     },
+    onManualInstallProgress: (
+      callback: (progress: { step: string; percent?: number }) => void
+    ): (() => void) => {
+      const listener = (_: IpcRendererEvent, progress: { step: string; percent?: number }): void =>
+        callback(progress)
+      typedIpcRenderer.on('manual-install:progress', listener)
+      return () => typedIpcRenderer.removeListener('manual-install:progress', listener)
+    },
     setDownloadPath: (path: string): void =>
       typedIpcRenderer.send('download:set-download-path', path),
     setAppConnectionState: (selectedDevice: string | null, isConnected: boolean): void =>
