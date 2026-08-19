@@ -83,6 +83,7 @@ import { useTablePreferences } from '@renderer/hooks/useTablePreferences'
 import { useSettings } from '../hooks/useSettings'
 import { useMirrors } from '../hooks/useMirrors'
 import { useStarredGames } from '../hooks/useStarredGames'
+import { playSound } from '../hooks/useSoundEffects'
 
 // Column width constants
 const COLUMN_WIDTHS = {
@@ -1552,11 +1553,27 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         if (success) {
           console.log(`${itemName} installation successful for: ${filePath}`)
           setInstallStatusMessage(`✅ "${fileName}" installed successfully!`)
+          // Manual installs don't go through the download queue, so the
+          // queue-completion notification never fires for them — notify here.
+          playSound('click')
+          try {
+            window.api.app.showNotification(
+              'Install Complete',
+              `${fileName} installed successfully.`
+            )
+          } catch {
+            /* ignore */
+          }
           // Refresh packages to update the UI
           await loadPackages()
         } else {
           console.error(`${itemName} installation failed for: ${filePath}`)
           setInstallStatusMessage(`❌ Failed to install "${fileName}"`)
+          try {
+            window.api.app.showNotification('Install Failed', `${fileName} could not be installed.`)
+          } catch {
+            /* ignore */
+          }
         }
       } catch (error) {
         console.error(`Error during installation:`, error)
