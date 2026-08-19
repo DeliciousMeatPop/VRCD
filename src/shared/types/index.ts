@@ -344,6 +344,9 @@ export interface DownloadAPI {
 export interface DownloadAPIRenderer extends DownloadAPI {
   onQueueUpdated: (callback: (queue: DownloadItem[]) => void) => () => void
   onStorageStatusChanged: (callback: (status: DownloadStorageStatus) => void) => () => void
+  onManualInstallProgress: (
+    callback: (progress: { step: string; percent?: number }) => void
+  ) => () => void
   installFromCompleted: (releaseName: string, deviceId: string) => Promise<void>
   installManualFile: (filePath: string, deviceId: string) => Promise<boolean>
   copyObbFolder: (folderPath: string, deviceId: string) => Promise<boolean>

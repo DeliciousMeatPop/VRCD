@@ -7,6 +7,14 @@ import adbService, { SignatureMismatchError } from '../adbService'
 import dependencyService from '../dependencyService'
 import { resolveObbDirectory, ObbDirectory } from './obbResolution'
 
+/**
+ * Reports a human-readable step (and optional 0–100 percent for the current
+ * step) while an install runs, so the UI can show "Installing game.apk… 40%"
+ * instead of a static "Processing". Used mainly by manual installs, which have
+ * no queue row of their own to surface progress through.
+ */
+export type InstallProgressReporter = (step: string, percent?: number) => void
+
 export class InstallationProcessor {
   private queueManager: QueueManager
   private adbService: typeof adbService
@@ -16,6 +24,7 @@ export class InstallationProcessor {
   private installQueue: Array<{
     item: DownloadItem
     deviceId: string
+    onProgress?: InstallProgressReporter
     resolve: (result: boolean) => void
   }> = []
   private isInstalling = false
@@ -50,14 +59,18 @@ export class InstallationProcessor {
     }
   }
 
-  public async startInstallation(item: DownloadItem, deviceId: string): Promise<boolean> {
+  public async startInstallation(
+    item: DownloadItem,
+    deviceId: string,
+    onProgress?: InstallProgressReporter
+  ): Promise<boolean> {
     console.log(
       `[InstallProc] Queuing installation for ${item.releaseName} on device ${deviceId} (queue length: ${this.installQueue.length}, installing: ${this.isInstalling})`
     )
 
     // Enqueue and wait for our turn
     return new Promise<boolean>((resolve) => {
-      this.installQueue.push({ item, deviceId, resolve })
+      this.installQueue.push({ item, deviceId, onProgress, resolve })
       this.processInstallQueue()
     })
   }
@@ -74,14 +87,14 @@ export class InstallationProcessor {
     }
 
     this.isInstalling = true
-    const { item, deviceId, resolve } = next
+    const { item, deviceId, onProgress, resolve } = next
 
     console.log(
       `[InstallProc] Starting installation for ${item.releaseName} on device ${deviceId} (${this.installQueue.length} remaining in queue)`
     )
 
     try {
-      const result = await this.executeInstallation(item, deviceId)
+      const result = await this.executeInstallation(item, deviceId, onProgress)
       resolve(result)
     } catch (error: unknown) {
       console.error(
@@ -101,10 +114,15 @@ export class InstallationProcessor {
     }
   }
 
-  private async executeInstallation(item: DownloadItem, deviceId: string): Promise<boolean> {
+  private async executeInstallation(
+    item: DownloadItem,
+    deviceId: string,
+    onProgress?: InstallProgressReporter
+  ): Promise<boolean> {
     console.log(
       `[InstallProc] Executing installation for ${item.releaseName} on device ${deviceId}`
     )
+    onProgress?.('Preparing install…')
     if (!item.downloadPath || !existsSync(item.downloadPath)) {
       console.error(
         `[InstallProc] Download path invalid for ${item.releaseName}: ${item.downloadPath}`
@@ -131,12 +149,12 @@ export class InstallationProcessor {
     try {
       if (installScriptPath) {
         console.log(`[InstallProc] Found install script: ${installScriptPath}`)
-        success = await this.executeInstallScript(item, deviceId, installScriptPath)
+        success = await this.executeInstallScript(item, deviceId, installScriptPath, onProgress)
       } else {
         console.log(
           `[InstallProc] No install script found for ${item.releaseName}. Proceeding with standard install.`
         )
-        success = await this.executeStandardInstall(item, deviceId)
+        success = await this.executeStandardInstall(item, deviceId, onProgress)
       }
       if (success) {
         console.log(`[InstallProc] Installation completed successfully for ${item.releaseName}.`)
@@ -178,7 +196,8 @@ export class InstallationProcessor {
   private async executeInstallScript(
     item: DownloadItem,
     deviceId: string,
-    scriptPath: string
+    scriptPath: string,
+    onProgress?: InstallProgressReporter
   ): Promise<boolean> {
     let overallSuccess = true
     try {
@@ -188,7 +207,8 @@ export class InstallationProcessor {
       // archive left in the folder (a nested one the extract phase didn't reach,
       // or a folder installed manually without going through extraction) is
       // unpacked first so the script's push/install paths exist on disk.
-      await this.extractArchivesForInstall(item.downloadPath!, item.releaseName)
+      onProgress?.('Extracting archives…')
+      await this.extractArchivesForInstall(item.downloadPath!, item.releaseName, onProgress)
 
       const scriptContent = await fs.readFile(scriptPath, 'utf-8')
       const commands = scriptContent
@@ -196,8 +216,14 @@ export class InstallationProcessor {
         .map((cmd) => cmd.trim())
         .filter((cmd) => cmd.length > 0 && !cmd.startsWith('#'))
       console.log(`[InstallProc] Executing ${commands.length} commands from script...`)
+      let commandIndex = 0
       for (const command of commands) {
         console.log(`[InstallProc] Running: ${command}`)
+        commandIndex++
+        // Percent reflects progress through the script's command list so the UI
+        // advances step by step ("Running install.txt · step 2/5").
+        const scriptPercent = Math.round((commandIndex / commands.length) * 100)
+        onProgress?.(`Running install.txt · step ${commandIndex}/${commands.length}`, scriptPercent)
         const parts =
           command
             .match(/(?:[^\s"]+"([^"]*)")|[^\s"]+/g)
@@ -362,7 +388,8 @@ export class InstallationProcessor {
    */
   private async extractArchivesForInstall(
     downloadPath: string,
-    releaseName: string
+    releaseName: string,
+    onProgress?: InstallProgressReporter
   ): Promise<void> {
     const sevenZipPath = dependencyService.get7zPath()
     if (!sevenZipPath || !dependencyService.getStatus().sevenZip.ready) {
@@ -400,12 +427,18 @@ export class InstallationProcessor {
       `[InstallProc] Auto-extracting ${archives.length} archive(s) before running install.txt for ${releaseName}: ${archives.join(', ')}`
     )
 
+    let extractedCount = 0
     for (const archiveName of archives) {
       const archivePath = join(downloadPath, archiveName)
       try {
+        onProgress?.(
+          `Unzipping ${archiveName}…`,
+          Math.round((extractedCount / archives.length) * 100)
+        )
         await execa(sevenZipPath, ['x', archivePath, '-y', `-o${downloadPath}`, '-mmt=on'], {
           windowsHide: true
         })
+        extractedCount++
         console.log(`[InstallProc] Extracted ${archiveName} for ${releaseName}.`)
 
         // Remove every part of the archive we just extracted. For a split volume
@@ -434,7 +467,11 @@ export class InstallationProcessor {
     }
   }
 
-  private async executeStandardInstall(item: DownloadItem, deviceId: string): Promise<boolean> {
+  private async executeStandardInstall(
+    item: DownloadItem,
+    deviceId: string,
+    onProgress?: InstallProgressReporter
+  ): Promise<boolean> {
     // Only the download folder is truly required. The package name (used to
     // locate and push the OBB) may be blank in the catalog for some releases —
     // don't let a missing package name block the whole install. Install the
@@ -466,12 +503,20 @@ export class InstallationProcessor {
       }
       console.log(`[InstallProc Standard] Found ${apks.length} APK(s): ${apks.join(', ')}`)
       this.updateItemStatus(item.releaseName, 'Installing', 0)
+      let installedApks = 0
       for (const apk of apks) {
         const apkPath = join(item.downloadPath, apk)
         console.log(`[InstallProc Standard] Installing ${apkPath}...`)
+        onProgress?.(
+          apks.length > 1
+            ? `Installing ${apk} (${installedApks + 1}/${apks.length})…`
+            : `Installing ${apk}…`,
+          Math.round((installedApks / apks.length) * 100)
+        )
         try {
           // Use the simplified installPackage, now with flags for reinstall and granting permissions
           await this.adbService.installPackage(deviceId, apkPath, { flags: ['-r', '-g'] })
+          installedApks++
           console.log(`[InstallProc Standard] Successfully installed ${apk}`)
         } catch (installError: unknown) {
           if (installError instanceof SignatureMismatchError) {
@@ -509,14 +554,17 @@ export class InstallationProcessor {
       const obb = await this.findObbDirectory(item.downloadPath, item.packageName)
       this.updateItemStatus(item.releaseName, 'Installing', obb ? 50 : 100)
       if (obb) {
+        onProgress?.('Pushing game data (OBB)…', 0)
         const pushed = await this.pushObbFolder(
           item.releaseName,
           deviceId,
           obb.obbPath,
-          obb.obbDirName
+          obb.obbDirName,
+          onProgress
         )
         if (!pushed) return false
       }
+      onProgress?.('Finishing up…', 100)
       console.log(
         `[InstallProc Standard] Standard installation steps completed for ${item.releaseName}.`
       )
@@ -544,11 +592,16 @@ export class InstallationProcessor {
    * install, so choosing the APK inside an extracted game folder still delivers
    * the game's OBB data instead of installing a data-less app.
    */
-  public async installSingleApk(apkPath: string, deviceId: string): Promise<boolean> {
+  public async installSingleApk(
+    apkPath: string,
+    deviceId: string,
+    onProgress?: InstallProgressReporter
+  ): Promise<boolean> {
     const releaseName = basename(apkPath)
     const parentDir = dirname(apkPath)
     console.log(`[InstallProc Standard] Installing single APK ${apkPath}...`)
     try {
+      onProgress?.(`Installing ${releaseName}…`, 0)
       await this.adbService.installPackage(deviceId, apkPath, { flags: ['-r', '-g'] })
       console.log(`[InstallProc Standard] Successfully installed ${releaseName}`)
     } catch (installError: unknown) {
@@ -569,9 +622,17 @@ export class InstallationProcessor {
       console.log(
         `[InstallProc Standard] Found OBB folder ${obb.obbPath} alongside picked APK; pushing.`
       )
-      const pushed = await this.pushObbFolder(releaseName, deviceId, obb.obbPath, obb.obbDirName)
+      onProgress?.('Pushing game data (OBB)…', 0)
+      const pushed = await this.pushObbFolder(
+        releaseName,
+        deviceId,
+        obb.obbPath,
+        obb.obbDirName,
+        onProgress
+      )
       if (!pushed) return false
     }
+    onProgress?.('Finishing up…', 100)
     return true
   }
 
@@ -599,7 +660,8 @@ export class InstallationProcessor {
     releaseName: string,
     deviceId: string,
     obbPath: string,
-    obbDirName: string
+    obbDirName: string,
+    onProgress?: InstallProgressReporter
   ): Promise<boolean> {
     const deviceObbBasePath = '/sdcard/Android/obb'
     const deviceObbTargetPath = `${deviceObbBasePath}/${obbDirName}`
@@ -684,6 +746,10 @@ export class InstallationProcessor {
           transferredSize += size
           const progressPercentage = Math.min(Math.floor((transferredSize / totalSize) * 100), 100)
           this.updateItemStatus(releaseName, 'Installing', 50 + progressPercentage / 2)
+          onProgress?.(
+            `Pushing game data (OBB) · ${i + 1}/${filesInfo.length}…`,
+            progressPercentage
+          )
         }
         console.log(`[InstallProc Standard] Successfully pushed all OBB files.`)
 

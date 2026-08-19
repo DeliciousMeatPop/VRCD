@@ -69,6 +69,68 @@ const PRESETS: PresetCategory[] = [
     ]
   },
   {
+    name: 'DISPLAY',
+    items: [
+      // Render (eye-buffer) resolution — the biggest visual-quality lever on
+      // standalone. Values are per-eye pixels; 0/0 restores the app/system
+      // default. These are non-persistent (reset on reboot / app relaunch),
+      // same as the other debug.oculus props.
+      {
+        label: 'RES DEFAULT',
+        command: 'setprop debug.oculus.textureWidth 0 && setprop debug.oculus.textureHeight 0',
+        desc: 'Reset render resolution to the app/system default'
+      },
+      {
+        label: 'RES 1.2x',
+        command:
+          'setprop debug.oculus.textureWidth 2016 && setprop debug.oculus.textureHeight 2112',
+        desc: 'Supersample render target to ~1.2x (2016×2112 per eye)'
+      },
+      {
+        label: 'RES 1.5x',
+        command:
+          'setprop debug.oculus.textureWidth 2496 && setprop debug.oculus.textureHeight 2592',
+        desc: 'Supersample render target to ~1.5x (2496×2592 per eye) — heavy'
+      },
+      // Fixed foveated rendering: 0 = off (sharpest edges, most GPU), 4 =
+      // highest foveation (blurrier periphery, most perf). Dynamic lets the
+      // runtime scale it with GPU load.
+      {
+        label: 'FFR OFF',
+        command:
+          'setprop debug.oculus.foveation.level 0 && setprop debug.oculus.foveation.dynamic 0',
+        desc: 'Disable fixed foveated rendering (sharpest, highest GPU cost)'
+      },
+      {
+        label: 'FFR LOW',
+        command:
+          'setprop debug.oculus.foveation.level 1 && setprop debug.oculus.foveation.dynamic 1',
+        desc: 'Low dynamic foveation (balanced)'
+      },
+      {
+        label: 'FFR HIGH',
+        command:
+          'setprop debug.oculus.foveation.level 3 && setprop debug.oculus.foveation.dynamic 1',
+        desc: 'High dynamic foveation (best perf, blurrier periphery)'
+      }
+    ]
+  },
+  {
+    name: 'MTP',
+    items: [
+      {
+        label: 'MOUNT (MTP)',
+        command: 'svc usb setFunctions mtp',
+        desc: 'Switch the headset USB into MTP mode so it shows up on your PC as a portable device (browse files in Explorer/Finder). Note: MTP is not a lettered drive.'
+      },
+      {
+        label: 'UNMOUNT',
+        command: 'svc usb setFunctions none',
+        desc: 'Return USB to charge-only mode (drops the MTP connection)'
+      }
+    ]
+  },
+  {
     name: 'UPDATES',
     items: [
       {
