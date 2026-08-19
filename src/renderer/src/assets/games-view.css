@@ -257,6 +257,15 @@
   display: block; /* Remove extra space below image */
 }
 
+/* Badge for an installed app with no catalog entry */
+.game-not-on-server-tag {
+  color: #ffaa00 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  opacity: 0.85;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }

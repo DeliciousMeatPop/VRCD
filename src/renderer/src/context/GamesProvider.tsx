@@ -216,7 +216,7 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
     // Build a Map for O(1) lookups instead of O(n) .find() per game
     const installedMap = new Map(installedPackages.map((pkg) => [pkg.packageName, pkg.versionCode]))
 
-    return rawGames.map((game) => {
+    const catalogGames = rawGames.map((game) => {
       const deviceVersionCode = game.packageName ? installedMap.get(game.packageName) : undefined
       const isInstalled = deviceVersionCode !== undefined
       let hasUpdate = false
@@ -235,6 +235,34 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
         hasUpdate
       }
     })
+
+    // Surface every installed app, including ones with no catalog entry. These
+    // "not on the server" apps show the package name in place of a title and a
+    // dedicated poster in place of game art (handled in the view). Match on
+    // packageName so we don't duplicate an app the catalog already covers.
+    const catalogPackages = new Set(
+      rawGames.map((g) => g.packageName).filter((p): p is string => !!p)
+    )
+    const notOnServer: GameInfo[] = installedPackages
+      .filter((pkg) => pkg.packageName && !catalogPackages.has(pkg.packageName))
+      .map((pkg) => ({
+        id: pkg.packageName,
+        name: pkg.packageName,
+        packageName: pkg.packageName,
+        version: String(pkg.versionCode),
+        size: '0',
+        lastUpdated: new Date().toISOString(),
+        releaseName: pkg.packageName,
+        downloads: 0,
+        thumbnailPath: '',
+        notePath: '',
+        isInstalled: true,
+        deviceVersionCode: pkg.versionCode,
+        hasUpdate: false,
+        notOnServer: true
+      }))
+
+    return [...catalogGames, ...notOnServer]
   }, [rawGames, installedPackages])
 
   const localGames = useMemo((): GameInfo[] => {
