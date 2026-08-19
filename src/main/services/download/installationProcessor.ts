@@ -1,8 +1,10 @@
 import { basename, dirname, join } from 'path'
 import { promises as fs, existsSync } from 'fs'
+import { execa } from 'execa'
 import { DownloadItem, DownloadStatus, SIGNATURE_MISMATCH_ERROR_PREFIX } from '@shared/types'
 import { QueueManager } from './queueManager'
 import adbService, { SignatureMismatchError } from '../adbService'
+import dependencyService from '../dependencyService'
 import { resolveObbDirectory, ObbDirectory } from './obbResolution'
 
 export class InstallationProcessor {
@@ -180,6 +182,14 @@ export class InstallationProcessor {
   ): Promise<boolean> {
     let overallSuccess = true
     try {
+      // Rookie auto-extracts any .7z archives sitting next to install.txt before
+      // running the script, so an install.txt that references an APK/OBB still
+      // packed inside an archive resolves to a real file. Mirror that here: any
+      // archive left in the folder (a nested one the extract phase didn't reach,
+      // or a folder installed manually without going through extraction) is
+      // unpacked first so the script's push/install paths exist on disk.
+      await this.extractArchivesForInstall(item.downloadPath!, item.releaseName)
+
       const scriptContent = await fs.readFile(scriptPath, 'utf-8')
       const commands = scriptContent
         .split(/\r?\n/)
@@ -334,6 +344,93 @@ export class InstallationProcessor {
         100
       )
       return false
+    }
+  }
+
+  /**
+   * Unpack any 7-Zip archives left in the install folder before an install.txt
+   * script runs, the way Rookie does. An install.txt can reference an APK or OBB
+   * that is still packed inside a `.7z` (a nested archive the extract phase
+   * didn't reach, or a folder the user installed manually without extracting),
+   * and the script's `push`/`install` commands would otherwise fail on the
+   * missing file. Handles both single `.7z` files and split volumes (extracting
+   * from the `.7z.001` first part), then deletes the archive parts on success.
+   *
+   * Extraction failures are logged but not fatal here — the archive may simply
+   * be irrelevant to the script, and a genuinely missing file will surface as a
+   * clear per-command error when the script runs.
+   */
+  private async extractArchivesForInstall(
+    downloadPath: string,
+    releaseName: string
+  ): Promise<void> {
+    const sevenZipPath = dependencyService.get7zPath()
+    if (!sevenZipPath || !dependencyService.getStatus().sevenZip.ready) {
+      console.warn(
+        `[InstallProc] 7zip not ready; skipping pre-install archive extraction for ${releaseName}.`
+      )
+      return
+    }
+
+    let entries: string[]
+    try {
+      const dirents = await fs.readdir(downloadPath, { withFileTypes: true })
+      entries = dirents.filter((d) => d.isFile()).map((d) => d.name)
+    } catch (err) {
+      console.warn(
+        `[InstallProc] Could not scan ${downloadPath} for archives to extract before install:`,
+        err
+      )
+      return
+    }
+
+    // A split volume is extracted from its .001 part; the other parts (.002, …)
+    // are consumed automatically, so only collect the first part for those.
+    // A plain `.7z` (with no trailing volume number) is extracted directly.
+    const archives = entries.filter(
+      (name) => name.endsWith('.7z.001') || (name.endsWith('.7z') && !/\.7z\.\d+$/.test(name))
+    )
+
+    if (archives.length === 0) {
+      console.log(`[InstallProc] No .7z archives to extract before install for ${releaseName}.`)
+      return
+    }
+
+    console.log(
+      `[InstallProc] Auto-extracting ${archives.length} archive(s) before running install.txt for ${releaseName}: ${archives.join(', ')}`
+    )
+
+    for (const archiveName of archives) {
+      const archivePath = join(downloadPath, archiveName)
+      try {
+        await execa(sevenZipPath, ['x', archivePath, '-y', `-o${downloadPath}`, '-mmt=on'], {
+          windowsHide: true
+        })
+        console.log(`[InstallProc] Extracted ${archiveName} for ${releaseName}.`)
+
+        // Remove every part of the archive we just extracted. For a split volume
+        // (.7z.001) that means all sibling .7z.NNN parts; for a plain .7z it's
+        // just the single file.
+        const baseName = archiveName.endsWith('.7z.001')
+          ? archiveName.slice(0, -4) // drop the ".001"
+          : archiveName
+        const partsToDelete = archiveName.endsWith('.7z.001')
+          ? entries.filter((n) => n.startsWith(baseName) && /\.7z\.\d+$/.test(n))
+          : [archiveName]
+        for (const part of partsToDelete) {
+          try {
+            await fs.unlink(join(downloadPath, part))
+            console.log(`[InstallProc] Deleted archive part: ${part}`)
+          } catch (unlinkError) {
+            console.warn(`[InstallProc] Failed to delete archive part ${part}:`, unlinkError)
+          }
+        }
+      } catch (extractError) {
+        console.error(
+          `[InstallProc] Failed to extract ${archiveName} before install for ${releaseName}:`,
+          extractError
+        )
+      }
     }
   }
 
