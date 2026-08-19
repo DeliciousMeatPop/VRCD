@@ -18,6 +18,7 @@ import { useGames } from '../hooks/useGames'
 import { useDownload } from '../hooks/useDownload'
 import { GameInfo, isSignatureMismatchError } from '@shared/types'
 import placeholderImage from '../assets/images/game-placeholder.png'
+import notOnServerImage from '../assets/images/not-on-server.png'
 import sideloaderBg from '../assets/images/sideloader-bg.png'
 import {
   Button,
@@ -869,13 +870,16 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
         header: ' ',
         size: COLUMN_WIDTHS.THUMBNAIL,
         enableResizing: false,
-        cell: ({ getValue }) => {
+        cell: ({ getValue, row }) => {
           const pathValue = getValue()
           const imagePath = typeof pathValue === 'string' ? pathValue : ''
+          // Apps installed on the device but not in the catalog get a dedicated
+          // "not on the server" poster instead of the generic placeholder.
+          const fallback = row.original.notOnServer ? notOnServerImage : placeholderImage
           return (
             <div className="game-thumbnail-cell">
               <img
-                src={imagePath ? `file://${imagePath}` : placeholderImage}
+                src={imagePath ? `file://${imagePath}` : fallback}
                 alt="Thumbnail"
                 className="game-thumbnail-img"
               />
@@ -931,9 +935,18 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
             >
               <div style={{ marginBottom: tokens.spacingVerticalXS }}>
                 {' '}
-                <div className="game-name-main">{game.name}</div>
-                <div className="game-package-sub">{game.releaseName}</div>
-                <div className="game-package-sub">{game.packageName}</div>
+                {game.notOnServer ? (
+                  <>
+                    <div className="game-name-main">{game.packageName}</div>
+                    <div className="game-package-sub game-not-on-server-tag">Not on server</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="game-name-main">{game.name}</div>
+                    <div className="game-package-sub">{game.releaseName}</div>
+                    <div className="game-package-sub">{game.packageName}</div>
+                  </>
+                )}
               </div>
               <div
                 style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}
@@ -3288,7 +3301,9 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                               src={
                                 game.thumbnailPath
                                   ? `file://${game.thumbnailPath}`
-                                  : placeholderImage
+                                  : game.notOnServer
+                                    ? notOnServerImage
+                                    : placeholderImage
                               }
                               alt={game.name}
                             />

@@ -76,6 +76,13 @@ export interface GameInfo {
   deviceVersionCode?: number
   hasUpdate?: boolean
   /**
+   * True for an app that is installed on the device but has no matching entry
+   * in the server catalog. These are surfaced anyway (so the user sees every
+   * installed app) with the package name in place of a title and a dedicated
+   * "not on the server" poster in place of game art.
+   */
+  notOnServer?: boolean
+  /**
    * ms timestamp of when this packageName first appeared in our local
    * library snapshot. 0 = present at initial-sync (so we don't badge every
    * game NEW for new installs). Undefined = no snapshot info.
@@ -288,13 +295,12 @@ export interface GamesAPI {
   isGameBlacklisted: (packageName: string, version?: number) => boolean
 }
 
-export interface GameAPIRenderer
-  extends Modify<
-    GamesAPI,
-    {
-      isGameBlacklisted: (packageName: string, version?: number) => Promise<boolean>
-    }
-  > {
+export interface GameAPIRenderer extends Modify<
+  GamesAPI,
+  {
+    isGameBlacklisted: (packageName: string, version?: number) => Promise<boolean>
+  }
+> {
   onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void
   onBackgroundSyncComplete: (callback: (games: GameInfo[]) => void) => () => void
   onBackgroundSyncError: (callback: (error: string) => void) => () => void
@@ -443,26 +449,25 @@ export interface SettingsAPI {
   setExistingDownloadAction: (v: ExistingDownloadAction) => void
 }
 
-export interface SettingsAPIRenderer
-  extends Modify<
-    SettingsAPI,
-    {
-      getDownloadPath: () => Promise<string>
-      setDownloadPath: (path: string) => Promise<void>
-      getDownloadSpeedLimit: () => Promise<number>
-      setDownloadSpeedLimit: (limit: number) => Promise<void>
-      getUploadSpeedLimit: () => Promise<number>
-      setUploadSpeedLimit: (limit: number) => Promise<void>
-      getColorScheme: () => Promise<'light' | 'dark'>
-      setColorScheme: (scheme: 'light' | 'dark') => Promise<void>
-      getServerConfig: () => Promise<ServerConfigInfo>
-      setServerConfig: (config: ServerConfigInfo) => Promise<void>
-      getMaxConcurrentDownloads: () => Promise<number>
-      setMaxConcurrentDownloads: (n: number) => Promise<void>
-      getExistingDownloadAction: () => Promise<ExistingDownloadAction>
-      setExistingDownloadAction: (v: ExistingDownloadAction) => Promise<void>
-    }
-  > {}
+export interface SettingsAPIRenderer extends Modify<
+  SettingsAPI,
+  {
+    getDownloadPath: () => Promise<string>
+    setDownloadPath: (path: string) => Promise<void>
+    getDownloadSpeedLimit: () => Promise<number>
+    setDownloadSpeedLimit: (limit: number) => Promise<void>
+    getUploadSpeedLimit: () => Promise<number>
+    setUploadSpeedLimit: (limit: number) => Promise<void>
+    getColorScheme: () => Promise<'light' | 'dark'>
+    setColorScheme: (scheme: 'light' | 'dark') => Promise<void>
+    getServerConfig: () => Promise<ServerConfigInfo>
+    setServerConfig: (config: ServerConfigInfo) => Promise<void>
+    getMaxConcurrentDownloads: () => Promise<number>
+    setMaxConcurrentDownloads: (n: number) => Promise<void>
+    getExistingDownloadAction: () => Promise<ExistingDownloadAction>
+    setExistingDownloadAction: (v: ExistingDownloadAction) => Promise<void>
+  }
+> {}
 
 // ─── Save Backup (BETA) ───────────────────────────────────────────────────────
 // Experimental save/restore module. See main/services/backup for details.

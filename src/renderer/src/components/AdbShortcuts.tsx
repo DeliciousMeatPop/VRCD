@@ -73,24 +73,37 @@ const PRESETS: PresetCategory[] = [
     items: [
       // Render (eye-buffer) resolution — the biggest visual-quality lever on
       // standalone. Values are per-eye pixels; 0/0 restores the app/system
-      // default. These are non-persistent (reset on reboot / app relaunch),
-      // same as the other debug.oculus props.
+      // default. Per-headset buttons so the right native panel size is used
+      // instead of guessing a multiplier. Non-persistent (reset on reboot /
+      // app relaunch), same as the other debug.oculus props.
       {
         label: 'RES DEFAULT',
         command: 'setprop debug.oculus.textureWidth 0 && setprop debug.oculus.textureHeight 0',
         desc: 'Reset render resolution to the app/system default'
       },
       {
-        label: 'RES 1.2x',
+        label: 'Q2 NATIVE',
         command:
-          'setprop debug.oculus.textureWidth 2016 && setprop debug.oculus.textureHeight 2112',
-        desc: 'Supersample render target to ~1.2x (2016×2112 per eye)'
+          'setprop debug.oculus.textureWidth 1832 && setprop debug.oculus.textureHeight 1920',
+        desc: 'Quest 2 — full panel resolution, 1832×1920 per eye (1.0x)'
       },
       {
-        label: 'RES 1.5x',
+        label: 'Q2 HIGH',
         command:
-          'setprop debug.oculus.textureWidth 2496 && setprop debug.oculus.textureHeight 2592',
-        desc: 'Supersample render target to ~1.5x (2496×2592 per eye) — heavy'
+          'setprop debug.oculus.textureWidth 2368 && setprop debug.oculus.textureHeight 2464',
+        desc: 'Quest 2 — ~1.3x supersample, 2368×2464 per eye (heavy)'
+      },
+      {
+        label: 'Q3 NATIVE',
+        command:
+          'setprop debug.oculus.textureWidth 2064 && setprop debug.oculus.textureHeight 2208',
+        desc: 'Quest 3 / 3S — full panel resolution, 2064×2208 per eye (1.0x)'
+      },
+      {
+        label: 'Q3 HIGH',
+        command:
+          'setprop debug.oculus.textureWidth 2688 && setprop debug.oculus.textureHeight 2880',
+        desc: 'Quest 3 / 3S — ~1.3x supersample, 2688×2880 per eye (heavy)'
       },
       // Fixed foveated rendering: 0 = off (sharpest edges, most GPU), 4 =
       // highest foveation (blurrier periphery, most perf). Dynamic lets the
