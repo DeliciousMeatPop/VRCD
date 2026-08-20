@@ -22,6 +22,7 @@ import adbService from './services/adbService'
 import dependencyService, { DependencyStatus } from './services/dependencyService'
 import gameService from './services/gameService'
 import metaStoreService from './services/metaStoreService'
+import { createGameDescriptionService } from './services/gameDescription/gameDescriptionService'
 import downloadService from './services/downloadService'
 import uploadService from './services/uploadService'
 import updateService from './services/updateService'
@@ -282,7 +283,7 @@ function createWindow(): void {
             dependencyService.setDependencyServiceStatus('INITIALIZED')
 
             // Initialize Update Service
-            if (mainWindow) {
+            if (mainWindow && !is.dev) {
               updateService.initialize()
               console.log('Update Service initialized.')
 
@@ -358,6 +359,9 @@ app.whenReady().then(async () => {
   // If the user triggered Reset App Data last session, clean up now while
   // nothing is locked. Runs before createWindow so no files are in use yet.
   const userData = app.getPath('userData')
+  const gameDescriptionService = createGameDescriptionService(
+    join(userData, 'vrp-data', 'game-description-cache-v1.json')
+  )
   const resetFlag = join(userData, 'pending-data-reset')
   if (existsSync(resetFlag)) {
     const resetTargets = [
@@ -595,6 +599,12 @@ app.whenReady().then(async () => {
   })
   typedIpcMain.handle('games:get-trailer-url', async (_event, gameName, packageName) => {
     return metaStoreService.getTrailerUrl(gameName, packageName)
+  })
+  typedIpcMain.handle('games:get-description', async (_event, request) => {
+    return gameDescriptionService.getDescription(request)
+  })
+  typedIpcMain.handle('games:prime-descriptions', async (_event, requests) => {
+    return gameDescriptionService.primeDescriptions(requests)
   })
 
   // --- Download Handlers ---

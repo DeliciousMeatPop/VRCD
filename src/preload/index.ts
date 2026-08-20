@@ -120,6 +120,8 @@ const api = {
     forceSync: (): Promise<GameInfo[]> => typedIpcRenderer.invoke('games:force-sync-games'),
     getTrailerUrl: (gameName: string, packageName: string | undefined): Promise<string | null> =>
       typedIpcRenderer.invoke('games:get-trailer-url', gameName, packageName),
+    getDescription: (request) => typedIpcRenderer.invoke('games:get-description', request),
+    primeDescriptions: (requests) => typedIpcRenderer.invoke('games:prime-descriptions', requests),
     onDownloadProgress: (callback: (progress: DownloadProgress) => void): (() => void) => {
       const listener = (_: IpcRendererEvent, progress: DownloadProgress): void => callback(progress)
       typedIpcRenderer.on('games:download-progress', listener)

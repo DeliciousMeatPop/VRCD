@@ -813,6 +813,12 @@ class GameService extends EventEmitter implements GamesAPI {
     const lastUpdatedIndex = columns.indexOf('Last Updated')
     const releaseNameIndex = columns.indexOf('Release Name')
     const downloadsIndex = columns.indexOf('Downloads')
+    // Optional library enrichment fields. They are intentionally ignored when
+    // absent so existing mirrors keep their current contract.
+    const descriptionIndex = columns.indexOf('Description')
+    const descriptionSourceLabelIndex = columns.indexOf('Description Source')
+    const descriptionSourceUrlIndex = columns.indexOf('Description Source URL')
+    const descriptionLanguageIndex = columns.indexOf('Description Language')
 
     // Batch-read thumbnail directory once instead of 2600+ existsSync calls
     const thumbnailDir = join(this.metaPath, 'thumbnails')
@@ -847,6 +853,16 @@ class GameService extends EventEmitter implements GamesAPI {
         const lastUpdated = lastUpdatedIndex >= 0 ? parts[lastUpdatedIndex].trim() : ''
         const releaseName = releaseNameIndex >= 0 ? parts[releaseNameIndex].trim() : ''
         const downloads = downloadsIndex >= 0 ? parts[downloadsIndex].trim() : ''
+        const libraryDescription = descriptionIndex >= 0 ? parts[descriptionIndex].trim() : ''
+        const libraryDescriptionSourceLabel = descriptionSourceLabelIndex >= 0
+          ? parts[descriptionSourceLabelIndex].trim()
+          : ''
+        const libraryDescriptionSourceUrl = descriptionSourceUrlIndex >= 0
+          ? parts[descriptionSourceUrlIndex].trim()
+          : ''
+        const descriptionLanguage = descriptionLanguageIndex >= 0
+          ? parts[descriptionLanguageIndex].trim()
+          : ''
 
         if (gameName === 'Unknown') {
           console.warn(
@@ -880,7 +896,13 @@ class GameService extends EventEmitter implements GamesAPI {
           downloads: parseFloat(downloads) || 0,
           thumbnailPath: thumbnailExists ? thumbnailPath : '',
           notePath,
-          isInstalled: false
+          isInstalled: false,
+          ...(libraryDescription ? { libraryDescription } : {}),
+          ...(libraryDescriptionSourceLabel ? { libraryDescriptionSourceLabel } : {}),
+          ...(libraryDescriptionSourceUrl ? { libraryDescriptionSourceUrl } : {}),
+          ...(descriptionLanguage === 'en' || descriptionLanguage === 'es'
+            ? { libraryDescriptionLanguage: descriptionLanguage }
+            : {})
         }
 
         games.push(gameInfo)

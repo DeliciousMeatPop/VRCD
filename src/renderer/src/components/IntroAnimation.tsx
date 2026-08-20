@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { getMatrixUsername } from '../utils/matrixUsername'
 import { playSoundOnce } from '../hooks/useSoundEffects'
 
@@ -25,7 +25,6 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   const [textJitter, setTextJitter] = useState({ x: 0, y: 0 })
   const [fading, setFading] = useState(false)
   const [appVersion, setAppVersion] = useState('0.0.1')
-  const dead = useRef(false)
 
   useEffect(() => {
     window.api.app
@@ -48,13 +47,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   }, [phase])
 
   useEffect(() => {
-    // Reset the liveness flag on every mount. React StrictMode (dev) runs
-    // effects mount → cleanup → mount; without this reset, the cleanup's
-    // `dead.current = true` from the throwaway first mount persists into the
-    // real second mount, so run() bails right after the boot phase and the
-    // intro sticks on the blinking cursor forever (dev-only; StrictMode is a
-    // no-op in production, which is why installed builds are unaffected).
-    dead.current = false
+    let cancelled = false
     let systemUser = ''
     const run = async (): Promise<void> => {
       try {
@@ -67,7 +60,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
 
       // ── Phase 1: boot cursor, 1.5s ──────────────────────────────
       await sleep(1500)
-      if (dead.current) return
+      if (cancelled) return
       setPhase('typing')
 
       // Fire the typing sound once for the whole sequence (the audio clip
@@ -84,7 +77,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       const typoAt = hasTypo ? rand(1, Math.max(1, username.length - 2)) : -1
 
       for (let i = 0; i < username.length; i++) {
-        if (dead.current) return
+        if (cancelled) return
         await sleep(rand(70, 190))
 
         if (i === typoAt) {
@@ -102,7 +95,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       }
 
       await sleep(rand(300, 500))
-      if (dead.current) return
+      if (cancelled) return
       setCommittedLines((prev) => [...prev, userPrompt + typed])
       setActiveLine('')
 
@@ -116,7 +109,7 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       const burstLen = rand(Math.max(3, targetLen - 4), targetLen - 1)
 
       for (let i = 0; i < burstLen; i++) {
-        if (dead.current) return
+        if (cancelled) return
         await sleep(rand(100, 180))
         stars += '*'
         setActiveLine(passPrompt + stars)
@@ -124,21 +117,21 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
 
       const backCount = rand(2, Math.min(4, stars.length - 1))
       for (let i = 0; i < backCount; i++) {
-        if (dead.current) return
+        if (cancelled) return
         await sleep(rand(80, 160))
         stars = stars.slice(0, -1)
         setActiveLine(passPrompt + stars)
       }
 
       while (stars.length < targetLen) {
-        if (dead.current) return
+        if (cancelled) return
         await sleep(rand(100, 180))
         stars += '*'
         setActiveLine(passPrompt + stars)
       }
 
       await sleep(rand(350, 550))
-      if (dead.current) return
+      if (cancelled) return
       setCommittedLines((prev) => [...prev, passPrompt + stars])
       setActiveLine('')
 
@@ -147,35 +140,35 @@ const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
       await sleep(300)
       setActiveLine('> INITIALIZING CONNECTION...')
       await sleep(1400)
-      if (dead.current) return
+      if (cancelled) return
 
       setCommittedLines((prev) => [...prev, '> INITIALIZING CONNECTION...'])
       setActiveLine('> AUTHENTICATING...')
       await sleep(2200)
-      if (dead.current) return
+      if (cancelled) return
 
       // ── Phase 5: hard cut → UNAUTHORIZED — hold 4s ───────────────
       setPhase('unauthorized')
       setCommittedLines((prev) => [...prev, '> AUTHENTICATING...'])
       setActiveLine('')
       await sleep(4000)
-      if (dead.current) return
+      if (cancelled) return
 
       // ── Phase 6: UN + ! vanish → AUTHORIZED in green, 1.2s ───────
       setPhase('authorized')
       await sleep(1200)
-      if (dead.current) return
+      if (cancelled) return
 
       // ── Phase 7: fade out ─────────────────────────────────────────
       setPhase('fade')
       setFading(true)
       await sleep(1500)
-      if (!dead.current) onComplete()
+      if (!cancelled) onComplete()
     }
 
     run()
     return () => {
-      dead.current = true
+      cancelled = true
     }
   }, [onComplete])
 
