@@ -20,6 +20,33 @@ function debounce<T extends (...args: P) => void, P extends unknown[]>(
 export { debounce }
 
 /**
+ * Convert a release name into a filesystem-safe folder name.
+ *
+ * Some releases contain characters that are legal on the server but illegal in
+ * Windows paths — most notably the colon, e.g. "Trip the Light: Let's dance
+ * v26+0.97 -JF". Creating or extracting into such a directory fails with
+ * ENOENT (VR Cyberdeck) or NotSupportedException (Rookie Sideloader), so the
+ * download never starts. We map every character Windows forbids in a path
+ * component to a dash so the on-disk folder is portable across every device.
+ *
+ * IMPORTANT: the release name itself must NOT be sanitized where it is used as
+ * the queue key or to derive the download source hash (md5(releaseName + '\n'))
+ * — that has to match the server exactly. Only the on-disk folder segment is
+ * passed through here.
+ */
+export function sanitizeReleaseFolderName(releaseName: string): string {
+  return (
+    releaseName
+      // Reserved on Windows: \ / : * ? " < > | and control characters.
+      .replace(/[\\/:*?"<>|]/g, '-')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1f]/g, '-')
+      // Windows silently strips trailing dots and spaces from folder names.
+      .replace(/[. ]+$/g, '')
+  )
+}
+
+/**
  * Check available disk space at the given path
  * @param path - Directory path to check
  * @returns Available space in bytes, or null if unable to determine

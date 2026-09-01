@@ -8,7 +8,7 @@ import adbService from './adbService'
 import dependencyService from './dependencyService'
 import gameService from './gameService'
 import { EventEmitter } from 'events'
-import { debounce } from './download/utils'
+import { debounce, sanitizeReleaseFolderName } from './download/utils'
 import { QueueManager } from './download/queueManager'
 import { DownloadProcessor } from './download/downloadProcessor'
 import { ExtractionProcessor } from './download/extractionProcessor'
@@ -236,7 +236,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
   public async checkOnDiskCompletion(
     releaseName: string
   ): Promise<'absent' | 'partial' | 'completed'> {
-    const folderPath = join(this.downloadsPath, releaseName)
+    const folderPath = join(this.downloadsPath, sanitizeReleaseFolderName(releaseName))
     if (!existsSync(folderPath)) return 'absent'
     let entries: string[]
     try {
@@ -281,7 +281,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
       return 'imported'
     }
     // redownload: wipe the existing folder so rclone copies into a clean dest
-    const folderPath = join(this.downloadsPath, game.releaseName)
+    const folderPath = join(this.downloadsPath, sanitizeReleaseFolderName(game.releaseName))
     try {
       await fs.rm(folderPath, { recursive: true, force: true })
     } catch (err) {
@@ -291,7 +291,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
   }
 
   private importExistingAsCompleted(game: GameInfo): void {
-    const folderPath = join(this.downloadsPath, game.releaseName)
+    const folderPath = join(this.downloadsPath, sanitizeReleaseFolderName(game.releaseName))
     const existing = this.queueManager.findItem(game.releaseName)
     if (existing) {
       this.queueManager.updateItem(game.releaseName, {
@@ -358,7 +358,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
           return 'imported'
         }
         if (action === 'redownload') {
-          const folderPath = join(this.downloadsPath, game.releaseName)
+          const folderPath = join(this.downloadsPath, sanitizeReleaseFolderName(game.releaseName))
           try {
             await fs.rm(folderPath, { recursive: true, force: true })
           } catch (err) {
@@ -811,10 +811,11 @@ class DownloadService extends EventEmitter implements DownloadAPI {
    * downloads folder, so fall back to joining the release name.
    */
   private resolveReleaseFolder(item: DownloadItem): string {
-    if (item.downloadPath && item.downloadPath.endsWith(item.releaseName)) {
+    const folderName = sanitizeReleaseFolderName(item.releaseName)
+    if (item.downloadPath && item.downloadPath.endsWith(folderName)) {
       return item.downloadPath
     }
-    return join(this.downloadsPath, item.releaseName)
+    return join(this.downloadsPath, folderName)
   }
 
   public async retryDownload(releaseName: string): Promise<void> {
@@ -1174,7 +1175,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         item.status === 'Error' ||
         item.status === 'InstallError'
       ) {
-        const folderPath = join(this.downloadsPath, item.releaseName)
+        const folderPath = join(this.downloadsPath, sanitizeReleaseFolderName(item.releaseName))
         if (!existsSync(folderPath)) {
           this.queueManager.removeItem(item.releaseName)
           pruned++
