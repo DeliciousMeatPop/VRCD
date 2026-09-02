@@ -42,7 +42,18 @@ const pagesFrom = (response: WikipediaResponse): WikipediaPage[] => {
 }
 
 export class WikipediaDescriptionProvider {
-  constructor(private readonly get: WikipediaGet = axios.get as WikipediaGet) {}
+  private readonly userAgent: string
+
+  constructor(
+    private readonly get: WikipediaGet = axios.get as WikipediaGet,
+    appVersion?: string
+  ) {
+    // Wikipedia's API policy asks for a descriptive, contactable User-Agent.
+    // The version is injected by the caller (from app.getVersion()) so it can't
+    // drift out of sync with the app the way a hardcoded string does; the pure
+    // provider stays free of any Electron import so it remains unit-testable.
+    this.userAgent = `VR-CyberDeck/${appVersion ?? 'dev'} (https://github.com/DeliciousMeatPop/VRCD)`
+  }
 
   async lookup(
     gameName: string,
@@ -63,7 +74,7 @@ export class WikipediaDescriptionProvider {
         formatversion: '2'
       },
       headers: {
-        'User-Agent': 'VR-CyberDeck/1.6 (https://github.com/DeliciousMeatPop/VRCD)'
+        'User-Agent': this.userAgent
       }
     })
 

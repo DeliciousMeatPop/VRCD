@@ -11,6 +11,18 @@ import { GamesContext } from './GamesContext'
 import { useAdb } from '../hooks/useAdb'
 import { useDependency } from '../hooks/useDependency'
 import { toGameDescriptionRequest } from '../utils/gameDescription'
+import { DISABLE_ALL_EXTRAS_KEY } from '../hooks/useExtrasSettings'
+
+// True when the user has enabled "Disable All Extras". Read directly from
+// localStorage (rather than the hook) so the non-React getDescription callback
+// stays simple; a read failure defaults to extras-enabled.
+const areExtrasDisabled = (): boolean => {
+  try {
+    return localStorage.getItem(DISABLE_ALL_EXTRAS_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
 
 interface GamesProviderProps {
   children: ReactNode
@@ -372,7 +384,10 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
 
   const getDescription = useCallback(
     async (request: GameDescriptionRequest): Promise<GameDescriptionResult> => {
-      const result = await window.api.games.getDescription(request)
+      const result = await window.api.games.getDescription({
+        ...request,
+        allowNetwork: !areExtrasDisabled()
+      })
       if (result.status !== 'error') {
         setDescriptionSnapshot((current) => ({ ...current, [request.key]: result }))
       }

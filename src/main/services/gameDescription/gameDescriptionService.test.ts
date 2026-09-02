@@ -88,6 +88,49 @@ describe('GameDescriptionService', () => {
     expect(provider.lookup).not.toHaveBeenCalled()
   })
 
+  it('skips the network lookup when allowNetwork is false (Disable All Extras)', async () => {
+    const cache = createCache()
+    const provider = { lookup: vi.fn() }
+    const service = new GameDescriptionService({
+      cache,
+      provider,
+      // No qualifying library image → would normally fall through to Wikipedia.
+      probeImage: vi.fn(async () => null)
+    })
+
+    await expect(
+      service.getDescription({ ...sourceQualifiedGame, allowNetwork: false })
+    ).resolves.toMatchObject({ status: 'not-found' })
+
+    // Never reached the network, and did not negative-cache the skip.
+    expect(provider.lookup).not.toHaveBeenCalled()
+    expect(cache.set).not.toHaveBeenCalled()
+  })
+
+  it('still performs the lookup when allowNetwork is unset (default allowed)', async () => {
+    const cache = createCache()
+    const provider = {
+      lookup: vi.fn(async () => ({
+        status: 'found' as const,
+        text: 'A virtual reality game.',
+        source: { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Test' },
+        language: 'en' as const,
+        fetchedAt: 3
+      }))
+    }
+    const service = new GameDescriptionService({
+      cache,
+      provider,
+      probeImage: vi.fn(async () => null)
+    })
+
+    await expect(service.getDescription(sourceQualifiedGame)).resolves.toMatchObject({
+      status: 'found',
+      source: { label: 'Wikipedia' }
+    })
+    expect(provider.lookup).toHaveBeenCalledTimes(1)
+  })
+
   it('does not negative-cache temporary provider failures', async () => {
     const cache = createCache()
     const provider = { lookup: vi.fn().mockRejectedValue(new Error('offline')) }

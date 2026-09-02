@@ -70,6 +70,13 @@ export class GameDescriptionService {
     const cached = await this.dependencies.cache.get(key)
     if (cached) return cached
 
+    // Respect the user's "Disable All Extras" choice: serve local library data
+    // and any prior cached result, but never initiate a network lookup. Not
+    // cached, so a later request with extras re-enabled still tries.
+    if (request.allowNetwork === false) {
+      return { status: 'not-found', language: request.language, fetchedAt: Date.now() }
+    }
+
     const existing = this.inFlight.get(key)
     if (existing) return existing
 
@@ -126,9 +133,12 @@ export const probeLocalImage = async (path: string): Promise<ImageDimensions | n
   }
 }
 
-export const createGameDescriptionService = (cachePath: string): GameDescriptionService =>
+export const createGameDescriptionService = (
+  cachePath: string,
+  appVersion?: string
+): GameDescriptionService =>
   new GameDescriptionService({
     cache: new DescriptionCache(cachePath),
-    provider: new WikipediaDescriptionProvider(),
+    provider: new WikipediaDescriptionProvider(undefined, appVersion),
     probeImage: probeLocalImage
   })
