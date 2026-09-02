@@ -1,5 +1,5 @@
 import { isIP } from 'node:net'
-import type { DownloadProxySettings } from '@shared/types'
+import type { DownloadProxySettings, Settings } from '@shared/types'
 
 export const DEFAULT_DOWNLOAD_PROXY_SETTINGS: DownloadProxySettings = {
   enabled: false,
@@ -9,6 +9,13 @@ export const DEFAULT_DOWNLOAD_PROXY_SETTINGS: DownloadProxySettings = {
 }
 
 type ProxySettingsInput = Partial<DownloadProxySettings> | null | undefined
+
+export interface RcloneMirrorConfig {
+  configFilePath: string
+  remoteName: string
+}
+
+export type SettingsFileWriter = (path: string, contents: string) => void
 
 export function normalizeDownloadProxySettings(value: ProxySettingsInput): DownloadProxySettings {
   if (!value || typeof value !== 'object') return { ...DEFAULT_DOWNLOAD_PROXY_SETTINGS }
@@ -27,6 +34,30 @@ export function normalizeDownloadProxySettings(value: ProxySettingsInput): Downl
   if (enabled) validateProxyHost(host)
 
   return { enabled, protocol, host, port }
+}
+
+export function readPersistedDownloadProxySettings(value: unknown): DownloadProxySettings {
+  try {
+    return normalizeDownloadProxySettings(value as ProxySettingsInput)
+  } catch {
+    return { ...DEFAULT_DOWNLOAD_PROXY_SETTINGS }
+  }
+}
+
+export function persistDownloadProxySettings(
+  settingsPath: string,
+  settings: Settings,
+  downloadProxy: DownloadProxySettings,
+  writeSettingsFile: SettingsFileWriter
+): Settings {
+  const normalizedProxy = normalizeDownloadProxySettings(downloadProxy)
+  const savedSettings = { ...settings, downloadProxy: normalizedProxy }
+  try {
+    writeSettingsFile(settingsPath, JSON.stringify(savedSettings, null, 2))
+  } catch {
+    throw new Error('Could not save custom proxy settings. Check that the settings folder is writable.')
+  }
+  return savedSettings
 }
 
 export function buildRcloneDownloadEnvironment(
@@ -51,6 +82,28 @@ export function buildRcloneDownloadEnvironment(
   environment.NO_PROXY = ''
   environment.no_proxy = ''
   return environment
+}
+
+export function buildGameArchiveRcloneEnvironment(
+  _isResume: boolean,
+  proxySettings: DownloadProxySettings,
+  apiKey: string | null,
+  inheritedEnvironment: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const environment = buildRcloneDownloadEnvironment(proxySettings, inheritedEnvironment)
+  if (apiKey) environment.RCLONE_HEADER = `X-API-Key: ${apiKey}`
+  return environment
+}
+
+export function isCustomDownloadProxyEnabled(proxySettings: DownloadProxySettings): boolean {
+  return normalizeDownloadProxySettings(proxySettings).enabled
+}
+
+export function selectGameArchiveMirror(
+  proxySettings: DownloadProxySettings,
+  activeMirror: RcloneMirrorConfig | undefined
+): RcloneMirrorConfig | undefined {
+  return isCustomDownloadProxyEnabled(proxySettings) ? undefined : activeMirror
 }
 
 function validateProxyHost(host: string): void {

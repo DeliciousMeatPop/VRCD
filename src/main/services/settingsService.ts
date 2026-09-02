@@ -13,7 +13,9 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import EventEmitter from 'events'
 import {
   DEFAULT_DOWNLOAD_PROXY_SETTINGS,
-  normalizeDownloadProxySettings
+  normalizeDownloadProxySettings,
+  readPersistedDownloadProxySettings,
+  persistDownloadProxySettings
 } from './download/downloadProxy'
 
 class SettingsService extends EventEmitter implements SettingsAPI {
@@ -128,8 +130,12 @@ class SettingsService extends EventEmitter implements SettingsAPI {
 
   setDownloadProxy(settings: DownloadProxySettings): DownloadProxySettings {
     const normalized = normalizeDownloadProxySettings(settings)
-    this.settings.downloadProxy = normalized
-    this.saveSettings()
+    this.settings = persistDownloadProxySettings(
+      this.settingsPath,
+      this.settings,
+      normalized,
+      (settingsPath, contents) => writeFileSync(settingsPath, contents, 'utf-8')
+    )
     return { ...normalized }
   }
 
@@ -149,12 +155,7 @@ class SettingsService extends EventEmitter implements SettingsAPI {
         const data = readFileSync(this.settingsPath, 'utf-8')
         const loadedSettings = JSON.parse(data)
         this.settings = { ...this.settings, ...loadedSettings }
-        try {
-          this.settings.downloadProxy = normalizeDownloadProxySettings(loadedSettings.downloadProxy)
-        } catch {
-          this.settings.downloadProxy = { ...DEFAULT_DOWNLOAD_PROXY_SETTINGS }
-          console.warn('Invalid custom proxy settings were ignored.')
-        }
+        this.settings.downloadProxy = readPersistedDownloadProxySettings(loadedSettings.downloadProxy)
         console.log('Settings loaded successfully')
       } else {
         console.log('No settings file found, using defaults')

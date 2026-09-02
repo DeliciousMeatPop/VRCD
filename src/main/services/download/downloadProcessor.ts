@@ -11,7 +11,11 @@ import { DownloadItem } from '@shared/types'
 import { DownloadStatus } from '@shared/types'
 import { getAvailableDiskSpace, parseSizeToBytes, formatBytes } from './utils'
 import { isCompletedDownloadFile, validateDownloadCompletion } from './archiveDiscovery'
-import { buildRcloneDownloadEnvironment } from './downloadProxy'
+import {
+  buildGameArchiveRcloneEnvironment,
+  isCustomDownloadProxyEnabled,
+  selectGameArchiveMirror
+} from './downloadProxy'
 
 // Type for VRP config - adjust if needed elsewhere
 interface VrpConfig {
@@ -177,29 +181,38 @@ export class DownloadProcessor {
 
     this.updateItemStatus(item.releaseName, 'Downloading', 0)
 
-    // Check if there's an active mirror to use
-    const activeMirror = await mirrorService.getActiveMirror()
+    const proxySettings = settingsService.getDownloadProxy()
+    if (isCustomDownloadProxyEnabled(proxySettings)) {
+      console.log('[DownProc] Custom proxy enabled; using the public download endpoint.')
+    } else {
+      // Check if there's an active mirror to use only when preserving the normal direct policy.
+      const activeMirror = await mirrorService.getActiveMirror()
 
-    if (activeMirror) {
-      console.log(`[DownProc] Using active mirror: ${activeMirror.name}`)
+      if (activeMirror) {
+        console.log(`[DownProc] Using active mirror: ${activeMirror.name}`)
 
-      // Get the config file path and remote name
-      const configFilePath = mirrorService.getActiveMirrorConfigPath()
-      const remoteName = mirrorService.getActiveMirrorRemoteName()
+        // Get the config file path and remote name
+        const configFilePath = mirrorService.getActiveMirrorConfigPath()
+        const remoteName = mirrorService.getActiveMirrorRemoteName()
+        const mirrorConfig = selectGameArchiveMirror(
+          proxySettings,
+          configFilePath && remoteName ? { configFilePath, remoteName } : undefined
+        )
 
-      if (configFilePath && remoteName) {
-        try {
-          console.log(`[DownProc] Using rclone copy with mirror: ${activeMirror.name}`)
-          return await this.startRcloneCopyDownload(item, { configFilePath, remoteName })
-        } catch (mirrorError: unknown) {
-          console.error(
-            `[DownProc] Mirror download failed for ${item.releaseName}, falling back to public endpoint:`,
-            mirrorError
-          )
-          // Fall through to public endpoint
+        if (mirrorConfig) {
+          try {
+            console.log(`[DownProc] Using rclone copy with mirror: ${activeMirror.name}`)
+            return await this.startRcloneCopyDownload(item, mirrorConfig)
+          } catch (mirrorError: unknown) {
+            console.error(
+              `[DownProc] Mirror download failed for ${item.releaseName}, falling back to public endpoint:`,
+              mirrorError
+            )
+            // Fall through to public endpoint
+          }
+        } else {
+          console.warn('[DownProc] Failed to get mirror config, falling back to public endpoint')
         }
-      } else {
-        console.warn('[DownProc] Failed to get mirror config, falling back to public endpoint')
       }
     }
 
@@ -387,8 +400,12 @@ export class DownloadProcessor {
       // Pass the API key via env var (RCLONE_HEADER) rather than --header so
       // it never appears in process listings, logs, or ExecaError messages.
       const apiKey = getApiKey()
-      const env = buildRcloneDownloadEnvironment(settingsService.getDownloadProxy(), process.env)
-      if (apiKey) env.RCLONE_HEADER = `X-API-Key: ${apiKey}`
+      const env = buildGameArchiveRcloneEnvironment(
+        isResume,
+        settingsService.getDownloadProxy(),
+        apiKey,
+        process.env
+      )
       const rcloneProcess = execa(rclonePath, copyArgs, {
         all: true,
         buffer: false,

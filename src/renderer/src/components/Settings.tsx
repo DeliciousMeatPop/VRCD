@@ -1634,6 +1634,11 @@ const DownloadProxySettingsPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
+  const updateSettings = (next: (current: DownloadProxySettings) => DownloadProxySettings): void => {
+    setSaved(false)
+    setSettings(next)
+  }
+
   useEffect(() => {
     let mounted = true
     window.api.settings
@@ -1683,7 +1688,9 @@ const DownloadProxySettingsPanel: React.FC = () => {
       <div className={styles.formRow} style={{ flexWrap: 'wrap' }}>
         <Switch
           checked={settings.enabled}
-          onChange={(_, data) => setSettings((current) => ({ ...current, enabled: data.checked }))}
+          onChange={(_, data) =>
+            updateSettings((current) => ({ ...current, enabled: data.checked }))
+          }
           label="Route game archive downloads through this proxy"
         />
       </div>
@@ -1696,7 +1703,7 @@ const DownloadProxySettingsPanel: React.FC = () => {
             value={settings.protocol.toUpperCase()}
             onOptionSelect={(_, data) => {
               if (data.optionValue === 'http' || data.optionValue === 'https') {
-                setSettings((current) => ({ ...current, protocol: data.optionValue }))
+                updateSettings((current) => ({ ...current, protocol: data.optionValue }))
               }
             }}
             disabled={!settings.enabled}
@@ -1710,7 +1717,10 @@ const DownloadProxySettingsPanel: React.FC = () => {
           <Input
             aria-label="Proxy port"
             value={portInput}
-            onChange={(_, data) => setPortInput(data.value)}
+            onChange={(_, data) => {
+              setSaved(false)
+              setPortInput(data.value)
+            }}
             inputMode="numeric"
             disabled={!settings.enabled}
           />
@@ -1721,7 +1731,7 @@ const DownloadProxySettingsPanel: React.FC = () => {
           className={styles.input}
           aria-label="Proxy host"
           value={settings.host}
-          onChange={(_, data) => setSettings((current) => ({ ...current, host: data.value }))}
+          onChange={(_, data) => updateSettings((current) => ({ ...current, host: data.value }))}
           placeholder="proxy.example.com, 192.0.2.10, or 2001:db8::1"
           disabled={!settings.enabled}
         />
@@ -1729,7 +1739,11 @@ const DownloadProxySettingsPanel: React.FC = () => {
           {isSaving ? 'Saving...' : 'Save Proxy'}
         </Button>
       </div>
-      {error && <Text className={styles.error}>{error}</Text>}
+      {error && (
+        <Text className={styles.error} role="alert">
+          {error}
+        </Text>
+      )}
       {saved && (
         <Text className={styles.success} role="status">
           <CheckmarkCircleRegular />
