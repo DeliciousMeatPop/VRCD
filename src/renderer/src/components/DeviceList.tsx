@@ -336,7 +336,7 @@ const TargetCard: React.FC<TargetCardProps> = ({
   const isOffline = device.type === 'offline'
   const isUnauth = device.type === 'unauthorized'
   const isWifi = isWifiBook || (hasBook && isTcp && isConnectable)
-  const name = device.friendlyModelName || (device as any).model || device.id
+  const name = device.friendlyModelName || device.model || device.id
   const statusBadgeColor = isConnected
     ? 'var(--vrcd-neon)'
     : connectionError
@@ -459,7 +459,7 @@ const TargetCard: React.FC<TargetCardProps> = ({
             </span>
 
             {/* IP */}
-            {(device as any).ipAddress && (
+            {device.ipAddress && (
               <span
                 style={{
                   ...S,
@@ -468,34 +468,34 @@ const TargetCard: React.FC<TargetCardProps> = ({
                   letterSpacing: '0.06em'
                 }}
               >
-                IP: {(device as any).ipAddress}
+                IP: {device.ipAddress}
               </span>
             )}
 
             {/* Battery */}
-            {(device as any).batteryLevel != null && (
+            {device.batteryLevel != null && (
               <span style={{ ...S, fontSize: '10px', color: 'rgba(var(--vrcd-neon-raw),0.5)' }}>
-                ⚡ {(device as any).batteryLevel}%
+                ⚡ {device.batteryLevel}%
               </span>
             )}
 
             {/* Storage */}
-            {(device as any).storageFree && (
+            {device.storageFree && (
               <span style={{ ...S, fontSize: '10px', color: 'rgba(var(--vrcd-neon-raw),0.5)' }}>
-                💾 {(device as any).storageFree} free
+                💾 {device.storageFree} free
               </span>
             )}
 
             {/* Ping / signal */}
             {isWifi && (
               <span>
-                {(device as any).pingStatus === 'reachable' && (
-                  <SignalBars ms={(device as any).pingResponseTime ?? null} />
+                {device.pingStatus === 'reachable' && (
+                  <SignalBars ms={device.pingResponseTime ?? null} />
                 )}
-                {(device as any).pingStatus === 'unreachable' && (
+                {device.pingStatus === 'unreachable' && (
                   <span style={{ ...S, fontSize: '10px', color: '#ff4444' }}>OFFLINE</span>
                 )}
-                {(device as any).pingStatus === 'checking' && (
+                {device.pingStatus === 'checking' && (
                   <span style={{ ...S, fontSize: '10px', color: 'rgba(var(--vrcd-neon-raw),0.4)' }}>
                     PINGING...
                   </span>
@@ -504,7 +504,7 @@ const TargetCard: React.FC<TargetCardProps> = ({
             )}
 
             {/* Non-Quest warning */}
-            {isConnectable && !(device as any).isQuestDevice && !isWifi && (
+            {isConnectable && !device.isQuestDevice && !isWifi && (
               <span style={{ ...S, fontSize: '10px', color: '#f5a623' }}>⚠ UNKNOWN DEVICE</span>
             )}
           </div>
@@ -596,7 +596,7 @@ const TargetCard: React.FC<TargetCardProps> = ({
             <button
               className="breach-btn breach-btn-primary"
               onClick={onConnect}
-              disabled={(device as any).pingStatus === 'unreachable'}
+              disabled={device.pingStatus === 'unreachable'}
               style={{ fontSize: '10px', padding: '5px 12px' }}
             >
               ▶ BREACH
@@ -618,7 +618,7 @@ const TargetCard: React.FC<TargetCardProps> = ({
             >
               ▶ BREACH
             </button>
-            {(device as any).ipAddress && !isTcp && !isAlreadyBookmarked && (
+            {device.ipAddress && !isTcp && !isAlreadyBookmarked && (
               <button
                 className="breach-btn"
                 onClick={onBookmark}
@@ -805,7 +805,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
   useEffect(() => {
     if (isConnected || isLoading || hasAutoConnected.current) return
     const q = devices.find(
-      (d) => (d as any).isQuestDevice && (d.type === 'device' || d.type === 'emulator')
+      (d) => d.isQuestDevice && (d.type === 'device' || d.type === 'emulator')
     )
     if (!q) return
     hasAutoConnected.current = true
@@ -819,7 +819,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
         .filter((d) => isWiFiBookmark(d) || hasBookmarkData(d))
         .map((d) =>
           isWiFiBookmark(d)
-            ? (d as any).ipAddress
+            ? d.ipAddress
             : hasBookmarkData(d)
               ? d.bookmarkData.ipAddress
               : null
@@ -909,9 +909,9 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
 
   const handleBookmark = useCallback(
     async (device: ExtendedDeviceInfo): Promise<void> => {
-      const ip = (device as any).ipAddress
+      const ip = device.ipAddress
       if (!ip) return
-      const name = device.friendlyModelName || (device as any).model || device.id
+      const name = device.friendlyModelName || device.model || device.id
       await window.api.wifiBookmarks.add(`${name} (${ip})`, ip, 5555)
       refreshDevices()
     },
@@ -948,7 +948,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
   const breachDeviceName = breachDevice
     ? (
         breachDevice.friendlyModelName ||
-        (breachDevice as any).model ||
+        breachDevice.model ||
         breachDevice.id
       ).toUpperCase()
     : tcpIpAddress || '...'
@@ -1170,8 +1170,8 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
                     onDeleteBookmark={() => handleDeleteBookmark(device)}
                     onOpenShell={() => setShellDialogDeviceId(device.id)}
                     isAlreadyBookmarked={
-                      !!(device as any).ipAddress &&
-                      bookmarkedIps.includes((device as any).ipAddress)
+                      !!device.ipAddress &&
+                      bookmarkedIps.includes(device.ipAddress)
                     }
                   />
                 )

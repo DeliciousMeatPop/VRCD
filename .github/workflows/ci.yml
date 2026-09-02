@@ -34,7 +34,7 @@ jobs:
       # --ignore-scripts skips Electron's binary download and native rebuilds:
       # none of the checks below launch Electron, so we don't pay for it.
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Typecheck (main / node)
         run: npm run typecheck:node
@@ -49,12 +49,9 @@ jobs:
         run: npm run test:node
 
   lint:
-    name: Lint (informational)
+    name: Lint
     runs-on: ubuntu-latest
-    # Non-blocking for now: the repo carries pre-existing prettier/eslint debt,
-    # so surface it without failing the merge. Flip continue-on-error off once
-    # `npm run lint` is clean.
-    continue-on-error: true
+    # Blocking: `npm run lint` is clean of errors (warnings don't fail eslint).
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,7 +63,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Lint
         run: npm run lint

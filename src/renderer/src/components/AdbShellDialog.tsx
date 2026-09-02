@@ -805,7 +805,7 @@ export function AdbShellDialog({
                 onClick={() => inputRef.current?.focus()}
               >
                 {history.length === 0 && (
-                  <span style={S.emptyHint}>// type a shell command and press Enter</span>
+                  <span style={S.emptyHint}>{'// type a shell command and press Enter'}</span>
                 )}
 
                 {history.map((entry, i) => (
