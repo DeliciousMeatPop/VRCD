@@ -1,12 +1,34 @@
 import React, { ReactNode, useEffect, useState, useCallback, useMemo } from 'react'
-import { BlacklistEntry, GameInfo, UploadCandidate } from '@shared/types'
+import {
+  BlacklistEntry,
+  GameDescriptionRequest,
+  GameDescriptionResult,
+  GameDescriptionSnapshot,
+  GameInfo,
+  UploadCandidate
+} from '@shared/types'
 import { GamesContext } from './GamesContext'
 import { useAdb } from '../hooks/useAdb'
 import { useDependency } from '../hooks/useDependency'
+import { toGameDescriptionRequest } from '../utils/gameDescription'
+import { DISABLE_ALL_EXTRAS_KEY } from '../hooks/useExtrasSettings'
+
+// True when the user has enabled "Disable All Extras". Read directly from
+// localStorage (rather than the hook) so the non-React getDescription callback
+// stays simple; a read failure defaults to extras-enabled.
+const areExtrasDisabled = (): boolean => {
+  try {
+    return localStorage.getItem(DISABLE_ALL_EXTRAS_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
 
 interface GamesProviderProps {
   children: ReactNode
 }
+
+const DESCRIPTION_LANGUAGE = 'en' as const
 
 // Helper function to parse version string (extract numbers)
 const parseVersion = (versionString: string): number | null => {
@@ -24,6 +46,7 @@ const parseVersion = (versionString: string): number | null => {
 
 export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
   const [rawGames, setRawGames] = useState<GameInfo[]>([])
+  const [descriptionSnapshot, setDescriptionSnapshot] = useState<GameDescriptionSnapshot>({})
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
@@ -49,6 +72,21 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
     selectedDeviceDetails
   } = useAdb()
   const { isReady } = useDependency()
+  const primeLibraryDescriptions = useCallback(async (gamesList: GameInfo[]): Promise<void> => {
+    const requests = gamesList
+      .filter((game) =>
+        Boolean(game.libraryDescription && game.libraryDescriptionSourceLabel?.trim())
+      )
+      .map((game) => toGameDescriptionRequest(game, DESCRIPTION_LANGUAGE))
+    if (requests.length === 0) return
+
+    try {
+      const snapshot = await window.api.games.primeDescriptions(requests)
+      setDescriptionSnapshot((current) => ({ ...current, ...snapshot }))
+    } catch (error) {
+      console.warn('[GamesProvider] Could not prime library descriptions:', error)
+    }
+  }, [])
 
   // Detect version change on startup — triggers upload check on first launch post-update
   useEffect(() => {
@@ -289,6 +327,7 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
 
       const gamesList = await window.api.games.getGames()
       setRawGames(gamesList)
+      void primeLibraryDescriptions(gamesList)
 
       const syncTime = await window.api.games.getLastSyncTime()
       setLastSyncTime(syncTime ? new Date(syncTime) : null)
@@ -301,7 +340,7 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
         setIsInitialLoadComplete(true)
       }
     }
-  }, [isInitialLoadComplete])
+  }, [isInitialLoadComplete, primeLibraryDescriptions])
 
   const getTrailerUrl = useCallback(
     async (gameName: string, packageName: string | undefined): Promise<string | null> => {
@@ -321,6 +360,7 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       const syncTime = await window.api.games.getLastSyncTime()
 
       setRawGames(gamesList)
+      void primeLibraryDescriptions(gamesList)
       setLastSyncTime(syncTime ? new Date(syncTime) : null)
     } catch (err) {
       console.error('Error refreshing games:', err)
@@ -339,7 +379,21 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       setDownloadProgress(0)
       setExtractProgress(0)
     }
-  }, [])
+  }, [primeLibraryDescriptions])
+
+  const getDescription = useCallback(
+    async (request: GameDescriptionRequest): Promise<GameDescriptionResult> => {
+      const result = await window.api.games.getDescription({
+        ...request,
+        allowNetwork: !areExtrasDisabled()
+      })
+      if (result.status !== 'error') {
+        setDescriptionSnapshot((current) => ({ ...current, [request.key]: result }))
+      }
+      return result
+    },
+    []
+  )
 
   useEffect(() => {
     const removeDownloadProgressListener = window.api.games.onDownloadProgress((progress) => {
@@ -360,9 +414,10 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       console.log('[GamesProvider] Background sync complete, updating game list.')
       setSyncError(null)
       setRawGames(games)
+      void primeLibraryDescriptions(games)
     })
     return remove
-  }, [])
+  }, [primeLibraryDescriptions])
 
   useEffect(() => {
     const remove = window.api.games.onBackgroundSyncError((error) => {
@@ -414,6 +469,8 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       uploadCandidates,
       uploadCandidatesVersion,
       getTrailerUrl,
+      getDescription,
+      descriptionSnapshot,
       addGameToBlacklist,
       getBlacklistGames,
       removeGameFromBlacklist,
@@ -438,6 +495,8 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
       uploadCandidates,
       uploadCandidatesVersion,
       getTrailerUrl,
+      getDescription,
+      descriptionSnapshot,
       addGameToBlacklist,
       getBlacklistGames,
       removeGameFromBlacklist,

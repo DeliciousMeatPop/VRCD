@@ -1,0 +1,69 @@
+name: CI
+
+# Fast, cross-platform-agnostic checks for every PR and every push to main:
+# type safety and the unit-test suites. These do NOT build or launch Electron,
+# so they run in ~a minute and catch the regressions a merge would otherwise
+# hide (the game-details work merged with no CI watching typecheck at all).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so a rapid push sequence doesn't queue.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck & tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Node 22 strips TypeScript types natively, which the *.test.mjs
+          # suites rely on to import their .ts subjects directly.
+          node-version: '22.x'
+          cache: 'npm'
+
+      # --ignore-scripts skips Electron's binary download and native rebuilds:
+      # none of the checks below launch Electron, so we don't pay for it.
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck (main / node)
+        run: npm run typecheck:node
+
+      - name: Typecheck (renderer / web)
+        run: npm run typecheck:web
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Unit tests (node --test)
+        run: npm run test:node
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    # Blocking: `npm run lint` is clean of errors (warnings don't fail eslint).
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint

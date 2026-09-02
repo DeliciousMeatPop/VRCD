@@ -61,6 +61,8 @@ export interface PackageInfo {
 }
 
 // Game types
+export type GameDescriptionLanguage = 'en' | 'es'
+
 export interface GameInfo {
   id: string
   name: string
@@ -73,6 +75,11 @@ export interface GameInfo {
   thumbnailPath: string
   notePath: string
   isInstalled: boolean
+  /** Optional first-party synopsis supplied by the configured library. */
+  libraryDescription?: string
+  libraryDescriptionSourceLabel?: string
+  libraryDescriptionSourceUrl?: string
+  libraryDescriptionLanguage?: GameDescriptionLanguage
   deviceVersionCode?: number
   hasUpdate?: boolean
   /**
@@ -94,6 +101,56 @@ export interface GameInfo {
    */
   versionChangedAt?: number
 }
+
+export interface GameDescriptionSource {
+  label: string
+  url?: string
+}
+
+export interface GameDescriptionFound {
+  status: 'found'
+  text: string
+  source: GameDescriptionSource
+  language: GameDescriptionLanguage
+  fetchedAt: number
+}
+
+export interface GameDescriptionNotFound {
+  status: 'not-found'
+  language: GameDescriptionLanguage
+  fetchedAt: number
+}
+
+export interface GameDescriptionError {
+  status: 'error'
+  language: GameDescriptionLanguage
+}
+
+export type GameDescriptionResult =
+  | GameDescriptionFound
+  | GameDescriptionNotFound
+  | GameDescriptionError
+
+export interface GameDescriptionRequest {
+  key: string
+  gameName: string
+  packageName: string
+  thumbnailPath: string
+  language: GameDescriptionLanguage
+  libraryDescription?: string
+  libraryDescriptionSourceLabel?: string
+  libraryDescriptionSourceUrl?: string
+  libraryDescriptionLanguage?: GameDescriptionLanguage
+  /**
+   * Whether an external (Wikipedia) lookup is permitted for this request when
+   * no local library description qualifies. Defaults to allowed; the renderer
+   * sets it to false when the user has enabled "Disable All Extras", so details
+   * still show local metadata but never reach out to the network.
+   */
+  allowNetwork?: boolean
+}
+
+export type GameDescriptionSnapshot = Record<string, GameDescriptionResult>
 
 export interface UploadCandidate {
   packageName: string
@@ -304,6 +361,8 @@ export interface GameAPIRenderer extends Modify<
   onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void
   onBackgroundSyncComplete: (callback: (games: GameInfo[]) => void) => () => void
   onBackgroundSyncError: (callback: (error: string) => void) => () => void
+  getDescription: (request: GameDescriptionRequest) => Promise<GameDescriptionResult>
+  primeDescriptions: (requests: GameDescriptionRequest[]) => Promise<GameDescriptionSnapshot>
 }
 
 /** Result codes returned by DownloadService.addToQueue. */

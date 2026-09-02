@@ -57,7 +57,7 @@ const CreditsDialog: React.FC<CreditsDialogProps> = ({ open, onClose, variant = 
             {CREW.map((member, i) => (
               <div key={i} className="credits-crew-entry">
                 <span className="credits-name">{member.name}</span>
-                {member.desc && <span className="credits-desc">// {member.desc}</span>}
+                {member.desc && <span className="credits-desc">{'// '}{member.desc}</span>}
               </div>
             ))}
           </div>

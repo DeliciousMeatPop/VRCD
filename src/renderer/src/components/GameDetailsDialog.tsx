@@ -32,6 +32,9 @@ import { getSideloadingDisabled } from '@renderer/hooks/useExtrasSettings'
 import ErrorDetailDialog, { ErrorPhase } from './ErrorDetailDialog'
 import NoteRenderer from './NoteRenderer'
 import GameSaveBackupControls from './backup/GameSaveBackupControls'
+import GameCoverLightbox from './GameCoverLightbox'
+import GameDescriptionPanel from './GameDescriptionPanel'
+import { gameDescriptionKey, toGameDescriptionRequest } from '@renderer/utils/gameDescription'
 
 const NEON = 'var(--vrcd-neon)'
 const PURPLE = 'var(--vrcd-purple)'
@@ -96,7 +99,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   isStarred,
   onToggleStarred
 }) => {
-  const { getTrailerUrl } = useGames()
+  const { getTrailerUrl, getDescription, descriptionSnapshot } = useGames()
   const { selectedDevice } = useAdb()
   const [currentGameNote, setCurrentGameNote] = useState<string | null>(null)
   const [loadingNote, setLoadingNote] = useState(false)
@@ -104,6 +107,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
   const [loadingVideo, setLoadingVideo] = useState(false)
   const [trailerOpen, setTrailerOpen] = useState(false)
   const [errorDetailOpen, setErrorDetailOpen] = useState(false)
+  const [loadingDescription, setLoadingDescription] = useState(false)
   const webviewRef = useRef<HTMLElement>(null)
 
   // The trailer is loaded as the actual youtube.com/watch page (not /embed/,
@@ -208,6 +212,37 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
       alive = false
     }
   }, [open, game, getTrailerUrl])
+
+  const descriptionResult = game
+    ? (descriptionSnapshot[gameDescriptionKey(game, 'en')] ?? null)
+    : null
+
+  useEffect(() => {
+    let alive = true
+    if (!open || !game) {
+      setLoadingDescription(false)
+      return () => {
+        alive = false
+      }
+    }
+
+    if (descriptionResult) {
+      setLoadingDescription(false)
+      return () => {
+        alive = false
+      }
+    }
+
+    setLoadingDescription(true)
+    getDescription(toGameDescriptionRequest(game, 'en'))
+      .catch(() => undefined)
+      .finally(() => {
+        if (alive) setLoadingDescription(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [open, game, getDescription, descriptionResult])
 
   const renderActionButtons = (g: GameInfo): React.ReactNode => {
     const status = downloadStatusMap.get(g.releaseName || '')?.status
@@ -515,17 +550,12 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             }}
           >
             {/* Cover image */}
-            <img
+            <GameCoverLightbox
               src={game.thumbnailPath ? `file://${game.thumbnailPath}` : placeholderImage}
               alt={game.name}
-              style={{
-                width: 140,
-                height: 140,
-                objectFit: 'cover',
-                borderRadius: 8,
-                border: '1px solid rgba(var(--vrcd-neon-raw),0.3)',
-                display: 'block'
-              }}
+              isPlaceholder={!game.thumbnailPath}
+              loading={loadingDescription}
+              labels={{ open: 'Enlarge cover', close: 'Close enlarged cover' }}
             />
 
             {/* Game meta */}
@@ -686,6 +716,16 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
             </div>
           </div>
 
+          <GameDescriptionPanel
+            loading={loadingDescription}
+            result={descriptionResult}
+            labels={{
+              heading: 'DESCRIPTION',
+              loading: 'Loading description…',
+              unavailable: 'No description available.'
+            }}
+          />
+
           {/* Download progress */}
           {showProgress && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -818,7 +858,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 marginBottom: 6
               }}
             >
-              // NOTE
+              {'// NOTE'}
             </div>
             {loadingNote ? (
               <Spinner size="tiny" label="Loading..." />

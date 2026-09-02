@@ -15,6 +15,7 @@ import {
   RestoreFixup
 } from '@shared/types'
 import { planProfileFolderSync } from './restoreFixups'
+import { isRegeneratedSaveFile } from './saveDataFilter'
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -207,6 +208,7 @@ class BackupService {
       const planned = this.plannedRoots(packageName, profile)
       const roots: BackupRoot[] = []
       let anyExternalPathMissing = false
+      let anyCacheSkipped = false
 
       for (const p of planned) {
         const localDirAbs = join(dir, ...p.localDir.split('/'))
@@ -220,11 +222,19 @@ class BackupService {
             anyExternalPathMissing = true
             continue
           }
-          const { fileCount, totalBytes } = await adbService.pullDirectory(
+          const { fileCount, totalBytes, skipped } = await adbService.pullDirectory(
             deviceId,
             p.remotePath,
-            localDirAbs
+            localDirAbs,
+            { exclude: isRegeneratedSaveFile }
           )
+          if (skipped > 0) {
+            anyCacheSkipped = true
+            await this.log(
+              id,
+              `  Skipped ${skipped} regenerated cache file(s) (shader/PSO caches, il2cpp, localization).`
+            )
+          }
           await this.log(id, `  Pulled ${fileCount} file(s), ${totalBytes} bytes`)
           roots.push({ ...p, fileCount, totalBytes })
         } else {
@@ -252,9 +262,20 @@ class BackupService {
       if (fileCount === 0) {
         await this.log(id, 'Backup aborted: no files copied from any source.')
         await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
-        const hint = anyExternalPathMissing
-          ? `No save data found for ${appLabel}. Launch the app on the headset at least once before backing up.`
-          : `No save files found for ${appLabel}. There may be nothing to back up yet.`
+        let hint: string
+        if (anyCacheSkipped) {
+          // The external tree existed but held only regenerated engine data
+          // (shader caches, il2cpp, localization). This game keeps its real
+          // progress somewhere a normal backup can't reach.
+          hint =
+            `No save data found for ${appLabel} — its shared folder held only ` +
+            `regenerated cache. This game likely stores progress in its private ` +
+            `app storage or an online account, which a local save backup can't capture.`
+        } else if (anyExternalPathMissing) {
+          hint = `No save data found for ${appLabel}. Launch the app on the headset at least once before backing up.`
+        } else {
+          hint = `No save files found for ${appLabel}. There may be nothing to back up yet.`
+        }
         return { ok: false, error: hint }
       }
 

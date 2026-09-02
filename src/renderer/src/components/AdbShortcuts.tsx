@@ -533,7 +533,7 @@ const AdbShortcuts: React.FC<AdbShortcutsProps> = ({ onRun, disabled }) => {
               letterSpacing: '0.14em'
             }}
           >
-            // QUICK COMMANDS
+            {'// QUICK COMMANDS'}
           </span>
           <span
             style={{
