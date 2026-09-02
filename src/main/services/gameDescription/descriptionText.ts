@@ -63,7 +63,11 @@ export function readImageDimensions(data: Buffer): ImageDimensions | null {
     }
 
     const segmentLength = data.readUInt16BE(offset + 2)
-    const isStartOfFrame = marker >= 0xc0 && marker <= 0xc3 || marker >= 0xc5 && marker <= 0xc7 || marker >= 0xc9 && marker <= 0xcb || marker >= 0xcd && marker <= 0xcf
+    const isStartOfFrame =
+      (marker >= 0xc0 && marker <= 0xc3) ||
+      (marker >= 0xc5 && marker <= 0xc7) ||
+      (marker >= 0xc9 && marker <= 0xcb) ||
+      (marker >= 0xcd && marker <= 0xcf)
     if (isStartOfFrame && segmentLength >= 7) {
       return {
         height: data.readUInt16BE(offset + 5),

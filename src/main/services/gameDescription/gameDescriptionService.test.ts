@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { GameDescriptionFound, GameDescriptionNotFound, GameDescriptionRequest } from '@shared/types'
+import {
+  GameDescriptionFound,
+  GameDescriptionNotFound,
+  GameDescriptionRequest
+} from '@shared/types'
 import { DescriptionCachePort, GameDescriptionService } from './gameDescriptionService'
 
 const sourceQualifiedGame: GameDescriptionRequest = {
@@ -17,9 +21,11 @@ const createCache = (): DescriptionCachePort => {
   const values = new Map<string, GameDescriptionFound | GameDescriptionNotFound>()
   return {
     get: vi.fn(async (key: string) => values.get(key) ?? null),
-    set: vi.fn(async (key: string, value: GameDescriptionFound | GameDescriptionNotFound): Promise<void> => {
-      values.set(key, value)
-    })
+    set: vi.fn(
+      async (key: string, value: GameDescriptionFound | GameDescriptionNotFound): Promise<void> => {
+        values.set(key, value)
+      }
+    )
   }
 }
 
@@ -30,7 +36,8 @@ describe('GameDescriptionService', () => {
     const service = new GameDescriptionService({
       cache,
       provider,
-      probeImage: vi.fn()
+      probeImage: vi
+        .fn()
         .mockResolvedValueOnce({ width: 512, height: 512 })
         .mockResolvedValueOnce({ width: 128, height: 128 })
     })
@@ -40,7 +47,10 @@ describe('GameDescriptionService', () => {
       { ...sourceQualifiedGame, key: 'small:en', thumbnailPath: '/tmp/small.jpg' }
     ])
 
-    expect(snapshot['puzzling:en']).toMatchObject({ status: 'found', source: { label: 'VRP metadata' } })
+    expect(snapshot['puzzling:en']).toMatchObject({
+      status: 'found',
+      source: { label: 'VRP metadata' }
+    })
     expect(snapshot['small:en']).toBeUndefined()
     expect(provider.lookup).not.toHaveBeenCalled()
   })
@@ -48,7 +58,8 @@ describe('GameDescriptionService', () => {
   it('defers weak source records to the lazy Wikipedia path and falls back from Spanish', async () => {
     const cache = createCache()
     const provider = {
-      lookup: vi.fn()
+      lookup: vi
+        .fn()
         .mockResolvedValueOnce({ status: 'not-found', language: 'es', fetchedAt: 1 })
         .mockResolvedValueOnce({
           status: 'found',
@@ -64,8 +75,9 @@ describe('GameDescriptionService', () => {
       probeImage: vi.fn(async () => ({ width: 128, height: 128 }))
     })
 
-    await expect(service.getDescription({ ...sourceQualifiedGame, key: 'puzzling:es', language: 'es' }))
-      .resolves.toMatchObject({ status: 'found', language: 'en' })
+    await expect(
+      service.getDescription({ ...sourceQualifiedGame, key: 'puzzling:es', language: 'es' })
+    ).resolves.toMatchObject({ status: 'found', language: 'en' })
 
     expect(provider.lookup).toHaveBeenNthCalledWith(1, 'Puzzling Places', 'es')
     expect(provider.lookup).toHaveBeenNthCalledWith(2, 'Puzzling Places', 'en')
@@ -141,7 +153,9 @@ describe('GameDescriptionService', () => {
     })
 
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    await expect(service.getDescription(sourceQualifiedGame)).resolves.toMatchObject({ status: 'error' })
+    await expect(service.getDescription(sourceQualifiedGame)).resolves.toMatchObject({
+      status: 'error'
+    })
     expect(cache.set).not.toHaveBeenCalled()
     warn.mockRestore()
   })

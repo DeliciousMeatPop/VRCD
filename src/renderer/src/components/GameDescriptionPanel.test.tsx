@@ -11,7 +11,11 @@ describe('GameDescriptionPanel', () => {
       <GameDescriptionPanel
         loading
         result={null}
-        labels={{ heading: 'DESCRIPTION', loading: 'Loading description…', unavailable: 'No description available.' }}
+        labels={{
+          heading: 'DESCRIPTION',
+          loading: 'Loading description…',
+          unavailable: 'No description available.'
+        }}
       />
     )
 
@@ -30,7 +34,11 @@ describe('GameDescriptionPanel', () => {
           language: 'en',
           fetchedAt: 1
         }}
-        labels={{ heading: 'DESCRIPTION', loading: 'Loading description…', unavailable: 'No description available.' }}
+        labels={{
+          heading: 'DESCRIPTION',
+          loading: 'Loading description…',
+          unavailable: 'No description available.'
+        }}
       />
     )
 

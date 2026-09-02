@@ -80,11 +80,13 @@ export class WikipediaDescriptionProvider {
 
     const matchingPage = pagesFrom(data).find((page) => {
       const extract = page.extract?.trim() ?? ''
-      return !!page.title &&
+      return (
+        !!page.title &&
         titlesMatch(gameName, page.title) &&
         page.pageprops?.disambiguation === undefined &&
         hasVrSignal(extract) &&
         isHttpsUrl(page.fullurl)
+      )
     })
 
     if (!matchingPage || !matchingPage.extract || !matchingPage.fullurl) {

@@ -854,15 +854,12 @@ class GameService extends EventEmitter implements GamesAPI {
         const releaseName = releaseNameIndex >= 0 ? parts[releaseNameIndex].trim() : ''
         const downloads = downloadsIndex >= 0 ? parts[downloadsIndex].trim() : ''
         const libraryDescription = descriptionIndex >= 0 ? parts[descriptionIndex].trim() : ''
-        const libraryDescriptionSourceLabel = descriptionSourceLabelIndex >= 0
-          ? parts[descriptionSourceLabelIndex].trim()
-          : ''
-        const libraryDescriptionSourceUrl = descriptionSourceUrlIndex >= 0
-          ? parts[descriptionSourceUrlIndex].trim()
-          : ''
-        const descriptionLanguage = descriptionLanguageIndex >= 0
-          ? parts[descriptionLanguageIndex].trim()
-          : ''
+        const libraryDescriptionSourceLabel =
+          descriptionSourceLabelIndex >= 0 ? parts[descriptionSourceLabelIndex].trim() : ''
+        const libraryDescriptionSourceUrl =
+          descriptionSourceUrlIndex >= 0 ? parts[descriptionSourceUrlIndex].trim() : ''
+        const descriptionLanguage =
+          descriptionLanguageIndex >= 0 ? parts[descriptionLanguageIndex].trim() : ''
 
         if (gameName === 'Unknown') {
           console.warn(
