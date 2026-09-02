@@ -360,7 +360,8 @@ app.whenReady().then(async () => {
   // nothing is locked. Runs before createWindow so no files are in use yet.
   const userData = app.getPath('userData')
   const gameDescriptionService = createGameDescriptionService(
-    join(userData, 'vrp-data', 'game-description-cache-v1.json')
+    join(userData, 'vrp-data', 'game-description-cache-v1.json'),
+    app.getVersion()
   )
   const resetFlag = join(userData, 'pending-data-reset')
   if (existsSync(resetFlag)) {
