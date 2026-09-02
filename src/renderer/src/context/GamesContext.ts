@@ -1,5 +1,12 @@
 import { createContext } from 'react'
-import { BlacklistEntry, GameInfo, UploadCandidate } from '@shared/types'
+import {
+  BlacklistEntry,
+  GameDescriptionRequest,
+  GameDescriptionResult,
+  GameDescriptionSnapshot,
+  GameInfo,
+  UploadCandidate
+} from '@shared/types'
 
 export interface GamesContextType {
   games: GameInfo[]
@@ -18,6 +25,8 @@ export interface GamesContextType {
   getNote: (releaseName: string) => Promise<string>
   isInitialLoadComplete: boolean
   getTrailerUrl: (gameName: string, packageName: string | undefined) => Promise<string | null>
+  getDescription: (request: GameDescriptionRequest) => Promise<GameDescriptionResult>
+  descriptionSnapshot: GameDescriptionSnapshot
   addGameToBlacklist: (packageName: string, version?: number | 'any') => Promise<void>
   getBlacklistGames: () => Promise<BlacklistEntry[]>
   removeGameFromBlacklist: (packageName: string) => Promise<void>

@@ -23,7 +23,10 @@ import {
   BackupCreateResult,
   BackupReportResult,
   BackupVerification,
-  BackupProfile
+  BackupProfile,
+  GameDescriptionRequest,
+  GameDescriptionResult,
+  GameDescriptionSnapshot
 } from './index'
 
 // Define types for all IPC channels between renderer and main
@@ -78,6 +81,11 @@ export interface IPCChannels {
   'games:get-trailer-url': DefineChannel<
     [gameName: string, packageName: string | undefined],
     string | null
+  >
+  'games:get-description': DefineChannel<[request: GameDescriptionRequest], GameDescriptionResult>
+  'games:prime-descriptions': DefineChannel<
+    [requests: GameDescriptionRequest[]],
+    GameDescriptionSnapshot
   >
 
   // Download related channels

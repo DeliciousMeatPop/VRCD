@@ -1,11 +1,15 @@
 import { defineConfig } from 'vitest/config'
+import { resolve } from 'path'
 
-// Vitest runs the TypeScript unit tests. The Node-based `*.test.mjs` suites
-// under src/main/services/download use the node:test runner instead and are
-// executed via `npm run test:node`, so they are excluded from Vitest's globs
-// here to prevent it from trying (and failing) to collect them.
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@shared': resolve(__dirname, 'src/shared'),
+      '@renderer': resolve(__dirname, 'src/renderer/src')
+    }
+  },
   test: {
-    include: ['src/**/*.test.ts']
+    include: ['src/**/*.test.{ts,tsx}'],
+    clearMocks: true
   }
 })
