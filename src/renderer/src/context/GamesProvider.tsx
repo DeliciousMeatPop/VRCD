@@ -72,22 +72,21 @@ export const GamesProvider: React.FC<GamesProviderProps> = ({ children }) => {
     selectedDeviceDetails
   } = useAdb()
   const { isReady } = useDependency()
-  const primeLibraryDescriptions = useCallback(
-    async (gamesList: GameInfo[]): Promise<void> => {
-      const requests = gamesList
-        .filter((game) => Boolean(game.libraryDescription && game.libraryDescriptionSourceLabel?.trim()))
-        .map((game) => toGameDescriptionRequest(game, DESCRIPTION_LANGUAGE))
-      if (requests.length === 0) return
+  const primeLibraryDescriptions = useCallback(async (gamesList: GameInfo[]): Promise<void> => {
+    const requests = gamesList
+      .filter((game) =>
+        Boolean(game.libraryDescription && game.libraryDescriptionSourceLabel?.trim())
+      )
+      .map((game) => toGameDescriptionRequest(game, DESCRIPTION_LANGUAGE))
+    if (requests.length === 0) return
 
-      try {
-        const snapshot = await window.api.games.primeDescriptions(requests)
-        setDescriptionSnapshot((current) => ({ ...current, ...snapshot }))
-      } catch (error) {
-        console.warn('[GamesProvider] Could not prime library descriptions:', error)
-      }
-    },
-    []
-  )
+    try {
+      const snapshot = await window.api.games.primeDescriptions(requests)
+      setDescriptionSnapshot((current) => ({ ...current, ...snapshot }))
+    } catch (error) {
+      console.warn('[GamesProvider] Could not prime library descriptions:', error)
+    }
+  }, [])
 
   // Detect version change on startup — triggers upload check on first launch post-update
   useEffect(() => {

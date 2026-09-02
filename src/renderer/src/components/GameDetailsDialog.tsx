@@ -213,7 +213,9 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
     }
   }, [open, game, getTrailerUrl])
 
-  const descriptionResult = game ? descriptionSnapshot[gameDescriptionKey(game, 'en')] ?? null : null
+  const descriptionResult = game
+    ? (descriptionSnapshot[gameDescriptionKey(game, 'en')] ?? null)
+    : null
 
   useEffect(() => {
     let alive = true

@@ -7,19 +7,32 @@ import {
   GameDescriptionSnapshot
 } from '@shared/types'
 import { DescriptionCache } from './descriptionCache'
-import { ImageDimensions, normalizeGameTitle, readImageDimensions, truncateDescription } from './descriptionText'
+import {
+  ImageDimensions,
+  normalizeGameTitle,
+  readImageDimensions,
+  truncateDescription
+} from './descriptionText'
 import { WikipediaDescriptionProvider } from './wikipediaProvider'
 
 const MIN_LIBRARY_DESCRIPTION_LENGTH = 40
 const MIN_SOURCE_IMAGE_SIDE = 256
 
 export interface DescriptionCachePort {
-  get(key: string): Promise<GameDescriptionFound | Extract<GameDescriptionResult, { status: 'not-found' }> | null>
-  set(key: string, result: GameDescriptionFound | Extract<GameDescriptionResult, { status: 'not-found' }>): Promise<void>
+  get(
+    key: string
+  ): Promise<GameDescriptionFound | Extract<GameDescriptionResult, { status: 'not-found' }> | null>
+  set(
+    key: string,
+    result: GameDescriptionFound | Extract<GameDescriptionResult, { status: 'not-found' }>
+  ): Promise<void>
 }
 
 export interface DescriptionProviderPort {
-  lookup(gameName: string, language: GameDescriptionLanguage): Promise<GameDescriptionFound | Extract<GameDescriptionResult, { status: 'not-found' }>>
+  lookup(
+    gameName: string,
+    language: GameDescriptionLanguage
+  ): Promise<GameDescriptionFound | Extract<GameDescriptionResult, { status: 'not-found' }>>
 }
 
 export interface GameDescriptionServiceDependencies {
@@ -41,7 +54,9 @@ const safeHttpsUrl = (value: string | undefined): string | undefined => {
 }
 
 const hasUsableSourceImage = (dimensions: ImageDimensions | null): boolean =>
-  !!dimensions && dimensions.width >= MIN_SOURCE_IMAGE_SIDE && dimensions.height >= MIN_SOURCE_IMAGE_SIDE
+  !!dimensions &&
+  dimensions.width >= MIN_SOURCE_IMAGE_SIDE &&
+  dimensions.height >= MIN_SOURCE_IMAGE_SIDE
 
 export class GameDescriptionService {
   private inFlight = new Map<string, Promise<GameDescriptionResult>>()
@@ -85,7 +100,10 @@ export class GameDescriptionService {
     return lookup
   }
 
-  private async lookupAndCache(request: GameDescriptionRequest, key: string): Promise<GameDescriptionResult> {
+  private async lookupAndCache(
+    request: GameDescriptionRequest,
+    key: string
+  ): Promise<GameDescriptionResult> {
     try {
       let result = await this.dependencies.provider.lookup(request.gameName, request.language)
       if (result.status === 'not-found' && request.language === 'es') {
@@ -94,15 +112,21 @@ export class GameDescriptionService {
       await this.dependencies.cache.set(key, result)
       return result
     } catch (error) {
-      console.warn(`[GameDescriptionService] Lookup failed for ${request.packageName || request.gameName}:`, error)
+      console.warn(
+        `[GameDescriptionService] Lookup failed for ${request.packageName || request.gameName}:`,
+        error
+      )
       return { status: 'error', language: request.language }
     }
   }
 
-  private async libraryDescription(request: GameDescriptionRequest): Promise<GameDescriptionFound | null> {
+  private async libraryDescription(
+    request: GameDescriptionRequest
+  ): Promise<GameDescriptionFound | null> {
     const text = truncateDescription(request.libraryDescription ?? '')
     const sourceLabel = request.libraryDescriptionSourceLabel?.trim()
-    if (text.length < MIN_LIBRARY_DESCRIPTION_LENGTH || !sourceLabel || !request.thumbnailPath) return null
+    if (text.length < MIN_LIBRARY_DESCRIPTION_LENGTH || !sourceLabel || !request.thumbnailPath)
+      return null
 
     let dimensions: ImageDimensions | null
     try {

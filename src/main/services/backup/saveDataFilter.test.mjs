@@ -5,10 +5,7 @@ import { isRegeneratedSaveFile } from './saveDataFilter.ts'
 // Real paths taken from the Maestro / Into the Radius / Walkabout failure reports.
 
 test('excludes GPU shader / pipeline caches', () => {
-  assert.equal(
-    isRegeneratedSaveFile('files/ProgramBinaryCache/GLSL_ES3_1_ANDROID_5DD8F5E5'),
-    true
-  )
+  assert.equal(isRegeneratedSaveFile('files/ProgramBinaryCache/GLSL_ES3_1_ANDROID_5DD8F5E5'), true)
   assert.equal(
     isRegeneratedSaveFile('files/VulkanProgramBinaryCache/VulkanPSO_BEDC3013.5143.6050002'),
     true

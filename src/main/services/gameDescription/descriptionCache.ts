@@ -1,9 +1,6 @@
 import { promises as fs } from 'fs'
 import { dirname } from 'path'
-import {
-  GameDescriptionFound,
-  GameDescriptionNotFound
-} from '@shared/types'
+import { GameDescriptionFound, GameDescriptionNotFound } from '@shared/types'
 
 type CacheableDescription = GameDescriptionFound | GameDescriptionNotFound
 
@@ -68,7 +65,11 @@ export class DescriptionCache {
     const temporaryPath = `${this.path}.tmp`
     try {
       await fs.mkdir(dirname(this.path), { recursive: true })
-      await fs.writeFile(temporaryPath, JSON.stringify({ version: 1, entries: this.entries }), 'utf8')
+      await fs.writeFile(
+        temporaryPath,
+        JSON.stringify({ version: 1, entries: this.entries }),
+        'utf8'
+      )
       await fs.rename(temporaryPath, this.path)
     } catch (error) {
       console.warn('[DescriptionCache] Failed to persist description cache:', error)
