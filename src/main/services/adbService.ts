@@ -995,8 +995,16 @@ class AdbService extends EventEmitter implements AdbAPI {
   async pullDirectory(
     serial: string,
     remoteDir: string,
-    localDir: string
-  ): Promise<{ fileCount: number; totalBytes: number }> {
+    localDir: string,
+    options?: {
+      /**
+       * Predicate over a file's path RELATIVE to `remoteDir` (forward slashes,
+       * no leading slash). Return true to skip the file. Used by the save-backup
+       * service to drop regenerated engine caches from the default capture.
+       */
+      exclude?: (relativePath: string) => boolean
+    }
+  ): Promise<{ fileCount: number; totalBytes: number; skipped: number }> {
     if (!this.client) {
       throw new Error('[ADB Service] adb service not initialized!')
     }
@@ -1009,14 +1017,34 @@ class AdbService extends EventEmitter implements AdbAPI {
     // "Permission denied" noise on inaccessible subpaths doesn't pollute the
     // file list.
     const listing = await this.runShellCommand(serial, `find "${escaped}" -type f 2>/dev/null`)
-    const remoteFiles = (listing ?? '')
+    const allRemoteFiles = (listing ?? '')
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter((l) => l.length > 0 && (l === normRemote || l.startsWith(normRemote + '/')))
 
+    // Apply the caller's exclusion filter (e.g. shader caches, il2cpp metadata)
+    // against each file's path relative to the tree root.
+    let skipped = 0
+    const remoteFiles = options?.exclude
+      ? allRemoteFiles.filter((remoteFile) => {
+          const rel = remoteFile.slice(normRemote.length).replace(/^\/+/, '')
+          if (options.exclude!(rel)) {
+            skipped++
+            return false
+          }
+          return true
+        })
+      : allRemoteFiles
+
+    if (skipped > 0) {
+      console.log(
+        `[ADB Service] pullDirectory: skipped ${skipped} regenerated/cache file(s) under ${normRemote}`
+      )
+    }
+
     if (remoteFiles.length === 0) {
       console.log(`[ADB Service] pullDirectory: no files found under ${normRemote} on ${serial}`)
-      return { fileCount: 0, totalBytes: 0 }
+      return { fileCount: 0, totalBytes: 0, skipped }
     }
 
     const deviceClient = this.client.getDevice(serial)
@@ -1053,7 +1081,7 @@ class AdbService extends EventEmitter implements AdbAPI {
     console.log(
       `[ADB Service] pullDirectory: pulled ${fileCount} file(s), ${totalBytes} bytes from ${normRemote}`
     )
-    return { fileCount, totalBytes }
+    return { fileCount, totalBytes, skipped }
   }
 
   // ── Private internal app data via run-as (save-backup profiles) ───────────────
