@@ -1702,14 +1702,21 @@ const DownloadProxySettingsPanel: React.FC = () => {
             selectedOptions={[settings.protocol]}
             value={settings.protocol.toUpperCase()}
             onOptionSelect={(_, data) => {
-              if (data.optionValue === 'http' || data.optionValue === 'https') {
-                updateSettings((current) => ({ ...current, protocol: data.optionValue }))
+              // Hoist into a const so the narrowing survives into the closure below.
+              const nextProtocol = data.optionValue
+              if (
+                nextProtocol === 'http' ||
+                nextProtocol === 'https' ||
+                nextProtocol === 'socks5'
+              ) {
+                updateSettings((current) => ({ ...current, protocol: nextProtocol }))
               }
             }}
             disabled={!settings.enabled}
           >
             <Option value="http">{'HTTP'}</Option>
             <Option value="https">{'HTTPS'}</Option>
+            <Option value="socks5">{'SOCKS5'}</Option>
           </Dropdown>
         </div>
         <div className={styles.speedControl}>
@@ -1738,6 +1745,31 @@ const DownloadProxySettingsPanel: React.FC = () => {
         <Button appearance="primary" onClick={save} disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save Proxy'}
         </Button>
+      </div>
+      <div className={styles.speedFormRow}>
+        <div className={styles.speedControl}>
+          <Text>{'Username (optional)'}</Text>
+          <Input
+            aria-label="Proxy username"
+            value={settings.username ?? ''}
+            onChange={(_, data) =>
+              updateSettings((current) => ({ ...current, username: data.value }))
+            }
+            disabled={!settings.enabled}
+          />
+        </div>
+        <div className={styles.speedControl}>
+          <Text>{'Password'}</Text>
+          <Input
+            aria-label="Proxy password"
+            type="password"
+            value={settings.password ?? ''}
+            onChange={(_, data) =>
+              updateSettings((current) => ({ ...current, password: data.value }))
+            }
+            disabled={!settings.enabled || !settings.username}
+          />
+        </div>
       </div>
       {error && (
         <Text className={styles.error} role="alert">

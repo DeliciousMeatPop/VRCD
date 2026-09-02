@@ -471,13 +471,16 @@ export interface ServerConfigInfo {
 
 export type ExistingDownloadAction = 'ask' | 'reinstall' | 'redownload'
 
-export type DownloadProxyProtocol = 'http' | 'https'
+export type DownloadProxyProtocol = 'http' | 'https' | 'socks5'
 
 export interface DownloadProxySettings {
   enabled: boolean
   protocol: DownloadProxyProtocol
   host: string
   port: number
+  /** Optional proxy credentials. A password requires a username. */
+  username?: string
+  password?: string
 }
 
 export interface WindowBounds {

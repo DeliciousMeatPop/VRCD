@@ -24,6 +24,8 @@ test('builds a game-download environment that forces custom proxy routing', () =
     http_proxy: 'https://[2001:db8::7]:8443',
     HTTPS_PROXY: 'https://[2001:db8::7]:8443',
     https_proxy: 'https://[2001:db8::7]:8443',
+    ALL_PROXY: 'https://[2001:db8::7]:8443',
+    all_proxy: 'https://[2001:db8::7]:8443',
     NO_PROXY: '',
     no_proxy: ''
   })
@@ -37,7 +39,7 @@ test('disables malformed persisted custom proxy settings instead of restoring th
   assert.deepEqual(
     proxy.readPersistedDownloadProxySettings?.({
       enabled: true,
-      protocol: 'socks5',
+      protocol: 'socks4',
       host: 'proxy.example.com',
       port: 1080
     }),
@@ -75,9 +77,10 @@ test('normalizes valid DNS, IPv4, and IPv6 proxy addresses', () => {
   )
 })
 
-test('rejects proxy values that cannot identify an HTTP or HTTPS proxy', () => {
+test('rejects proxy values that cannot identify a supported proxy', () => {
   for (const [value, message] of [
-    [{ enabled: true, protocol: 'socks5', host: 'proxy.example.com', port: 1080 }, /HTTP or HTTPS/],
+    [{ enabled: true, protocol: 'socks4', host: 'proxy.example.com', port: 1080 }, /HTTP, HTTPS, or SOCKS5/],
+    [{ enabled: true, protocol: 'http', host: 'proxy.example.com', port: 8080, password: 'p' }, /password requires a username/],
     [{ enabled: true, protocol: 'http', host: 'https://proxy.example.com', port: 8080 }, /host only/],
     [{ enabled: true, protocol: 'http', host: 'proxy.example.com/path', port: 8080 }, /host only/],
     [{ enabled: true, protocol: 'http', host: 'name@example.com', port: 8080 }, /host only/],
@@ -158,4 +161,54 @@ test('keeps resume mirror selection and proxy environment on one routing snapsho
   assert.deepEqual(proxy.selectGameArchiveMirror?.(route, activeMirror), activeMirror)
   assert.equal(environment?.HTTP_PROXY, 'http://system.example:3128')
   assert.equal(environment?.RCLONE_HEADER, 'X-API-Key: api-key')
+})
+
+test('normalizes a SOCKS5 proxy with credentials', () => {
+  assert.deepEqual(
+    proxy.normalizeDownloadProxySettings?.({
+      enabled: true,
+      protocol: 'SOCKS5',
+      host: 'proxy.example.com',
+      port: 1080,
+      username: '  user  ',
+      password: ' p@ss:word '
+    }),
+    {
+      enabled: true,
+      protocol: 'socks5',
+      host: 'proxy.example.com',
+      port: 1080,
+      username: 'user',
+      password: ' p@ss:word ' // password preserved verbatim, only username trimmed
+    }
+  )
+})
+
+test('routes SOCKS5 through ALL_PROXY with percent-encoded credentials', () => {
+  const environment = proxy.buildRcloneDownloadEnvironment?.(
+    {
+      enabled: true,
+      protocol: 'socks5',
+      host: 'proxy.example.com',
+      port: 1080,
+      username: 'user name',
+      password: 'p@ss:word'
+    },
+    { PATH: '/usr/bin', ALL_PROXY: 'socks5://inherited.example:1080' }
+  )
+
+  const url = 'socks5://user%20name:p%40ss%3Aword@proxy.example.com:1080'
+  assert.equal(environment?.ALL_PROXY, url)
+  assert.equal(environment?.all_proxy, url)
+  assert.equal(environment?.HTTP_PROXY, url)
+  assert.equal(environment?.HTTPS_PROXY, url)
+  assert.equal(environment?.NO_PROXY, '')
+})
+
+test('omits credentials from the proxy URL when no username is set', () => {
+  const environment = proxy.buildRcloneDownloadEnvironment?.(
+    { enabled: true, protocol: 'http', host: 'proxy.example.com', port: 8080 },
+    { PATH: '/usr/bin' }
+  )
+  assert.equal(environment?.HTTP_PROXY, 'http://proxy.example.com:8080')
 })

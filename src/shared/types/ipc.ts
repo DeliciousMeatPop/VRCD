@@ -24,7 +24,7 @@ import {
   BackupReportResult,
   BackupVerification,
   BackupProfile,
-  DownloadProxySettings
+  DownloadProxySettings,
   GameDescriptionRequest,
   GameDescriptionResult,
   GameDescriptionSnapshot
