@@ -9,12 +9,7 @@ import mirrorService from '../mirrorService'
 import settingsService from '../settingsService'
 import { DownloadItem } from '@shared/types'
 import { DownloadStatus } from '@shared/types'
-import {
-  getAvailableDiskSpace,
-  parseSizeToBytes,
-  formatBytes,
-  sanitizeReleaseFolderName
-} from './utils'
+import { getAvailableDiskSpace, parseSizeToBytes, formatBytes } from './utils'
 import { isCompletedDownloadFile, validateDownloadCompletion } from './archiveDiscovery'
 
 // Type for VRP config - adjust if needed elsewhere
@@ -138,10 +133,9 @@ export class DownloadProcessor {
       return { success: false, startExtraction: false }
     }
 
-    const folderName = sanitizeReleaseFolderName(item.releaseName)
-    const downloadPath = item.downloadPath.endsWith(folderName)
+    const downloadPath = item.downloadPath.endsWith(item.releaseName)
       ? item.downloadPath
-      : join(item.downloadPath, folderName)
+      : join(item.downloadPath, item.releaseName)
     this.queueManager.updateItem(item.releaseName, { downloadPath: downloadPath })
 
     try {
@@ -239,10 +233,9 @@ export class DownloadProcessor {
       return { success: false, startExtraction: false }
     }
 
-    const folderName = sanitizeReleaseFolderName(item.releaseName)
-    const downloadPath = item.downloadPath.endsWith(folderName)
+    const downloadPath = item.downloadPath.endsWith(item.releaseName)
       ? item.downloadPath
-      : join(item.downloadPath, folderName)
+      : join(item.downloadPath, item.releaseName)
     this.queueManager.updateItem(item.releaseName, { downloadPath: downloadPath })
 
     // Declared outside `try` so the catch block can inspect transfer state

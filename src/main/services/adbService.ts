@@ -11,7 +11,6 @@ import path from 'path'
 import ping from 'pingman'
 import { AdbAPI, DeviceInfo, PackageInfo, ServiceStatus } from '@shared/types'
 import { typedWebContentsSend } from '@shared/ipc-utils'
-import { sanitizeReleaseFolderName } from './download/utils'
 
 /**
  * Thrown by installPackage when ADB reports INSTALL_FAILED_UPDATE_INCOMPATIBLE,
@@ -1253,7 +1252,7 @@ class AdbService extends EventEmitter implements AdbAPI {
     error?: string
   }> {
     const downloadPath = settingsService.getDownloadPath()
-    const gamePath = path.join(downloadPath, sanitizeReleaseFolderName(releaseName))
+    const gamePath = path.join(downloadPath, releaseName)
     console.log(`[ADB Service] deleteGameFiles - Deleting ${gamePath}`)
     try {
       await fsPromises.stat(gamePath)

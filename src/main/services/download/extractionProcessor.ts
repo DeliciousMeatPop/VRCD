@@ -5,12 +5,7 @@ import { QueueManager } from './queueManager'
 import dependencyService from '../dependencyService'
 import { DownloadItem, DownloadStatus } from '@shared/types'
 import mirrorService from '../mirrorService'
-import {
-  getAvailableDiskSpace,
-  getDirectorySize,
-  formatBytes,
-  sanitizeReleaseFolderName
-} from './utils'
+import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
 import {
   parseReleaseManifest,
   RELEASE_MANIFEST_FILENAME,
@@ -408,7 +403,7 @@ export class ExtractionProcessor {
       // --- Delete archive files --- END
 
       // --- Flatten single root folder if it matches releaseName --- START
-      const rootFolderPath = join(downloadPath, sanitizeReleaseFolderName(item.releaseName))
+      const rootFolderPath = join(downloadPath, item.releaseName)
       try {
         if (existsSync(rootFolderPath)) {
           const stats = await fs.stat(rootFolderPath)

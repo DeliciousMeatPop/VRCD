@@ -31,7 +31,6 @@ import wifiBookmarksService from './services/wifiBookmarksService'
 import { registerBackupIpc } from './services/backup/backupIpc'
 import { typedIpcMain } from '@shared/ipc-utils'
 import settingsService from './services/settingsService'
-import { sanitizeReleaseFolderName } from './services/download/utils'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import log from 'electron-log/main'
 import fs from 'fs/promises'
@@ -523,7 +522,7 @@ app.whenReady().then(async () => {
   })
   typedIpcMain.handle('adb:deleteGameFiles', async (_event, releaseName) => {
     const downloadPath = settingsService.getDownloadPath()
-    const gamePath = join(downloadPath, sanitizeReleaseFolderName(releaseName))
+    const gamePath = join(downloadPath, releaseName)
     console.log(`[IPC] adb:deleteGameFiles - Deleting ${gamePath}`)
     try {
       await fs.stat(gamePath)
