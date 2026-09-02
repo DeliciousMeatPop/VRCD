@@ -27,5 +27,18 @@ export default tseslint.config(
       ...eslintPluginReactRefresh.configs.vite.rules
     }
   },
+  {
+    // Node/CommonJS build & release scripts (build/*.cjs, .github/scripts/*.js)
+    // and the plain-JS *.test.mjs suites are hand-written JavaScript, not
+    // TypeScript. The typed rules from the recommended TS preset don't apply
+    // there — require() is correct in CJS, and TS return-type annotations
+    // aren't even valid syntax in a .mjs/.js file.
+    files: ['**/*.{js,cjs,mjs}'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off'
+    }
+  },
   eslintConfigPrettier
 )

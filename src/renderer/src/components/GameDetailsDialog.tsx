@@ -858,7 +858,7 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
                 marginBottom: 6
               }}
             >
-              // NOTE
+              {'// NOTE'}
             </div>
             {loadingNote ? (
               <Spinner size="tiny" label="Loading..." />

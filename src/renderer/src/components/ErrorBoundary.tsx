@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
         }}
       >
         <div style={{ fontSize: '32px', color: 'var(--vrcd-neon)', letterSpacing: '0.1em' }}>
-          // SYSTEM FAULT
+          {'// SYSTEM FAULT'}
         </div>
         <div
           style={{

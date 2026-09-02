@@ -644,7 +644,7 @@ const ExtraSystemsSettings: React.FC = () => {
     })
   }
 
-  const neonOptionBtn = (active: boolean) => ({
+  const neonOptionBtn = (active: boolean): React.CSSProperties => ({
     background: active ? 'rgba(var(--vrcd-neon-raw),0.12)' : 'transparent',
     border: `1px solid ${active ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.25)'}`,
     color: active ? 'var(--vrcd-neon)' : 'rgba(var(--vrcd-neon-raw),0.5)',
@@ -1002,7 +1002,7 @@ const ExtraSystemsSettings: React.FC = () => {
               marginBottom: '4px'
             }}
           >
-            // LOADED FILES
+            {'// LOADED FILES'}
           </div>
           {SOUND_NAMES.map((name) => {
             const isLoaded = !!soundLoaded[name]
@@ -2230,7 +2230,9 @@ const Settings: React.FC = () => {
                       setHideAdultContentLocal(d.checked)
                       try {
                         localStorage.setItem('vrcyberdeck:hideAdult', String(d.checked))
-                      } catch {}
+                      } catch {
+                        /* ignore storage errors */
+                      }
                     }}
                   />
                 </div>

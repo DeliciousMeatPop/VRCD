@@ -903,7 +903,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
               cb = b[i]
             if (ca === cb) continue
             // priority: _ (0) → 0-9 (1) → everything else (2)
-            const p = (c: string) => (c === '_' ? 0 : c >= '0' && c <= '9' ? 1 : 2)
+            const p = (c: string): number => (c === '_' ? 0 : c >= '0' && c <= '9' ? 1 : 2)
             const pa = p(ca),
               pb = p(cb)
             if (pa !== pb) return pa - pb
