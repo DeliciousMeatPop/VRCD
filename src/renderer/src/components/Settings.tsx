@@ -46,6 +46,7 @@ import {
 import BackupBetaWarningDialog from './backup/BackupBetaWarningDialog'
 import BackupPanel from './backup/BackupPanel'
 import { useSoundEffects, SOUND_NAMES } from '../hooks/useSoundEffects'
+import type { DownloadProxySettings } from '@shared/types'
 
 // Supported speed units with conversion factors to KB/s
 const SPEED_UNITS = [
@@ -1617,6 +1618,146 @@ const MatrixIdentitySettings: React.FC = () => {
   )
 }
 
+const DEFAULT_DOWNLOAD_PROXY: DownloadProxySettings = {
+  enabled: false,
+  protocol: 'http',
+  host: '',
+  port: 8080
+}
+
+const DownloadProxySettingsPanel: React.FC = () => {
+  const styles = useStyles()
+  const [settings, setSettings] = useState<DownloadProxySettings>(DEFAULT_DOWNLOAD_PROXY)
+  const [portInput, setPortInput] = useState(String(DEFAULT_DOWNLOAD_PROXY.port))
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  const updateSettings = (next: (current: DownloadProxySettings) => DownloadProxySettings): void => {
+    setSaved(false)
+    setSettings(next)
+  }
+
+  useEffect(() => {
+    let mounted = true
+    window.api.settings
+      .getDownloadProxy()
+      .then((loaded) => {
+        if (!mounted) return
+        setSettings(loaded)
+        setPortInput(String(loaded.port))
+      })
+      .catch(() => {
+        if (mounted) setError('Failed to load custom proxy settings.')
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const save = async (): Promise<void> => {
+    try {
+      setIsSaving(true)
+      setSaved(false)
+      setError(null)
+      const normalized = await window.api.settings.setDownloadProxy({
+        ...settings,
+        port: Number(portInput)
+      })
+      setSettings(normalized)
+      setPortInput(String(normalized.port))
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save custom proxy settings.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) return <Spinner size="small" label="Loading custom proxy settings..." />
+
+  return (
+    <div className={styles.speedLimitSection} aria-labelledby="download-proxy-heading">
+      <Text id="download-proxy-heading" weight="semibold">
+        {'Custom HTTP/HTTPS Proxy'}
+      </Text>
+      <div className={styles.formRow} style={{ flexWrap: 'wrap' }}>
+        <Switch
+          checked={settings.enabled}
+          onChange={(_, data) =>
+            updateSettings((current) => ({ ...current, enabled: data.checked }))
+          }
+          label="Route game archive downloads through this proxy"
+        />
+      </div>
+      <div className={styles.speedFormRow}>
+        <div className={styles.speedControl}>
+          <Text>{'Protocol'}</Text>
+          <Dropdown
+            aria-label="Proxy protocol"
+            selectedOptions={[settings.protocol]}
+            value={settings.protocol.toUpperCase()}
+            onOptionSelect={(_, data) => {
+              if (data.optionValue === 'http' || data.optionValue === 'https') {
+                updateSettings((current) => ({ ...current, protocol: data.optionValue }))
+              }
+            }}
+            disabled={!settings.enabled}
+          >
+            <Option value="http">{'HTTP'}</Option>
+            <Option value="https">{'HTTPS'}</Option>
+          </Dropdown>
+        </div>
+        <div className={styles.speedControl}>
+          <Text>{'Port'}</Text>
+          <Input
+            aria-label="Proxy port"
+            value={portInput}
+            onChange={(_, data) => {
+              setSaved(false)
+              setPortInput(data.value)
+            }}
+            inputMode="numeric"
+            disabled={!settings.enabled}
+          />
+        </div>
+      </div>
+      <div className={styles.formRow}>
+        <Input
+          className={styles.input}
+          aria-label="Proxy host"
+          value={settings.host}
+          onChange={(_, data) => updateSettings((current) => ({ ...current, host: data.value }))}
+          placeholder="proxy.example.com, 192.0.2.10, or 2001:db8::1"
+          disabled={!settings.enabled}
+        />
+        <Button appearance="primary" onClick={save} disabled={isSaving}>
+          {isSaving ? 'Saving...' : 'Save Proxy'}
+        </Button>
+      </div>
+      {error && (
+        <Text className={styles.error} role="alert">
+          {error}
+        </Text>
+      )}
+      {saved && (
+        <Text className={styles.success} role="status">
+          <CheckmarkCircleRegular />
+          {'Custom proxy settings saved.'}
+        </Text>
+      )}
+      <Text className={styles.hint}>
+        <InfoRegular />
+        {'This applies only to game archive downloads. Leave it disabled to use your system proxy settings.'}
+      </Text>
+    </div>
+  )
+}
+
 const Settings: React.FC = () => {
   const styles = useStyles()
   const {
@@ -2178,6 +2319,8 @@ const Settings: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              <DownloadProxySettingsPanel />
 
               {(error || localError) && <Text className={styles.error}>{error || localError}</Text>}
 

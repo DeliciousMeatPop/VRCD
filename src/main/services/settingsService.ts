@@ -3,13 +3,20 @@ import {
   SettingsAPI,
   ServerConfigInfo,
   ExistingDownloadAction,
-  WindowBounds
+  WindowBounds,
+  DownloadProxySettings
 } from '@shared/types'
 import { sanitizeBaseUri } from '@shared/serverConfig'
 import { app, nativeTheme } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import EventEmitter from 'events'
+import {
+  DEFAULT_DOWNLOAD_PROXY_SETTINGS,
+  normalizeDownloadProxySettings,
+  readPersistedDownloadProxySettings,
+  persistDownloadProxySettings
+} from './download/downloadProxy'
 
 class SettingsService extends EventEmitter implements SettingsAPI {
   private settings: Settings
@@ -28,7 +35,8 @@ class SettingsService extends EventEmitter implements SettingsAPI {
       colorScheme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
       serverConfig: { baseUri: '', password: '' },
       maxConcurrentDownloads: 3,
-      existingDownloadAction: 'ask'
+      existingDownloadAction: 'ask',
+      downloadProxy: { ...DEFAULT_DOWNLOAD_PROXY_SETTINGS }
     }
 
     // Load settings from disk
@@ -116,6 +124,21 @@ class SettingsService extends EventEmitter implements SettingsAPI {
     this.emit('existing-download-action-changed', v)
   }
 
+  getDownloadProxy(): DownloadProxySettings {
+    return { ...this.settings.downloadProxy }
+  }
+
+  setDownloadProxy(settings: DownloadProxySettings): DownloadProxySettings {
+    const normalized = normalizeDownloadProxySettings(settings)
+    this.settings = persistDownloadProxySettings(
+      this.settingsPath,
+      this.settings,
+      normalized,
+      (settingsPath, contents) => writeFileSync(settingsPath, contents, 'utf-8')
+    )
+    return { ...normalized }
+  }
+
   getWindowBounds(): WindowBounds | undefined {
     return this.settings.windowBounds
   }
@@ -132,6 +155,7 @@ class SettingsService extends EventEmitter implements SettingsAPI {
         const data = readFileSync(this.settingsPath, 'utf-8')
         const loadedSettings = JSON.parse(data)
         this.settings = { ...this.settings, ...loadedSettings }
+        this.settings.downloadProxy = readPersistedDownloadProxySettings(loadedSettings.downloadProxy)
         console.log('Settings loaded successfully')
       } else {
         console.log('No settings file found, using defaults')

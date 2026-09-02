@@ -24,6 +24,7 @@ import {
   BackupReportResult,
   BackupVerification,
   BackupProfile,
+  DownloadProxySettings
   GameDescriptionRequest,
   GameDescriptionResult,
   GameDescriptionSnapshot
@@ -144,6 +145,8 @@ export interface IPCChannels {
   'settings:set-max-concurrent-downloads': DefineChannel<[n: number], void>
   'settings:get-existing-download-action': DefineChannel<[], ExistingDownloadAction>
   'settings:set-existing-download-action': DefineChannel<[v: ExistingDownloadAction], void>
+  'settings:get-download-proxy': DefineChannel<[], DownloadProxySettings>
+  'settings:set-download-proxy': DefineChannel<[settings: DownloadProxySettings], DownloadProxySettings>
 
   // Log upload related channels
   'logs:upload-current': DefineChannel<[], { url: string; password: string; slug: string } | null>
