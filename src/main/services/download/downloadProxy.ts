@@ -15,6 +15,11 @@ export interface RcloneMirrorConfig {
   remoteName: string
 }
 
+export interface GameArchiveRoutingSnapshot {
+  proxySettings: DownloadProxySettings
+  usePublicEndpoint: boolean
+}
+
 export type SettingsFileWriter = (path: string, contents: string) => void
 
 export function normalizeDownloadProxySettings(value: ProxySettingsInput): DownloadProxySettings {
@@ -86,24 +91,30 @@ export function buildRcloneDownloadEnvironment(
 
 export function buildGameArchiveRcloneEnvironment(
   _isResume: boolean,
-  proxySettings: DownloadProxySettings,
+  routing: GameArchiveRoutingSnapshot,
   apiKey: string | null,
   inheritedEnvironment: NodeJS.ProcessEnv = process.env
 ): NodeJS.ProcessEnv {
-  const environment = buildRcloneDownloadEnvironment(proxySettings, inheritedEnvironment)
+  const environment = buildRcloneDownloadEnvironment(routing.proxySettings, inheritedEnvironment)
   if (apiKey) environment.RCLONE_HEADER = `X-API-Key: ${apiKey}`
   return environment
 }
 
-export function isCustomDownloadProxyEnabled(proxySettings: DownloadProxySettings): boolean {
-  return normalizeDownloadProxySettings(proxySettings).enabled
+export function captureGameArchiveRouting(
+  proxySettings: DownloadProxySettings
+): GameArchiveRoutingSnapshot {
+  const normalized = normalizeDownloadProxySettings(proxySettings)
+  return {
+    proxySettings: normalized,
+    usePublicEndpoint: normalized.enabled
+  }
 }
 
 export function selectGameArchiveMirror(
-  proxySettings: DownloadProxySettings,
+  routing: GameArchiveRoutingSnapshot,
   activeMirror: RcloneMirrorConfig | undefined
 ): RcloneMirrorConfig | undefined {
-  return isCustomDownloadProxyEnabled(proxySettings) ? undefined : activeMirror
+  return routing.usePublicEndpoint ? undefined : activeMirror
 }
 
 function validateProxyHost(host: string): void {

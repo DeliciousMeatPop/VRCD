@@ -101,31 +101,36 @@ test('preserves inherited process environment when custom proxy routing is disab
 
 test('prevents a custom proxy download from entering an active mirror path', () => {
   const activeMirror = { configFilePath: '/tmp/mirror.conf', remoteName: 'private-mirror' }
+  const enabledRoute = proxy.captureGameArchiveRouting?.({
+    enabled: true,
+    protocol: 'http',
+    host: 'proxy.example.com',
+    port: 8080
+  })
   assert.equal(
-    proxy.selectGameArchiveMirror?.(
-      { enabled: true, protocol: 'http', host: 'proxy.example.com', port: 8080 },
-      activeMirror
-    ),
+    proxy.selectGameArchiveMirror?.(enabledRoute, activeMirror),
     undefined
   )
+  const disabledRoute = proxy.captureGameArchiveRouting?.({ ...DEFAULT_PROXY })
   assert.deepEqual(
-    proxy.selectGameArchiveMirror?.({ ...DEFAULT_PROXY }, activeMirror),
+    proxy.selectGameArchiveMirror?.(disabledRoute, activeMirror),
     activeMirror
   )
 })
 
 test('gives fresh and resumed game archive launches the same proxy environment', () => {
   const proxySettings = { enabled: true, protocol: 'http', host: 'proxy.example.com', port: 8080 }
+  const route = proxy.captureGameArchiveRouting?.(proxySettings)
   const inherited = { HTTP_PROXY: 'http://system.example:3128', NO_PROXY: 'localhost' }
   const freshEnvironment = proxy.buildGameArchiveRcloneEnvironment?.(
     false,
-    proxySettings,
+    route,
     'api-key',
     inherited
   )
   const resumedEnvironment = proxy.buildGameArchiveRcloneEnvironment?.(
     true,
-    proxySettings,
+    route,
     'api-key',
     inherited
   )
@@ -133,4 +138,24 @@ test('gives fresh and resumed game archive launches the same proxy environment',
   assert.deepEqual(freshEnvironment, resumedEnvironment)
   assert.equal(freshEnvironment?.RCLONE_HEADER, 'X-API-Key: api-key')
   assert.equal(freshEnvironment?.HTTPS_PROXY, 'http://proxy.example.com:8080')
+})
+
+test('keeps resume mirror selection and proxy environment on one routing snapshot', () => {
+  const settingsAtSelection = { ...DEFAULT_PROXY }
+  const route = proxy.captureGameArchiveRouting?.(settingsAtSelection)
+  settingsAtSelection.enabled = true
+  settingsAtSelection.host = 'later-proxy.example.com'
+
+  const activeMirror = { configFilePath: '/tmp/mirror.conf', remoteName: 'ftp-mirror' }
+  const environment = proxy.buildGameArchiveRcloneEnvironment?.(
+    true,
+    route,
+    'api-key',
+    { HTTP_PROXY: 'http://system.example:3128' }
+  )
+
+  assert.deepEqual(route?.proxySettings, DEFAULT_PROXY)
+  assert.deepEqual(proxy.selectGameArchiveMirror?.(route, activeMirror), activeMirror)
+  assert.equal(environment?.HTTP_PROXY, 'http://system.example:3128')
+  assert.equal(environment?.RCLONE_HEADER, 'X-API-Key: api-key')
 })
