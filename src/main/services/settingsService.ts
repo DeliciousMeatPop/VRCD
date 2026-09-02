@@ -3,13 +3,18 @@ import {
   SettingsAPI,
   ServerConfigInfo,
   ExistingDownloadAction,
-  WindowBounds
+  WindowBounds,
+  DownloadProxySettings
 } from '@shared/types'
 import { sanitizeBaseUri } from '@shared/serverConfig'
 import { app, nativeTheme } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import EventEmitter from 'events'
+import {
+  DEFAULT_DOWNLOAD_PROXY_SETTINGS,
+  normalizeDownloadProxySettings
+} from './download/downloadProxy'
 
 class SettingsService extends EventEmitter implements SettingsAPI {
   private settings: Settings
@@ -28,7 +33,8 @@ class SettingsService extends EventEmitter implements SettingsAPI {
       colorScheme: nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
       serverConfig: { baseUri: '', password: '' },
       maxConcurrentDownloads: 3,
-      existingDownloadAction: 'ask'
+      existingDownloadAction: 'ask',
+      downloadProxy: { ...DEFAULT_DOWNLOAD_PROXY_SETTINGS }
     }
 
     // Load settings from disk
@@ -116,6 +122,17 @@ class SettingsService extends EventEmitter implements SettingsAPI {
     this.emit('existing-download-action-changed', v)
   }
 
+  getDownloadProxy(): DownloadProxySettings {
+    return { ...this.settings.downloadProxy }
+  }
+
+  setDownloadProxy(settings: DownloadProxySettings): DownloadProxySettings {
+    const normalized = normalizeDownloadProxySettings(settings)
+    this.settings.downloadProxy = normalized
+    this.saveSettings()
+    return { ...normalized }
+  }
+
   getWindowBounds(): WindowBounds | undefined {
     return this.settings.windowBounds
   }
@@ -132,6 +149,12 @@ class SettingsService extends EventEmitter implements SettingsAPI {
         const data = readFileSync(this.settingsPath, 'utf-8')
         const loadedSettings = JSON.parse(data)
         this.settings = { ...this.settings, ...loadedSettings }
+        try {
+          this.settings.downloadProxy = normalizeDownloadProxySettings(loadedSettings.downloadProxy)
+        } catch {
+          this.settings.downloadProxy = { ...DEFAULT_DOWNLOAD_PROXY_SETTINGS }
+          console.warn('Invalid custom proxy settings were ignored.')
+        }
         console.log('Settings loaded successfully')
       } else {
         console.log('No settings file found, using defaults')

@@ -303,7 +303,9 @@ const api = {
     getExistingDownloadAction: () =>
       typedIpcRenderer.invoke('settings:get-existing-download-action'),
     setExistingDownloadAction: (v) =>
-      typedIpcRenderer.invoke('settings:set-existing-download-action', v)
+      typedIpcRenderer.invoke('settings:set-existing-download-action', v),
+    getDownloadProxy: () => typedIpcRenderer.invoke('settings:get-download-proxy'),
+    setDownloadProxy: (settings) => typedIpcRenderer.invoke('settings:set-download-proxy', settings)
   } satisfies SettingsAPIRenderer,
   // Logs APIs
   logs: {

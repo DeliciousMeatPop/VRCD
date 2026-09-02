@@ -11,6 +11,7 @@ import { DownloadItem } from '@shared/types'
 import { DownloadStatus } from '@shared/types'
 import { getAvailableDiskSpace, parseSizeToBytes, formatBytes } from './utils'
 import { isCompletedDownloadFile, validateDownloadCompletion } from './archiveDiscovery'
+import { buildRcloneDownloadEnvironment } from './downloadProxy'
 
 // Type for VRP config - adjust if needed elsewhere
 interface VrpConfig {
@@ -386,11 +387,13 @@ export class DownloadProcessor {
       // Pass the API key via env var (RCLONE_HEADER) rather than --header so
       // it never appears in process listings, logs, or ExecaError messages.
       const apiKey = getApiKey()
+      const env = buildRcloneDownloadEnvironment(settingsService.getDownloadProxy(), process.env)
+      if (apiKey) env.RCLONE_HEADER = `X-API-Key: ${apiKey}`
       const rcloneProcess = execa(rclonePath, copyArgs, {
         all: true,
         buffer: false,
         windowsHide: true,
-        env: apiKey ? { RCLONE_HEADER: `X-API-Key: ${apiKey}` } : undefined
+        env
       })
 
       // Store download controller for cancel/pause

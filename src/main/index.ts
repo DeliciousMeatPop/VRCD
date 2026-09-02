@@ -838,6 +838,10 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('settings:set-existing-download-action', (_event, v) =>
     settingsService.setExistingDownloadAction(v)
   )
+  typedIpcMain.handle('settings:get-download-proxy', () => settingsService.getDownloadProxy())
+  typedIpcMain.handle('settings:set-download-proxy', (_event, settings) =>
+    settingsService.setDownloadProxy(settings)
+  )
 
   // --- Logs Handlers ---
   typedIpcMain.handle('logs:upload-current', async () => {

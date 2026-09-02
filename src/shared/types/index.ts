@@ -412,6 +412,15 @@ export interface ServerConfigInfo {
 
 export type ExistingDownloadAction = 'ask' | 'reinstall' | 'redownload'
 
+export type DownloadProxyProtocol = 'http' | 'https'
+
+export interface DownloadProxySettings {
+  enabled: boolean
+  protocol: DownloadProxyProtocol
+  host: string
+  port: number
+}
+
 export interface WindowBounds {
   x?: number
   y?: number
@@ -429,6 +438,7 @@ export interface Settings {
   serverConfig: ServerConfigInfo
   maxConcurrentDownloads: number
   existingDownloadAction?: ExistingDownloadAction
+  downloadProxy: DownloadProxySettings
   windowBounds?: WindowBounds
 }
 
@@ -447,6 +457,8 @@ export interface SettingsAPI {
   setMaxConcurrentDownloads: (n: number) => void
   getExistingDownloadAction: () => ExistingDownloadAction
   setExistingDownloadAction: (v: ExistingDownloadAction) => void
+  getDownloadProxy: () => DownloadProxySettings
+  setDownloadProxy: (settings: DownloadProxySettings) => DownloadProxySettings
 }
 
 export interface SettingsAPIRenderer extends Modify<
@@ -466,6 +478,8 @@ export interface SettingsAPIRenderer extends Modify<
     setMaxConcurrentDownloads: (n: number) => Promise<void>
     getExistingDownloadAction: () => Promise<ExistingDownloadAction>
     setExistingDownloadAction: (v: ExistingDownloadAction) => Promise<void>
+    getDownloadProxy: () => Promise<DownloadProxySettings>
+    setDownloadProxy: (settings: DownloadProxySettings) => Promise<DownloadProxySettings>
   }
 > {}
 
