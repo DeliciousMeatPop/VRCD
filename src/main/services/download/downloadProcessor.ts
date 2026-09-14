@@ -259,6 +259,11 @@ export class DownloadProcessor {
     let lastProgress = -1
     let lastSpeed = ''
     let statsCount = 0
+    // Set if rclone warns the system clock is skewed. A wrong local clock makes
+    // the signed request time fall outside the server's allowed window, so every
+    // transfer 403s and the run dies with a bare "exit code 1". Captured here so
+    // the catch block can point the user at their clock instead.
+    let clockSkewDetected = false
 
     try {
       await fs.mkdir(downloadPath, { recursive: true })
@@ -441,6 +446,20 @@ export class DownloadProcessor {
             if (!trimmed || trimmed[0] !== '{') continue // Fast skip non-JSON
             try {
               const parsed = JSON.parse(trimmed)
+              // rclone emits a warning like "Time may be set wrong - time from
+              // <server> is <delta> different from this computer" when the local
+              // clock is off. This is the usual cause of an all-403 run, so flag
+              // it for the catch block.
+              if (
+                !clockSkewDetected &&
+                typeof parsed.msg === 'string' &&
+                parsed.msg.includes('Time may be set wrong')
+              ) {
+                clockSkewDetected = true
+                console.warn(
+                  `[DownProc] rclone reported a system clock skew for ${item.releaseName}: ${parsed.msg}`
+                )
+              }
               if (parsed.stats) {
                 const stats = parsed.stats
                 statsCount++
@@ -638,10 +657,19 @@ export class DownloadProcessor {
       }
       errorMessage = redactKey(errorMessage).substring(0, 500)
 
-      // rclone received stats but transferred zero bytes — the download source
-      // is unreachable or returned an empty directory listing. Provide a clear
-      // message instead of the raw "exit code 1".
-      if (statsCount > 0 && lastProgress <= 0) {
+      // A skewed system clock makes every request 403 and the run die with a
+      // bare "exit code 1". This is a user-fixable local problem, not a server
+      // outage, so it takes precedence over the generic messages below.
+      if (clockSkewDetected) {
+        errorMessage =
+          "Your computer's clock is wrong, so the download server rejected every " +
+          'request. Fix your system date and time (on Windows: Settings > Time & ' +
+          'language > Date & time > turn on "Set time automatically", then "Sync ' +
+          'now"), then retry the download.'
+      } else if (statsCount > 0 && lastProgress <= 0) {
+        // rclone received stats but transferred zero bytes — the download source
+        // is unreachable or returned an empty directory listing. Provide a clear
+        // message instead of the raw "exit code 1".
         errorMessage =
           'Download source returned no data. The download server may be temporarily ' +
           'unavailable, or the game may have been removed from the server. ' +
