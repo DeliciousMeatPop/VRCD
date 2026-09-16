@@ -23,6 +23,61 @@ describe('WikipediaDescriptionProvider', () => {
       language: 'en',
       source: { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Puzzling_Places' }
     })
+
+    expect(get).toHaveBeenCalledWith(
+      'https://en.wikipedia.org/w/api.php',
+      expect.objectContaining({ timeout: 8_000 })
+    )
+  })
+
+  it('tries a video-game-specific query after an inconclusive title query', async () => {
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { query: { pages: [] } } })
+      .mockResolvedValueOnce(
+        responseFor({
+          title: 'Breachers (video game)',
+          extract: 'Breachers is a virtual reality tactical shooter game.',
+          fullurl: 'https://en.wikipedia.org/wiki/Breachers_(video_game)'
+        })
+      )
+    const provider = new WikipediaDescriptionProvider(get)
+
+    await expect(provider.lookup('Breachers VR', 'en')).resolves.toMatchObject({
+      status: 'found',
+      source: { url: 'https://en.wikipedia.org/wiki/Breachers_(video_game)' }
+    })
+
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(get.mock.calls[1][1].params.gsrsearch).toBe('"Breachers VR" video game')
+  })
+
+  it('selects only the exact identity from multiple search candidates', async () => {
+    const provider = new WikipediaDescriptionProvider(
+      vi.fn().mockResolvedValue({
+        data: {
+          query: {
+            pages: [
+              {
+                title: 'Royal Rumble',
+                extract: 'Royal Rumble is a virtual reality wrestling game.',
+                fullurl: 'https://en.wikipedia.org/wiki/Royal_Rumble'
+              },
+              {
+                title: 'RUMBLE (video game)',
+                extract: 'RUMBLE is a virtual reality fighting game.',
+                fullurl: 'https://en.wikipedia.org/wiki/Rumble_(video_game)'
+              }
+            ]
+          }
+        }
+      })
+    )
+
+    await expect(provider.lookup('RUMBLE', 'en')).resolves.toMatchObject({
+      status: 'found',
+      source: { url: 'https://en.wikipedia.org/wiki/Rumble_(video_game)' }
+    })
   })
 
   it('rejects fuzzy, disambiguation, non-VR, and unsafe candidates', async () => {
@@ -63,5 +118,12 @@ describe('WikipediaDescriptionProvider', () => {
       vi.fn().mockRejectedValue(new Error('offline'))
     )
     await expect(provider.lookup('RUMBLE', 'en')).rejects.toThrow('offline')
+  })
+
+  it('keeps HTTP-success API errors distinct from confirmed misses', async () => {
+    const provider = new WikipediaDescriptionProvider(
+      vi.fn().mockResolvedValue({ data: { error: { code: 'ratelimited' } } })
+    )
+    await expect(provider.lookup('Breachers', 'en')).rejects.toThrow()
   })
 })
