@@ -16,6 +16,7 @@ interface WikipediaPage {
 }
 
 interface WikipediaResponse {
+  error?: unknown
   query?: {
     pages?: WikipediaPage[] | Record<string, WikipediaPage>
   }
@@ -23,8 +24,10 @@ interface WikipediaResponse {
 
 export type WikipediaGet = (
   url: string,
-  config: { params: Record<string, string>; headers: Record<string, string> }
+  config: { params: Record<string, string>; headers: Record<string, string>; timeout: number }
 ) => Promise<{ data: WikipediaResponse }>
+
+const REQUEST_TIMEOUT_MS = 8_000
 
 const isHttpsUrl = (value: string | undefined): value is string => {
   if (!value) return false
@@ -40,6 +43,23 @@ const pagesFrom = (response: WikipediaResponse): WikipediaPage[] => {
   if (!pages) return []
   return Array.isArray(pages) ? pages : Object.values(pages)
 }
+
+const quoteSearchTerm = (value: string): string => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
+const matchingPageFrom = (
+  response: WikipediaResponse,
+  gameName: string
+): WikipediaPage | undefined =>
+  pagesFrom(response).find((page) => {
+    const extract = page.extract?.trim() ?? ''
+    return (
+      !!page.title &&
+      titlesMatch(gameName, page.title) &&
+      page.pageprops?.disambiguation === undefined &&
+      hasVrSignal(extract) &&
+      isHttpsUrl(page.fullurl)
+    )
+  })
 
 export class WikipediaDescriptionProvider {
   private readonly userAgent: string
@@ -57,37 +77,40 @@ export class WikipediaDescriptionProvider {
 
   async lookup(
     gameName: string,
-    language: GameDescriptionLanguage
+    language: GameDescriptionLanguage,
+    packageName?: string
   ): Promise<GameDescriptionFound | GameDescriptionNotFound> {
-    const { data } = await this.get(`https://${language}.wikipedia.org/w/api.php`, {
-      params: {
-        action: 'query',
-        generator: 'search',
-        gsrsearch: `intitle:"${gameName}"`,
-        gsrlimit: '5',
-        prop: 'extracts|info|pageprops',
-        exintro: '1',
-        explaintext: '1',
-        inprop: 'url',
-        redirects: '1',
-        format: 'json',
-        formatversion: '2'
-      },
-      headers: {
-        'User-Agent': this.userAgent
-      }
-    })
+    void packageName
+    const quotedName = quoteSearchTerm(gameName)
+    const queries = [`intitle:"${quotedName}"`, `"${quotedName}" video game`]
+    let matchingPage: WikipediaPage | undefined
 
-    const matchingPage = pagesFrom(data).find((page) => {
-      const extract = page.extract?.trim() ?? ''
-      return (
-        !!page.title &&
-        titlesMatch(gameName, page.title) &&
-        page.pageprops?.disambiguation === undefined &&
-        hasVrSignal(extract) &&
-        isHttpsUrl(page.fullurl)
-      )
-    })
+    for (const searchQuery of queries) {
+      const { data } = await this.get(`https://${language}.wikipedia.org/w/api.php`, {
+        params: {
+          action: 'query',
+          generator: 'search',
+          gsrsearch: searchQuery,
+          gsrlimit: '5',
+          prop: 'extracts|info|pageprops',
+          exintro: '1',
+          explaintext: '1',
+          inprop: 'url',
+          redirects: '1',
+          format: 'json',
+          formatversion: '2'
+        },
+        headers: {
+          'User-Agent': this.userAgent
+        },
+        timeout: REQUEST_TIMEOUT_MS
+      })
+      if (!data || typeof data !== 'object' || data.error) {
+        throw new Error('Wikipedia returned an invalid or failed response')
+      }
+      matchingPage = matchingPageFrom(data, gameName)
+      if (matchingPage) break
+    }
 
     if (!matchingPage || !matchingPage.extract || !matchingPage.fullurl) {
       return { status: 'not-found', language, fetchedAt: Date.now() }

@@ -30,29 +30,38 @@ const createCache = (): DescriptionCachePort => {
 }
 
 describe('GameDescriptionService', () => {
-  it('background-primes only source-qualified records without web traffic', async () => {
+  it('background-primes source-qualified records regardless of cover usability', async () => {
     const cache = createCache()
     const provider = { lookup: vi.fn() }
     const service = new GameDescriptionService({
       cache,
-      provider,
-      probeImage: vi
-        .fn()
-        .mockResolvedValueOnce({ width: 512, height: 512 })
-        .mockResolvedValueOnce({ width: 128, height: 128 })
+      provider
     })
 
     const snapshot = await service.primeDescriptions([
-      sourceQualifiedGame,
-      { ...sourceQualifiedGame, key: 'small:en', thumbnailPath: '/tmp/small.jpg' }
+      { ...sourceQualifiedGame, key: 'missing:en', thumbnailPath: '' },
+      { ...sourceQualifiedGame, key: 'tiny:en', thumbnailPath: '/tmp/tiny.jpg' },
+      { ...sourceQualifiedGame, key: 'unreadable:en', thumbnailPath: '/tmp/unreadable.jpg' }
     ])
 
-    expect(snapshot['puzzling:en']).toMatchObject({
+    expect(snapshot['missing:en']).toMatchObject({
       status: 'found',
       source: { label: 'VRP metadata' }
     })
-    expect(snapshot['small:en']).toBeUndefined()
+    expect(snapshot['tiny:en']).toMatchObject({ status: 'found' })
+    expect(snapshot['unreadable:en']).toMatchObject({ status: 'found' })
     expect(provider.lookup).not.toHaveBeenCalled()
+  })
+
+  it('accepts a library description when the game has no thumbnail', async () => {
+    const service = new GameDescriptionService({
+      cache: createCache(),
+      provider: { lookup: vi.fn() }
+    })
+
+    await expect(
+      service.getDescription({ ...sourceQualifiedGame, thumbnailPath: '' })
+    ).resolves.toMatchObject({ status: 'found', source: { label: 'VRP metadata' } })
   })
 
   it('defers weak source records to the lazy Wikipedia path and falls back from Spanish', async () => {
@@ -71,16 +80,30 @@ describe('GameDescriptionService', () => {
     }
     const service = new GameDescriptionService({
       cache,
-      provider,
-      probeImage: vi.fn(async () => ({ width: 128, height: 128 }))
+      provider
     })
 
     await expect(
-      service.getDescription({ ...sourceQualifiedGame, key: 'puzzling:es', language: 'es' })
+      service.getDescription({
+        ...sourceQualifiedGame,
+        key: 'puzzling:es',
+        language: 'es',
+        libraryDescription: undefined
+      })
     ).resolves.toMatchObject({ status: 'found', language: 'en' })
 
-    expect(provider.lookup).toHaveBeenNthCalledWith(1, 'Puzzling Places', 'es')
-    expect(provider.lookup).toHaveBeenNthCalledWith(2, 'Puzzling Places', 'en')
+    expect(provider.lookup).toHaveBeenNthCalledWith(
+      1,
+      'Puzzling Places',
+      'es',
+      'com.realities.puzzlingplaces'
+    )
+    expect(provider.lookup).toHaveBeenNthCalledWith(
+      2,
+      'Puzzling Places',
+      'en',
+      'com.realities.puzzlingplaces'
+    )
   })
 
   it('requires an explicit library source before background priming', async () => {
@@ -88,8 +111,7 @@ describe('GameDescriptionService', () => {
     const provider = { lookup: vi.fn() }
     const service = new GameDescriptionService({
       cache,
-      provider,
-      probeImage: vi.fn(async () => ({ width: 512, height: 512 }))
+      provider
     })
 
     const snapshot = await service.primeDescriptions([
@@ -105,13 +127,15 @@ describe('GameDescriptionService', () => {
     const provider = { lookup: vi.fn() }
     const service = new GameDescriptionService({
       cache,
-      provider,
-      // No qualifying library image → would normally fall through to Wikipedia.
-      probeImage: vi.fn(async () => null)
+      provider
     })
 
     await expect(
-      service.getDescription({ ...sourceQualifiedGame, allowNetwork: false })
+      service.getDescription({
+        ...sourceQualifiedGame,
+        libraryDescription: undefined,
+        allowNetwork: false
+      })
     ).resolves.toMatchObject({ status: 'not-found' })
 
     // Never reached the network, and did not negative-cache the skip.
@@ -132,11 +156,12 @@ describe('GameDescriptionService', () => {
     }
     const service = new GameDescriptionService({
       cache,
-      provider,
-      probeImage: vi.fn(async () => null)
+      provider
     })
 
-    await expect(service.getDescription(sourceQualifiedGame)).resolves.toMatchObject({
+    await expect(
+      service.getDescription({ ...sourceQualifiedGame, libraryDescription: undefined })
+    ).resolves.toMatchObject({
       status: 'found',
       source: { label: 'Wikipedia' }
     })
@@ -148,14 +173,13 @@ describe('GameDescriptionService', () => {
     const provider = { lookup: vi.fn().mockRejectedValue(new Error('offline')) }
     const service = new GameDescriptionService({
       cache,
-      provider,
-      probeImage: vi.fn(async () => null)
+      provider
     })
 
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    await expect(service.getDescription(sourceQualifiedGame)).resolves.toMatchObject({
-      status: 'error'
-    })
+    await expect(
+      service.getDescription({ ...sourceQualifiedGame, libraryDescription: undefined })
+    ).resolves.toMatchObject({ status: 'error' })
     expect(cache.set).not.toHaveBeenCalled()
     warn.mockRestore()
   })

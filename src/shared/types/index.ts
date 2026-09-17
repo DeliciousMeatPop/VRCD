@@ -142,7 +142,7 @@ export interface GameDescriptionRequest {
   libraryDescriptionSourceUrl?: string
   libraryDescriptionLanguage?: GameDescriptionLanguage
   /**
-   * Whether an external (Wikipedia) lookup is permitted for this request when
+   * Whether external metadata lookups are permitted for this request when
    * no local library description qualifies. Defaults to allowed; the renderer
    * sets it to false when the user has enabled "Disable All Extras", so details
    * still show local metadata but never reach out to the network.
