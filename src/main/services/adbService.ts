@@ -179,7 +179,7 @@ class AdbService extends EventEmitter implements AdbAPI {
       throw new Error('adb service not initialized!')
     }
     try {
-      const devices = await this.client.listDevices()
+      const devices = (await this.client.listDevices()).map(normalizeDevice)
       const extendedDevices: DeviceInfo[] = []
 
       for (const device of devices) {
@@ -278,7 +278,8 @@ class AdbService extends EventEmitter implements AdbAPI {
     }
     this.deviceTracker = tracker
 
-    tracker.on('add', async (device: DeviceInfo) => {
+    tracker.on('add', async (rawDevice: DeviceInfo) => {
+      const device = normalizeDevice(rawDevice)
       console.log('Device added:', device)
       if (device.type === 'device' || device.type === 'emulator') {
         const details = await this.getDeviceDetails(device.id)
@@ -319,7 +320,8 @@ class AdbService extends EventEmitter implements AdbAPI {
       }
     })
 
-    tracker.on('remove', (device) => {
+    tracker.on('remove', (rawDevice) => {
+      const device = normalizeDevice(rawDevice)
       console.log('Device removed:', device)
 
       // Send a basic device object, details aren't relevant for removal
@@ -341,7 +343,8 @@ class AdbService extends EventEmitter implements AdbAPI {
       }
     })
 
-    tracker.on('change', async (device: DeviceInfo) => {
+    tracker.on('change', async (rawDevice: DeviceInfo) => {
+      const device = normalizeDevice(rawDevice)
       console.log('Device changed:', device)
       // This event typically signifies a device coming online (e.g., from 'offline' to 'device')
       // or a device's properties changing.
@@ -1517,6 +1520,19 @@ class AdbService extends EventEmitter implements AdbAPI {
     await run('kill-server')
     await run('start-server')
   }
+}
+
+/**
+ * adb reports a Linux device it can't open as a free-form type like
+ * "no permissions (missing udev rules? user is in the plugdev group); see
+ * [http://developer.android.com/tools/device.html]". Collapse that into a
+ * stable 'no-permissions' type the UI can key off.
+ */
+function normalizeDevice<T extends { type: string }>(device: T): T {
+  if (typeof device.type === 'string' && device.type.toLowerCase().startsWith('no permissions')) {
+    return { ...device, type: 'no-permissions' }
+  }
+  return device
 }
 
 export default new AdbService()

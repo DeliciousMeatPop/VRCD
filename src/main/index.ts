@@ -19,6 +19,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import adbService from './services/adbService'
+import { installQuestUdevRule } from './services/linuxUsbAccess'
 import dependencyService, { DependencyStatus } from './services/dependencyService'
 import gameService from './services/gameService'
 import metaStoreService from './services/metaStoreService'
@@ -577,6 +578,7 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('adb:run-local-adb-command', async (_event, args) => {
     return adbService.runLocalAdbCommand(args)
   })
+  typedIpcMain.handle('adb:fix-linux-usb-access', async () => installQuestUdevRule())
 
   // --- Game Handlers ---
   typedIpcMain.handle('games:get-games', async () => gameService.getGames())

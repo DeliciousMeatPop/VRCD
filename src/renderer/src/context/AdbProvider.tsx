@@ -144,7 +144,9 @@ export const AdbProvider: React.FC<AdbProviderProps> = ({ children }) => {
       // Check if the changed device is the currently selected device and is going offline
       if (
         selectedDeviceRef.current === device.id &&
-        (device.type === 'offline' || device.type === 'unauthorized')
+        (device.type === 'offline' ||
+          device.type === 'unauthorized' ||
+          device.type === 'no-permissions')
       ) {
         console.log(
           `[AdbProvider] Currently selected device ${device.id} went ${device.type}, disconnecting from app`
