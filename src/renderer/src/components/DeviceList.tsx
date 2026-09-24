@@ -335,6 +335,22 @@ const TargetCard: React.FC<TargetCardProps> = ({
   const isConnectable = device.type === 'device' || device.type === 'emulator'
   const isOffline = device.type === 'offline'
   const isUnauth = device.type === 'unauthorized'
+  const isNoPerms = device.type === 'no-permissions'
+  const [usbFixing, setUsbFixing] = useState(false)
+  const [usbFixResult, setUsbFixResult] = useState<{ success: boolean; message: string } | null>(
+    null
+  )
+  const handleFixUsbAccess = async (): Promise<void> => {
+    setUsbFixing(true)
+    setUsbFixResult(null)
+    try {
+      setUsbFixResult(await window.api.adb.fixLinuxUsbAccess())
+    } catch (e) {
+      setUsbFixResult({ success: false, message: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setUsbFixing(false)
+    }
+  }
   const isWifi = isWifiBook || (hasBook && isTcp && isConnectable)
   const name = device.friendlyModelName || device.model || device.id
   const statusBadgeColor = isConnected
@@ -354,11 +370,13 @@ const TargetCard: React.FC<TargetCardProps> = ({
         ? 'BREACHING...'
         : isUnauth
           ? 'UNAUTHORIZED'
-          : isOffline
-            ? 'OFFLINE'
-            : isWifiBook
-              ? 'STANDBY'
-              : 'DETECTED'
+          : isNoPerms
+            ? 'NO USB ACCESS'
+            : isOffline
+              ? 'OFFLINE'
+              : isWifiBook
+                ? 'STANDBY'
+                : 'DETECTED'
 
   const S = { fontFamily: 'var(--vrcd-font-mono)' }
 
@@ -548,6 +566,42 @@ const TargetCard: React.FC<TargetCardProps> = ({
               Then unplug and replug the cable.
             </div>
           )}
+
+          {/* Linux: no udev rule, so adb can't open the headset */}
+          {isNoPerms && (
+            <div
+              style={{
+                ...S,
+                fontSize: '10px',
+                color: '#ffaa00',
+                lineHeight: 1.5,
+                marginTop: '4px',
+                padding: '6px 8px',
+                background: 'rgba(255,170,0,0.06)',
+                border: '1px solid rgba(255,170,0,0.2)',
+                borderRadius: '4px'
+              }}
+            >
+              <strong>Linux USB access not set up.</strong> Linux needs a udev rule before it lets
+              ADB talk to the Quest. Without it, the headset only connects after you accept the
+              &quot;Allow access to data&quot; prompt. Click <strong>FIX USB ACCESS</strong> to
+              install the rule once (asks for your password), then unplug and replug the cable.
+              {usbFixResult && (
+                <div
+                  style={{
+                    marginTop: '6px',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    userSelect: 'text',
+                    color: usbFixResult.success ? 'var(--vrcd-neon)' : '#ff4444'
+                  }}
+                >
+                  {usbFixResult.success ? '✓ ' : '✗ '}
+                  {usbFixResult.message}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -665,6 +719,20 @@ const TargetCard: React.FC<TargetCardProps> = ({
             }}
           >
             ↻ RESET ADB
+          </button>
+        ) : isNoPerms ? (
+          <button
+            className="breach-btn"
+            onClick={handleFixUsbAccess}
+            disabled={usbFixing}
+            style={{
+              fontSize: '10px',
+              padding: '5px 12px',
+              borderColor: 'rgba(255,170,0,0.5)',
+              color: '#ffaa00'
+            }}
+          >
+            {usbFixing ? 'FIXING...' : '⚙ FIX USB ACCESS'}
           </button>
         ) : (
           <button className="breach-btn" disabled style={{ fontSize: '10px', padding: '5px 12px' }}>
@@ -804,9 +872,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
   const hasAutoConnected = React.useRef(false)
   useEffect(() => {
     if (isConnected || isLoading || hasAutoConnected.current) return
-    const q = devices.find(
-      (d) => d.isQuestDevice && (d.type === 'device' || d.type === 'emulator')
-    )
+    const q = devices.find((d) => d.isQuestDevice && (d.type === 'device' || d.type === 'emulator'))
     if (!q) return
     hasAutoConnected.current = true
     handleConnect(q.id)
@@ -818,11 +884,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
       devices
         .filter((d) => isWiFiBookmark(d) || hasBookmarkData(d))
         .map((d) =>
-          isWiFiBookmark(d)
-            ? d.ipAddress
-            : hasBookmarkData(d)
-              ? d.bookmarkData.ipAddress
-              : null
+          isWiFiBookmark(d) ? d.ipAddress : hasBookmarkData(d) ? d.bookmarkData.ipAddress : null
         )
         .filter(Boolean) as string[],
     [devices]
@@ -946,11 +1008,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
   // The device currently in a breach animation
   const breachDevice = breachTargetId ? devices.find((d) => d.id === breachTargetId) : null
   const breachDeviceName = breachDevice
-    ? (
-        breachDevice.friendlyModelName ||
-        breachDevice.model ||
-        breachDevice.id
-      ).toUpperCase()
+    ? (breachDevice.friendlyModelName || breachDevice.model || breachDevice.id).toUpperCase()
     : tcpIpAddress || '...'
 
   return (
@@ -1170,8 +1228,7 @@ const DeviceList: React.FC<DeviceListProps> = ({ onSkip, onConnected }) => {
                     onDeleteBookmark={() => handleDeleteBookmark(device)}
                     onOpenShell={() => setShellDialogDeviceId(device.id)}
                     isAlreadyBookmarked={
-                      !!device.ipAddress &&
-                      bookmarkedIps.includes(device.ipAddress)
+                      !!device.ipAddress && bookmarkedIps.includes(device.ipAddress)
                     }
                   />
                 )

@@ -69,6 +69,7 @@ export interface IPCChannels {
   >
   'adb:run-shell-command': DefineChannel<[serial: string, command: string], string | null>
   'adb:run-local-adb-command': DefineChannel<[args: string], string>
+  'adb:fix-linux-usb-access': DefineChannel<[], { success: boolean; message: string }>
 
   // Game related channels
   'games:get-games': DefineChannel<[], GameInfo[]>

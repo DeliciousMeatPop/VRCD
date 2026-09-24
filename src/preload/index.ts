@@ -108,7 +108,9 @@ const api = {
     runShellCommand: (serial: string, command: string): Promise<string | null> =>
       typedIpcRenderer.invoke('adb:run-shell-command', serial, command),
     runLocalAdbCommand: (args: string): Promise<string> =>
-      typedIpcRenderer.invoke('adb:run-local-adb-command', args)
+      typedIpcRenderer.invoke('adb:run-local-adb-command', args),
+    fixLinuxUsbAccess: (): Promise<{ success: boolean; message: string }> =>
+      typedIpcRenderer.invoke('adb:fix-linux-usb-access')
   } satisfies AdbAPIRenderer,
   games: {
     getGames: (): Promise<GameInfo[]> => typedIpcRenderer.invoke('games:get-games'),

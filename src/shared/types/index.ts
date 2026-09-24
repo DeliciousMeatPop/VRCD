@@ -9,7 +9,14 @@ type Modify<T, R> = Omit<T, keyof R> & R
 // Device types
 export interface DeviceInfo {
   id: string
-  type: 'emulator' | 'device' | 'offline' | 'unauthorized' | 'unknown' | 'wifi-bookmark'
+  type:
+    | 'emulator'
+    | 'device'
+    | 'offline'
+    | 'unauthorized'
+    | 'no-permissions' // Linux: adb can see the device but has no USB access (missing udev rule)
+    | 'unknown'
+    | 'wifi-bookmark'
   model: string | null
   isQuestDevice: boolean
   batteryLevel: number | null
@@ -333,6 +340,8 @@ export interface DependencyAPI {
 export interface DependencyAPIRenderer extends DependencyAPI {}
 
 export interface AdbAPIRenderer extends AdbAPI {
+  // Linux only: installs the Quest udev rule via pkexec (see linuxUsbAccess.ts)
+  fixLinuxUsbAccess: () => Promise<{ success: boolean; message: string }>
   onDeviceAdded: (callback: (device: DeviceInfo) => void) => () => void
   onDeviceRemoved: (callback: (device: DeviceInfo) => void) => () => void
   onDeviceChanged: (callback: (device: DeviceInfo) => void) => () => void

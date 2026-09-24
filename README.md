@@ -126,6 +126,16 @@ chmod +x vr-cyberdeck-x.x.x-x86_64.AppImage
 ./vr-cyberdeck-x.x.x-x86_64.AppImage
 ```
 
+**Linux — Quest only connects after accepting the "Allow access to data" prompt:**
+
+Linux needs a udev rule before ADB can reach the headset (Windows gets this from its driver). If the Quest shows up as **NO USB ACCESS**, click **FIX USB ACCESS** on its card, or run:
+
+```
+sh scripts/linux-quest-udev.sh
+```
+
+Then unplug and replug the Quest. After that it connects as soon as it's plugged in, and you can dismiss the data prompt.
+
 ---
 
 ## `// JACK_IN`
