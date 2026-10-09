@@ -244,6 +244,7 @@ export class MetaStoreService {
       .trim()
     const queries = baseName
       ? [
+          `${baseName} VR trailer`,
           `${baseName} oculus quest trailer`,
           `${baseName} meta quest trailer`,
           `${baseName} trailer`
@@ -253,7 +254,7 @@ export class MetaStoreService {
     for (const query of queries) {
       try {
         const response = await this.get(YT_SEARCH_URL, {
-          params: { search_query: query, sp: 'EgIQAQ%253D%253D' },
+          params: { search_query: query, sp: 'EgIQAQ==' },
           timeout: 10_000,
           maxContentLength: 5_000_000,
           headers: {

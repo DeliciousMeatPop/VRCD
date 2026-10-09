@@ -340,10 +340,10 @@ describe('MetaStoreService', () => {
 
     await service.getTrailerUrl('Unknown Game', 'com.unknown')
     await service.getTrailerUrl('Unknown Game', 'com.unknown')
-    expect(requests).toBe(3)
+    expect(requests).toBe(4)
     now += 24 * 60 * 60_000 + 1
     await service.getTrailerUrl('Unknown Game', 'com.unknown')
-    expect(requests).toBe(6)
+    expect(requests).toBe(8)
   })
 
   it('retries after transport, malformed-response, and incomplete-store failures', async () => {
@@ -399,7 +399,7 @@ describe('MetaStoreService', () => {
       'puzzlevers1'
     )
     expect(storeCalls).toBe(2)
-    expect(requests).toBe(4)
+    expect(requests).toBe(5)
   })
 
   it('deduplicates concurrent lookups and serializes atomic cache persistence', async () => {
