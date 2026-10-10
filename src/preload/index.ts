@@ -284,6 +284,10 @@ const api = {
     getDownloadPath: (): Promise<string> => typedIpcRenderer.invoke('settings:get-download-path'),
     setDownloadPath: (path: string): Promise<void> =>
       typedIpcRenderer.invoke('settings:set-download-path', path),
+    getExtractionPath: (): Promise<string> =>
+      typedIpcRenderer.invoke('settings:get-extraction-path'),
+    setExtractionPath: (path: string): Promise<void> =>
+      typedIpcRenderer.invoke('settings:set-extraction-path', path),
     getDownloadSpeedLimit: (): Promise<number> =>
       typedIpcRenderer.invoke('settings:get-download-speed-limit'),
     setDownloadSpeedLimit: (limit: number): Promise<void> =>

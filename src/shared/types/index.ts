@@ -236,6 +236,12 @@ export interface DownloadItem {
   speed?: string
   eta?: string
   extractProgress?: number
+  /**
+   * Set once every archive volume has been downloaded. Lets a restart, or a
+   * folder re-scan, go straight to extraction instead of re-checking the
+   * download. Cleared if extraction fails so Retry downloads again.
+   */
+  downloadComplete?: boolean
   size?: string
   /**
    * Set when the extracted files didn't match the release's release.manifest.
@@ -502,6 +508,8 @@ export interface WindowBounds {
 
 export interface Settings {
   downloadPath: string
+  /** Optional folder to extract into (e.g. on another drive). Empty = extract next to the download. */
+  extractionPath: string
   downloadSpeedLimit: number
   uploadSpeedLimit: number
   hideAdultContent: boolean
@@ -516,6 +524,8 @@ export interface Settings {
 export interface SettingsAPI {
   getDownloadPath: () => string
   setDownloadPath: (path: string) => void
+  getExtractionPath: () => string
+  setExtractionPath: (path: string) => void
   getDownloadSpeedLimit: () => number
   setDownloadSpeedLimit: (limit: number) => void
   getUploadSpeedLimit: () => number
@@ -537,6 +547,8 @@ export interface SettingsAPIRenderer extends Modify<
   {
     getDownloadPath: () => Promise<string>
     setDownloadPath: (path: string) => Promise<void>
+    getExtractionPath: () => Promise<string>
+    setExtractionPath: (path: string) => Promise<void>
     getDownloadSpeedLimit: () => Promise<number>
     setDownloadSpeedLimit: (limit: number) => Promise<void>
     getUploadSpeedLimit: () => Promise<number>

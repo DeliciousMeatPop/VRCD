@@ -9,6 +9,7 @@ import dependencyService from './dependencyService'
 import gameService from './gameService'
 import { EventEmitter } from 'events'
 import { debounce } from './download/utils'
+import { validateDownloadCompletion } from './download/archiveDiscovery'
 import { QueueManager } from './download/queueManager'
 import { DownloadProcessor } from './download/downloadProcessor'
 import { ExtractionProcessor } from './download/extractionProcessor'
@@ -507,12 +508,22 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     const targetDeviceId = this.getTargetDeviceForInstallation()
 
     try {
-      const downloadResult = await this.downloadProcessor.startDownload(nextItem)
+      // A download that already finished (app killed mid-extraction, or found by a
+      // folder scan) only needs extracting - don't touch the network again.
+      const alreadyDownloaded =
+        nextItem.downloadComplete === true &&
+        (await this.hasCompleteArchive(nextItem.downloadPath || '', nextItem.releaseName))
+      const downloadResult = alreadyDownloaded
+        ? await this.skipToExtraction(nextItem)
+        : await this.downloadProcessor.startDownload(nextItem)
       if (!downloadResult.success) {
         console.log(
           `[Service ProcessQueue] Download failed/cancelled for ${nextItem.releaseName}. Status: ${downloadResult.finalState?.status}`
         )
         return
+      }
+      if (downloadResult.startExtraction) {
+        this.queueManager.updateItem(nextItem.releaseName, { downloadComplete: true })
       }
       const itemAfterDownload = downloadResult.finalState
       if (!itemAfterDownload) {
@@ -536,6 +547,10 @@ class DownloadService extends EventEmitter implements DownloadAPI {
         console.log(
           `[Service ProcessQueue] Extraction failed or was cancelled for ${itemAfterDownload.releaseName}.`
         )
+        if (this.queueManager.findItem(itemAfterDownload.releaseName)?.status === 'Error') {
+          // The archive may be bad - make Retry download it again.
+          this.queueManager.updateItem(itemAfterDownload.releaseName, { downloadComplete: false })
+        }
         return
       }
       const itemAfterExtraction = this.queueManager.findItem(itemAfterDownload.releaseName)
@@ -1089,6 +1104,38 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     return this.inferPackageNameFromFolder(folderPath)
   }
 
+  /** True when `folder` holds a complete, finalized split-7z set that still needs extracting. */
+  private async hasCompleteArchive(folder: string, releaseName: string): Promise<boolean> {
+    const dir = folder || join(this.downloadsPath, releaseName)
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true })
+      const files = await Promise.all(
+        entries
+          .filter((e) => e.isFile())
+          .map(async (e) => ({
+            relativePath: e.name,
+            size: (await fs.stat(join(dir, e.name))).size
+          }))
+      )
+      const result = validateDownloadCompletion(files, true)
+      return result.ok && !!result.archive
+    } catch {
+      return false
+    }
+  }
+
+  private skipToExtraction(
+    item: DownloadItem
+  ): Promise<{ success: boolean; startExtraction: boolean; finalState?: DownloadItem }> {
+    const downloadPath = item.downloadPath || join(this.downloadsPath, item.releaseName)
+    this.queueManager.updateItem(item.releaseName, { downloadPath })
+    return Promise.resolve({
+      success: true,
+      startExtraction: true,
+      finalState: this.queueManager.findItem(item.releaseName)
+    })
+  }
+
   public async scanDownloadFolder(): Promise<{ added: number; pruned: number }> {
     if (this.storageStatus.state !== 'available') {
       console.warn('[Service scanDownloadFolder] Skipped: download location is unavailable')
@@ -1120,10 +1167,46 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     let added = 0
     let pruned = 0
     let skipped = 0
+    let queuedForExtraction = 0
 
     for (const dirName of subdirs) {
       const folderPath = join(this.downloadsPath, dirName)
       const existing = queueMap.get(dirName)
+
+      // Fully downloaded but never extracted (app killed / stalled / out of space):
+      // queue it so the pipeline extracts it without downloading again.
+      if (
+        (!existing ||
+          existing.status === 'Cancelled' ||
+          existing.status === 'Error' ||
+          existing.status === 'InstallError') &&
+        (await this.hasCompleteArchive(folderPath, dirName))
+      ) {
+        const packageName = await this.resolvePackageName(dirName, folderPath, catalogPackages)
+        const pending: Partial<DownloadItem> = {
+          status: 'Queued',
+          progress: 100,
+          extractProgress: undefined,
+          downloadPath: folderPath,
+          downloadComplete: true,
+          error: undefined
+        }
+        if (existing) {
+          this.queueManager.updateItem(dirName, pending)
+        } else {
+          this.queueManager.addItem({
+            gameId: dirName,
+            releaseName: dirName,
+            packageName,
+            gameName: dirName,
+            addedDate: Date.now(),
+            ...pending
+          } as DownloadItem)
+        }
+        queuedForExtraction++
+        added++
+        continue
+      }
 
       // Already in the queue → leave it alone (or revive it below).
       if (!existing) {
@@ -1183,6 +1266,7 @@ class DownloadService extends EventEmitter implements DownloadAPI {
     }
 
     if (added > 0 || pruned > 0) this.emitUpdate()
+    if (queuedForExtraction > 0) this.processQueue()
     console.log(`[Service scanDownloadFolder] added=${added} pruned=${pruned} skipped=${skipped}`)
     return { added, pruned }
   }

@@ -809,6 +809,10 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('settings:set-download-path', (_event, path) =>
     settingsService.setDownloadPath(path)
   )
+  typedIpcMain.handle('settings:get-extraction-path', () => settingsService.getExtractionPath())
+  typedIpcMain.handle('settings:set-extraction-path', (_event, path) =>
+    settingsService.setExtractionPath(path)
+  )
   typedIpcMain.handle('settings:get-download-speed-limit', () =>
     settingsService.getDownloadSpeedLimit()
   )

@@ -8,6 +8,7 @@ interface SettingsProviderProps {
 
 export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) => {
   const [downloadPath, setDownloadPathState] = useState<string>('')
+  const [extractionPath, setExtractionPathState] = useState<string>('')
   const [downloadSpeedLimit, setDownloadSpeedLimitState] = useState<number>(0)
   const [uploadSpeedLimit, setUploadSpeedLimitState] = useState<number>(0)
   const [colorScheme, setColorSchemeState] = useState<'light' | 'dark'>(
@@ -26,19 +27,22 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
 
     const loadSettings = async (): Promise<void> => {
       try {
-        const [path, downloadLimit, uploadLimit, colorScheme, server] = await Promise.all([
-          window.api.settings.getDownloadPath(),
-          window.api.settings.getDownloadSpeedLimit(),
-          window.api.settings.getUploadSpeedLimit(),
-          window.api.settings.getColorScheme(),
-          window.api.settings.getServerConfig()
-        ])
+        const [path, extraction, downloadLimit, uploadLimit, colorScheme, server] =
+          await Promise.all([
+            window.api.settings.getDownloadPath(),
+            window.api.settings.getExtractionPath(),
+            window.api.settings.getDownloadSpeedLimit(),
+            window.api.settings.getUploadSpeedLimit(),
+            window.api.settings.getColorScheme(),
+            window.api.settings.getServerConfig()
+          ])
 
         if (isMounted) {
           console.log('Fetched initial download path:', path)
           console.log('Fetched initial download speed limit:', downloadLimit)
           console.log('Fetched initial upload speed limit:', uploadLimit)
           setDownloadPathState(path)
+          setExtractionPathState(extraction)
           setDownloadSpeedLimitState(downloadLimit)
           setUploadSpeedLimitState(uploadLimit)
           setColorSchemeState(colorScheme)
@@ -60,6 +64,18 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
 
     return () => {
       isMounted = false
+    }
+  }, [])
+
+  const setExtractionPath = useCallback(async (path: string): Promise<void> => {
+    try {
+      await window.api.settings.setExtractionPath(path)
+      setExtractionPathState(path)
+      setError(null)
+    } catch (err) {
+      console.error('Error setting extraction path:', err)
+      setError('Failed to update extraction path')
+      throw err
     }
   }, [])
 
@@ -144,6 +160,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
   const value = useMemo<SettingsContextType>(
     () => ({
       downloadPath,
+      extractionPath,
       downloadSpeedLimit,
       uploadSpeedLimit,
       colorScheme,
@@ -151,6 +168,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
       isLoading,
       error,
       setDownloadPath,
+      setExtractionPath,
       setDownloadSpeedLimit,
       setUploadSpeedLimit,
       setColorScheme,
@@ -158,6 +176,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     }),
     [
       downloadPath,
+      extractionPath,
       downloadSpeedLimit,
       uploadSpeedLimit,
       colorScheme,
@@ -165,6 +184,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
       isLoading,
       error,
       setDownloadPath,
+      setExtractionPath,
       setDownloadSpeedLimit,
       setUploadSpeedLimit,
       setColorScheme,
