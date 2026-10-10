@@ -236,6 +236,12 @@ export interface DownloadItem {
   speed?: string
   eta?: string
   extractProgress?: number
+  /**
+   * Set once every archive volume has been downloaded. Lets a restart, or a
+   * folder re-scan, go straight to extraction instead of re-checking the
+   * download. Cleared if extraction fails so Retry downloads again.
+   */
+  downloadComplete?: boolean
   size?: string
   /**
    * Set when the extracted files didn't match the release's release.manifest.
