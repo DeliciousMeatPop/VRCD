@@ -1,10 +1,11 @@
-import { join, basename } from 'path'
+import { join, basename, resolve } from 'path'
 import { promises as fs, existsSync } from 'fs'
 import { execa } from 'execa'
 import { QueueManager } from './queueManager'
 import dependencyService from '../dependencyService'
 import { DownloadItem, DownloadStatus } from '@shared/types'
 import mirrorService from '../mirrorService'
+import settingsService from '../settingsService'
 import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
 import {
   parseReleaseManifest,
@@ -187,11 +188,29 @@ export class ExtractionProcessor {
     console.log(
       `[ExtractProc] Checking available disk space for extraction of ${item.releaseName}...`
     )
-    const availableSpace = await getAvailableDiskSpace(downloadPath)
+    // Optional separate extraction location (Settings > Extraction path). When set, the
+    // archive stays where it was downloaded and the files are extracted there instead,
+    // so the space check below runs against that drive.
+    const extractionRoot = settingsService.getExtractionPath()
+    const outDir = extractionRoot ? join(extractionRoot, item.releaseName) : downloadPath
+    const relocated = resolve(outDir) !== resolve(downloadPath)
+    if (relocated) {
+      try {
+        await fs.mkdir(outDir, { recursive: true })
+      } catch (mkdirError: unknown) {
+        const reason = mkdirError instanceof Error ? mkdirError.message : String(mkdirError)
+        const errorMsg = `Cannot create extraction folder ${outDir}: ${reason}`
+        console.error(`[ExtractProc] ${errorMsg}`)
+        this.updateItemStatus(item.releaseName, 'Error', 100, errorMsg.substring(0, 500))
+        return false
+      }
+    }
+    const availableSpace = await getAvailableDiskSpace(outDir)
     const downloadedSize = await getDirectorySize(downloadPath)
     // Extracted content is typically 2-5x larger than the compressed archive.
     // Use 3x as a conservative estimate to catch cases where space would run out mid-extraction
-    // (archive and extracted files coexist on disk until deletion after success).
+    // (archive and extracted files coexist on disk until deletion after success, unless
+    // extracting to a different drive).
     const requiredSpace = downloadedSize * 3
 
     if (availableSpace === null) {
@@ -313,7 +332,7 @@ export class ExtractionProcessor {
     try {
       const proc = execa(
         sevenZipPath,
-        ['x', archivePath, '-y', `-o${downloadPath}`, `-p${decodedPassword}`, '-bsp1', '-mmt=on'],
+        ['x', archivePath, '-y', `-o${outDir}`, `-p${decodedPassword}`, '-bsp1', '-mmt=on'],
         { windowsHide: true, buffer: false }
       )
 
@@ -369,7 +388,7 @@ export class ExtractionProcessor {
         return false // Indicate failure/cancellation
       }
 
-      console.log(`[ExtractProc] Extraction complete: ${item.releaseName} in ${downloadPath}`)
+      console.log(`[ExtractProc] Extraction complete: ${item.releaseName} in ${outDir}`)
       this.activeExtractions.delete(item.releaseName)
 
       // --- Delete archive files --- START
@@ -403,7 +422,7 @@ export class ExtractionProcessor {
       // --- Delete archive files --- END
 
       // --- Flatten single root folder if it matches releaseName --- START
-      const rootFolderPath = join(downloadPath, item.releaseName)
+      const rootFolderPath = join(outDir, item.releaseName)
       try {
         if (existsSync(rootFolderPath)) {
           const stats = await fs.stat(rootFolderPath)
@@ -415,7 +434,7 @@ export class ExtractionProcessor {
             if (rootFolderContents.length > 0) {
               for (const contentName of rootFolderContents) {
                 const oldPath = join(rootFolderPath, contentName)
-                const newPath = join(downloadPath, contentName)
+                const newPath = join(outDir, contentName)
                 try {
                   // Check if newPath already exists and handle potential conflicts (simple overwrite or log)
                   // For now, we'll attempt to rename, which might fail if newPath exists.
@@ -463,9 +482,9 @@ export class ExtractionProcessor {
       }
       // --- Flatten single root folder if it matches releaseName --- END
 
-      await this.extractNestedArchives(downloadPath, item.releaseName)
+      await this.extractNestedArchives(outDir, item.releaseName)
 
-      const manifestCheck = await this.verifyAgainstReleaseManifest(downloadPath, item.releaseName)
+      const manifestCheck = await this.verifyAgainstReleaseManifest(outDir, item.releaseName)
       // A mismatch is a warning, not a hard failure: a release can ship a wrong
       // manifest, and the user may want to install regardless. Record it (and
       // clear any stale warning on success); the pipeline skips auto-install for
@@ -477,6 +496,17 @@ export class ExtractionProcessor {
         console.warn(
           `[ExtractProc] ${manifestCheck.error} — completing ${item.releaseName} with a warning; auto-install skipped.`
         )
+      }
+
+      if (relocated) {
+        // Installation and deletion follow item.downloadPath, so point it at the extracted files
+        // and drop the now-empty download folder (only if nothing else is left in it).
+        this.queueManager.updateItem(item.releaseName, { downloadPath: outDir })
+        try {
+          await fs.rmdir(downloadPath)
+        } catch {
+          /* not empty or already gone - leave it */
+        }
       }
 
       // Update final status to Completed

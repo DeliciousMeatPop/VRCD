@@ -134,6 +134,8 @@ export interface IPCChannels {
   // Settings related channels
   'settings:get-download-path': DefineChannel<[], string>
   'settings:set-download-path': DefineChannel<[path: string], void>
+  'settings:get-extraction-path': DefineChannel<[], string>
+  'settings:set-extraction-path': DefineChannel<[path: string], void>
   'settings:get-download-speed-limit': DefineChannel<[], number>
   'settings:set-download-speed-limit': DefineChannel<[limit: number], void>
   'settings:get-upload-speed-limit': DefineChannel<[], number>
@@ -147,7 +149,10 @@ export interface IPCChannels {
   'settings:get-existing-download-action': DefineChannel<[], ExistingDownloadAction>
   'settings:set-existing-download-action': DefineChannel<[v: ExistingDownloadAction], void>
   'settings:get-download-proxy': DefineChannel<[], DownloadProxySettings>
-  'settings:set-download-proxy': DefineChannel<[settings: DownloadProxySettings], DownloadProxySettings>
+  'settings:set-download-proxy': DefineChannel<
+    [settings: DownloadProxySettings],
+    DownloadProxySettings
+  >
 
   // Log upload related channels
   'logs:upload-current': DefineChannel<[], { url: string; password: string; slug: string } | null>
