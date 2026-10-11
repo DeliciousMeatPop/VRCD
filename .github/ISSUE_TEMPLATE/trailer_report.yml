@@ -1,0 +1,55 @@
+name: "\U0001F3AC Wrong Trailer"
+description: Report an incorrect or missing trailer, and optionally suggest a better one.
+title: '[Trailer] '
+labels: ['trailer-report']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Opened from the trailer panel in VR CyberDeck? The first three fields are already filled in.
+        Just pick the problem and, if you know a better trailer, paste its YouTube link.
+
+  - type: input
+    id: game_name
+    attributes:
+      label: Game name
+    validations:
+      required: true
+
+  - type: input
+    id: package_name
+    attributes:
+      label: Package name
+      description: Looks like `com.company.game`.
+    validations:
+      required: true
+
+  - type: input
+    id: current_trailer
+    attributes:
+      label: Current trailer
+      description: The trailer VR CyberDeck showed, or `none`.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What's wrong?
+      options:
+        - Wrong game
+        - Not a trailer (gameplay, review, music, etc.)
+        - Different version or a mod
+        - No trailer is shown but one exists
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: suggested_trailer
+    attributes:
+      label: Suggested trailer (optional)
+      description: A YouTube link to a better trailer.
+      placeholder: https://www.youtube.com/watch?v=...
+    validations:
+      required: false

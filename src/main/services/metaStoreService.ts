@@ -18,6 +18,12 @@ const YT_SEARCH_URL = 'https://www.youtube.com/results'
 const CACHE_VERSION = 4
 const YOUTUBE_TTL = 30 * 24 * 60 * 60_000
 const MISS_TTL = 24 * 60 * 60_000
+/** Maintainer-curated trailer fixes, published from the repo and fetched on every launch. */
+const REMOTE_OVERRIDES_URL =
+  'https://raw.githubusercontent.com/DeliciousMeatPop/VRCD/main/data/trailer-overrides.json'
+const REMOTE_OVERRIDES_MAX_BYTES = 2_000_000
+const PACKAGE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+const YOUTUBE_WATCH_PATTERN = /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/
 
 interface CacheEntry {
   requestedTitle: string
@@ -44,6 +50,8 @@ export interface MetaStoreServiceOptions {
   /** Directory containing VRP's metadata cache and explicit trailer overrides. */
   dataDir?: string
   get?: TrailerGet
+  /** Where `refreshRemoteOverrides` downloads fixes from; `null` disables the download. */
+  remoteOverridesUrl?: string | null
   storeLookup?: StoreLookup
   clock?: () => number
 }
@@ -74,6 +82,40 @@ function normalizedOverride(entry: OverrideEntry): string | null {
   }
 }
 
+/**
+ * Reduces a downloaded override map to entries that are safe to apply for every
+ * user: a disabled trailer (`null`) or a plain YouTube video. Anything else
+ * (other hosts, local-video://, malformed keys) is dropped.
+ */
+function sanitizeRemoteOverrides(raw: unknown): Map<string, OverrideEntry> {
+  const result = new Map<string, OverrideEntry>()
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return result
+
+  for (const [packageName, value] of Object.entries(raw)) {
+    if (!PACKAGE_NAME_PATTERN.test(packageName)) continue
+    if (value === null) {
+      result.set(packageName, { url: null })
+      continue
+    }
+    const entry: OverrideEntry | null =
+      typeof value === 'string'
+        ? { url: value }
+        : value && typeof value === 'object'
+          ? (value as OverrideEntry)
+          : null
+    if (!entry) continue
+    if (entry.url === null && !entry.youtubeId) {
+      result.set(packageName, { url: null })
+      continue
+    }
+    const normalized = normalizedOverride(entry)
+    if (normalized && YOUTUBE_WATCH_PATTERN.test(normalized)) {
+      result.set(packageName, { url: normalized })
+    }
+  }
+  return result
+}
+
 function verifiedNativeUrl(value: string | undefined): string | null {
   if (!value) return null
   return playableStoreVideo(value, 'meta') ?? playableStoreVideo(value, 'steam') ?? null
@@ -83,9 +125,12 @@ function verifiedNativeUrl(value: string | undefined): string | null {
 export class MetaStoreService {
   private readonly cache = new Map<string, CacheEntry>()
   private readonly overrides = new Map<string, OverrideEntry>()
+  private remoteOverrides = new Map<string, OverrideEntry>()
   private readonly inFlight = new Map<string, Promise<string | null>>()
   private readonly cachePath: string
   private readonly overridesPath: string
+  private readonly remoteOverridesPath: string
+  private readonly remoteOverridesUrl: string | null
   private readonly get: TrailerGet
   private readonly storeLookup: StoreLookup
   private readonly clock: () => number
@@ -96,6 +141,9 @@ export class MetaStoreService {
     const dataDir = options.dataDir ?? join(app.getPath('userData'), 'vrp-data')
     this.cachePath = join(dataDir, 'meta-trailer-cache.json')
     this.overridesPath = join(dataDir, 'trailer-overrides.json')
+    this.remoteOverridesPath = join(dataDir, 'trailer-overrides-remote.json')
+    this.remoteOverridesUrl =
+      options.remoteOverridesUrl === undefined ? REMOTE_OVERRIDES_URL : options.remoteOverridesUrl
     this.get = options.get ?? axios.get
     this.clock = options.clock ?? Date.now
     if (options.storeLookup) this.storeLookup = options.storeLookup
@@ -142,6 +190,49 @@ export class MetaStoreService {
       }
     } catch {
       // Overrides are optional.
+    }
+
+    try {
+      const raw = JSON.parse(await fs.readFile(this.remoteOverridesPath, 'utf8')) as unknown
+      this.remoteOverrides = sanitizeRemoteOverrides(raw)
+    } catch {
+      // No downloaded overrides yet (first launch, or offline since install).
+    }
+  }
+
+  /**
+   * Downloads the maintainer's trailer fixes and keeps the last good copy on
+   * disk. Failures are non-fatal: the previously downloaded copy stays active.
+   */
+  public async refreshRemoteOverrides(): Promise<boolean> {
+    await this.loaded
+    if (!this.remoteOverridesUrl) return false
+
+    try {
+      const response = await this.get(this.remoteOverridesUrl, {
+        timeout: 10_000,
+        maxContentLength: REMOTE_OVERRIDES_MAX_BYTES,
+        responseType: 'json',
+        headers: { 'User-Agent': USER_AGENT, 'Cache-Control': 'no-cache' }
+      })
+      const raw = typeof response.data === 'string' ? JSON.parse(response.data) : response.data
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        throw new Error('Remote trailer overrides are not a JSON object')
+      }
+
+      const overrides = sanitizeRemoteOverrides(raw)
+      const serialized = Object.fromEntries(
+        [...overrides].map(([packageName, entry]) => [packageName, entry.url ?? null])
+      )
+      const temporaryPath = `${this.remoteOverridesPath}.tmp`
+      await fs.mkdir(dirname(this.remoteOverridesPath), { recursive: true })
+      await fs.writeFile(temporaryPath, JSON.stringify(serialized, null, 2))
+      await fs.rename(temporaryPath, this.remoteOverridesPath)
+      this.remoteOverrides = overrides
+      return true
+    } catch (error) {
+      console.warn('[MetaStoreService] Failed to refresh remote trailer overrides:', error)
+      return false
     }
   }
 
@@ -191,8 +282,12 @@ export class MetaStoreService {
     await this.loaded
     const requestedTitle = normalizeGameTitle(gameName)
 
+    // A user's own overrides beat the maintainer's downloaded fixes, which beat automatic lookup.
     if (packageName && this.overrides.has(packageName)) {
       return normalizedOverride(this.overrides.get(packageName)!)
+    }
+    if (packageName && this.remoteOverrides.has(packageName)) {
+      return normalizedOverride(this.remoteOverrides.get(packageName)!)
     }
     if (!isSpecificGameTitle(gameName)) return null
 

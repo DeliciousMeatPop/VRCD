@@ -406,6 +406,9 @@ app.whenReady().then(async () => {
     }
   }
 
+  // Pull the latest maintainer trailer fixes in the background; never blocks startup.
+  void metaStoreService.refreshRemoteOverrides()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.vrcyberdeck')
 
