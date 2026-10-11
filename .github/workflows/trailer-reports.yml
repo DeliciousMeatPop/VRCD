@@ -1,0 +1,142 @@
+name: Trailer Reports
+
+# Collects "Wrong Trailer" issue-form submissions into data/trailer-reports.json
+# so they can be reviewed in one place. The app never reads that file; fixes go
+# into data/trailer-overrides.json by hand.
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+
+# One run at a time so concurrent reports can't race each other's commits.
+concurrency:
+  group: trailer-reports
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: Record trailer report
+    if: startsWith(github.event.issue.title, '[Trailer]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Ensure trailer-report label exists
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const name = 'trailer-report'
+            try {
+              await github.rest.issues.getLabel({ ...context.repo, name })
+            } catch {
+              await github.rest.issues.createLabel({
+                ...context.repo,
+                name,
+                color: '1d76db',
+                description: 'Incorrect trailer reported from the app'
+              })
+            }
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: context.payload.issue.number,
+              labels: [name]
+            })
+
+      - name: Update data/trailer-reports.json
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const file = 'data/trailer-reports.json'
+            const issue = context.payload.issue
+            const body = issue.body ?? ''
+
+            // Issue forms render as "### Label\n\nvalue" blocks.
+            const field = (label) => {
+              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const match = body.match(new RegExp(`###\\s+${escaped}\\s*\\n+([\\s\\S]*?)(?=\\n###\\s|$)`))
+              const value = (match?.[1] ?? '').trim()
+              return value === '_No response_' ? '' : value
+            }
+
+            const packageName = field('Package name')
+            if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(packageName)) {
+              core.warning(`Ignoring report with invalid package name: ${packageName.slice(0, 80)}`)
+              return
+            }
+
+            // Only YouTube video links are kept; they are what the override file accepts.
+            const youtubeId = (value) => {
+              try {
+                const url = new URL(value)
+                const host = url.hostname.toLowerCase()
+                let id = null
+                if (host === 'youtu.be') id = url.pathname.split('/').filter(Boolean)[0] ?? null
+                else if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+                  id = url.pathname === '/watch' ? url.searchParams.get('v') : null
+                }
+                return id && /^[\w-]{11}$/.test(id) ? id : null
+              } catch {
+                return null
+              }
+            }
+
+            const currentId = youtubeId(field('Current trailer'))
+            const suggestedRaw = field('Suggested trailer (optional)')
+            const suggestedId = suggestedRaw ? youtubeId(suggestedRaw) : null
+
+            const report = {
+              issue: issue.number,
+              reporter: issue.user.login,
+              problem: field("What's wrong?").slice(0, 100),
+              currentTrailer: currentId ? `https://www.youtube.com/watch?v=${currentId}` : null,
+              suggestedTrailer: suggestedId ? `https://www.youtube.com/watch?v=${suggestedId}` : null,
+              reportedAt: issue.created_at
+            }
+
+            let data = {}
+            try {
+              data = JSON.parse(fs.readFileSync(file, 'utf8'))
+            } catch {
+              // First report.
+            }
+
+            // An edited issue replaces its earlier entry, even if the package name changed.
+            for (const [name, entry] of Object.entries(data)) {
+              entry.reports = entry.reports.filter((r) => r.issue !== issue.number)
+              if (entry.reports.length === 0) delete data[name]
+            }
+
+            const entry = data[packageName] ?? { gameName: '', reports: [] }
+            entry.gameName = field('Game name').slice(0, 200) || entry.gameName
+            entry.reports.push(report)
+            entry.reports.sort((a, b) => a.issue - b.issue)
+            entry.reportCount = entry.reports.length
+            data[packageName] = entry
+
+            // Most-reported games first so the worst ones are at the top.
+            const sorted = Object.fromEntries(
+              Object.entries(data).sort(([, a], [, b]) => b.reportCount - a.reportCount)
+            )
+            fs.mkdirSync('data', { recursive: true })
+            fs.writeFileSync(file, JSON.stringify(sorted, null, 2) + '\n')
+
+      - name: Commit changes
+        run: |
+          if git diff --quiet -- data/trailer-reports.json; then
+            echo "No changes to record."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/trailer-reports.json
+          git commit -m "chore: update trailer reports [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

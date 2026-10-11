@@ -433,4 +433,117 @@ describe('MetaStoreService', () => {
     expect(Object.values(persisted.entries)).toHaveLength(2)
     await expect(readFile(join(dataDir, 'meta-trailer-cache.json.tmp'))).rejects.toThrow()
   })
+  describe('remote overrides', () => {
+    const remoteService = async (
+      dataDir: string,
+      remote: unknown,
+      onGet?: () => void
+    ): Promise<MetaStoreService> =>
+      new MetaStoreService({
+        dataDir,
+        remoteOverridesUrl: 'https://example.test/trailer-overrides.json',
+        storeLookup: async () => null,
+        get: async (url) => {
+          onGet?.()
+          if (url === 'https://example.test/trailer-overrides.json') {
+            if (remote instanceof Error) throw remote
+            return { data: remote }
+          }
+          return { data: youtubeSearchPage('Auto - Official Trailer', 'auto0000001') }
+        }
+      })
+
+    it('applies downloaded fixes above automatic lookup and keeps them for offline launches', async () => {
+      const dataDir = await temporaryDataDir()
+      const service = await remoteService(dataDir, {
+        'com.fixed': 'https://www.youtube.com/watch?v=fixed000001',
+        'com.hidden': null,
+        'com.byid': { youtubeId: 'byid0000001' }
+      })
+
+      expect(await service.refreshRemoteOverrides()).toBe(true)
+      await expect(service.getTrailerUrl('Fixed', 'com.fixed')).resolves.toBe(
+        'https://www.youtube.com/watch?v=fixed000001'
+      )
+      await expect(service.getTrailerUrl('Hidden', 'com.hidden')).resolves.toBeNull()
+      await expect(service.getTrailerUrl('By Id', 'com.byid')).resolves.toBe(
+        'https://www.youtube.com/watch?v=byid0000001'
+      )
+
+      const offline = await remoteService(dataDir, new Error('offline'))
+      expect(await offline.refreshRemoteOverrides()).toBe(false)
+      await expect(offline.getTrailerUrl('Fixed', 'com.fixed')).resolves.toBe(
+        'https://www.youtube.com/watch?v=fixed000001'
+      )
+    })
+
+    it('drops downloaded entries that are not plain YouTube videos', async () => {
+      const service = await remoteService(await temporaryDataDir(), {
+        'com.http': 'http://media.lan/trailer.mp4',
+        'com.local': 'local-video://trailers/manual.mp4',
+        'com.other': 'https://evil.example/watch?v=fixed000001',
+        '../bad-key': 'https://www.youtube.com/watch?v=fixed000001',
+        'com.good': 'https://youtu.be/good0000001?t=5'
+      })
+
+      await service.refreshRemoteOverrides()
+      await expect(service.getTrailerUrl('Auto', 'com.http')).resolves.toBe(
+        'https://www.youtube.com/watch?v=auto0000001'
+      )
+      await expect(service.getTrailerUrl('Auto', 'com.local')).resolves.toBe(
+        'https://www.youtube.com/watch?v=auto0000001'
+      )
+      await expect(service.getTrailerUrl('Auto', 'com.other')).resolves.toBe(
+        'https://www.youtube.com/watch?v=auto0000001'
+      )
+      await expect(service.getTrailerUrl('Good', 'com.good')).resolves.toBe(
+        'https://www.youtube.com/watch?v=good0000001'
+      )
+    })
+
+    it('lets a local override beat a downloaded fix', async () => {
+      const dataDir = await temporaryDataDir()
+      await writeFile(
+        join(dataDir, 'trailer-overrides.json'),
+        JSON.stringify({ 'com.both': 'https://www.youtube.com/watch?v=local000001' })
+      )
+      const service = await remoteService(dataDir, {
+        'com.both': 'https://www.youtube.com/watch?v=remote00001'
+      })
+
+      await service.refreshRemoteOverrides()
+      await expect(service.getTrailerUrl('Both', 'com.both')).resolves.toBe(
+        'https://www.youtube.com/watch?v=local000001'
+      )
+    })
+
+    it('keeps the previous fixes when the download is not a JSON object', async () => {
+      const dataDir = await temporaryDataDir()
+      await (
+        await remoteService(dataDir, { 'com.fixed': 'https://youtu.be/fixed000001' })
+      ).refreshRemoteOverrides()
+
+      const service = await remoteService(dataDir, ['not', 'an', 'object'])
+      expect(await service.refreshRemoteOverrides()).toBe(false)
+      await expect(service.getTrailerUrl('Fixed', 'com.fixed')).resolves.toBe(
+        'https://www.youtube.com/watch?v=fixed000001'
+      )
+    })
+
+    it('does not download when remote overrides are disabled', async () => {
+      let requests = 0
+      const service = new MetaStoreService({
+        dataDir: await temporaryDataDir(),
+        remoteOverridesUrl: null,
+        storeLookup: async () => null,
+        get: async () => {
+          requests += 1
+          return { data: {} }
+        }
+      })
+
+      expect(await service.refreshRemoteOverrides()).toBe(false)
+      expect(requests).toBe(0)
+    })
+  })
 })

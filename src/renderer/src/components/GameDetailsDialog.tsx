@@ -34,6 +34,7 @@ import NoteRenderer from './NoteRenderer'
 import GameSaveBackupControls from './backup/GameSaveBackupControls'
 import GameCoverLightbox from './GameCoverLightbox'
 import GameDescriptionPanel from './GameDescriptionPanel'
+import { buildTrailerReportUrl } from '@shared/trailerReport'
 import { gameDescriptionKey, toGameDescriptionRequest } from '@renderer/utils/gameDescription'
 
 const NEON = 'var(--vrcd-neon)'
@@ -844,6 +845,29 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
               >
                 No trailer available.
               </p>
+            )}
+            {trailerOpen && !loadingVideo && game.packageName && (
+              <a
+                href={buildTrailerReportUrl({
+                  gameName: game.name,
+                  packageName: game.packageName,
+                  currentTrailerUrl: trailerUrl
+                })}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-block',
+                  marginTop: 8,
+                  color: 'rgba(var(--vrcd-neon-raw),0.6)',
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  letterSpacing: '0.04em'
+                }}
+              >
+                {trailerUrl
+                  ? 'Wrong trailer? Report it or suggest a better one →'
+                  : 'Know a trailer? Suggest one →'}
+              </a>
             )}
           </div>
 
