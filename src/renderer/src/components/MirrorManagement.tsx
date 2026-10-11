@@ -400,12 +400,28 @@ type = ftp
 host = example.com
 port = 21
 user = username
-pass = password`}
+pass = rclone obscured password`}
                       value={configContent}
                       onChange={(_, data) => setConfigContent(data.value)}
                       rows={8}
                       resize="vertical"
                     />
+                    <Text size={200}>
+                      {"Don't know what an rclone obscured password is? "}
+                      <a
+                        href="https://rclone.org/commands/rclone_obscure/"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: 'var(--vrcd-neon)' }}
+                      >
+                        {'https://rclone.org/commands/rclone_obscure/'}
+                      </a>
+                    </Text>
+                    <Text size={200}>
+                      {
+                        'If that rclone doc confuses you, create the config using the rclone config command and then copy and paste the remote here after it is created. This will give you the obscured password you need.'
+                      }
+                    </Text>
                   </DialogBody>
                   <DialogActions>
                     <Button
