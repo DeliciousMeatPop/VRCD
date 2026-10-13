@@ -1,1 +1,16 @@
-{}
+{
+  "com.xsgames.seventeenseconds": {
+    "gameName": "17 Seconds",
+    "reports": [
+      {
+        "issue": 68,
+        "reporter": "ZAKsPop",
+        "problem": "Other",
+        "currentTrailer": "https://www.youtube.com/watch?v=MT_SWkfrjbM",
+        "suggestedTrailer": "https://www.youtube.com/watch?v=VcBRxr7qHWE",
+        "reportedAt": "2026-10-13T23:11:50Z"
+      }
+    ],
+    "reportCount": 1
+  }
+}
