@@ -12,5 +12,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.foundrysix.siege.metaquest": {
+    "gameName": "100 Day Siege",
+    "reports": [
+      {
+        "issue": 69,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=gj3gD3TeleI",
+        "reportedAt": "2026-10-13T23:13:50Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
