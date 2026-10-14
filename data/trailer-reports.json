@@ -26,5 +26,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.badflyinteractive.deadeffect2": {
+    "gameName": "Dead Effect 2",
+    "reports": [
+      {
+        "issue": 70,
+        "reporter": "Sonnyjay19",
+        "problem": "Other",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=z9MpKuu-pCo",
+        "reportedAt": "2026-10-14T00:21:43Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
