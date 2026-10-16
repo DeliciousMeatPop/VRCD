@@ -25,3 +25,9 @@ Maps a package name to the trailer that should be shown:
 Rebuilt by the **Trailer Reports** workflow from issues made with the _Wrong trailer_ issue form. It lists, per
 package, how many people reported it, the trailer they saw, and any better trailers they suggested. Review it, then
 copy the good suggestions into `trailer-overrides.json`.
+
+## `missing-trailers.json` (generated locally)
+
+Run `python scripts/list_missing_trailers.py` on a machine where CyberDeck has been used. It reads the app's trailer
+cache and lists the games whose lookup found nothing (skipping any already in `trailer-overrides.json`). Only games
+that have been opened in the library are in the cache. Add a trailer for each one you want covered.
