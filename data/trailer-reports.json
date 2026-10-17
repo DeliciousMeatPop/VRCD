@@ -68,5 +68,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.LocoMotionDevs.Elements": {
+    "gameName": "Elements Divided",
+    "reports": [
+      {
+        "issue": 74,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=9DObM8GJ2Ng",
+        "reportedAt": "2026-10-17T02:03:53Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
