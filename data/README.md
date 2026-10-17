@@ -28,6 +28,6 @@ copy the good suggestions into `trailer-overrides.json`.
 
 ## `missing-trailers.json` (generated locally)
 
-Run `python scripts/list_missing_trailers.py` on a machine where CyberDeck has been used. It reads the app's trailer
+Run `python list_missing_trailers.py` (it works from any folder; the list is written next to the script) on a machine where CyberDeck has been used. It reads the app's trailer
 cache and lists the games whose lookup found nothing (skipping any already in `trailer-overrides.json`). Only games
 that have been opened in the library are in the cache. Add a trailer for each one you want covered.

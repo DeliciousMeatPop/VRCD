@@ -3,8 +3,9 @@
 
 Reads CyberDeck's trailer cache (meta-trailer-cache.json), picks the games whose
 lookup came back empty, drops any that already have an entry in
-data/trailer-overrides.json, and writes the rest to data/missing-trailers.json.
-Fill the good ones into trailer-overrides.json by hand.
+trailer-overrides.json (if it can find one), and writes the rest to
+missing-trailers.json next to this script. Add a trailer for each one you want
+covered in trailer-overrides.json.
 
 Only games that have been looked up are in the cache (opening a game's details
 looks its trailer up), so browse the library first for wider coverage.
@@ -19,7 +20,7 @@ import os
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 APP_FOLDER = "vr-cyberdeck"
 
 
@@ -41,6 +42,17 @@ def find_cache(explicit):
     sys.exit("Could not find meta-trailer-cache.json. Pass its location with --cache.")
 
 
+def default_overrides():
+    """Use trailer-overrides.json from the repo's data folder or next to the script, if present."""
+    for candidate in (
+        SCRIPT_DIR.parent / "data" / "trailer-overrides.json",
+        SCRIPT_DIR / "trailer-overrides.json",
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def load_json(path, fallback):
     try:
         return json.loads(Path(path).read_text(encoding="utf-8"))
@@ -51,13 +63,21 @@ def load_json(path, fallback):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--cache", help="path to meta-trailer-cache.json (auto-detected by default)")
-    parser.add_argument("--overrides", default=str(REPO_ROOT / "data" / "trailer-overrides.json"))
-    parser.add_argument("--out", default=str(REPO_ROOT / "data" / "missing-trailers.json"))
+    parser.add_argument(
+        "--overrides",
+        help="path to trailer-overrides.json (found next to the script or in ../data by default)",
+    )
+    parser.add_argument(
+        "--out",
+        default=str(SCRIPT_DIR / "missing-trailers.json"),
+        help="where to write the list (default: next to this script)",
+    )
     args = parser.parse_args()
 
     cache_path = find_cache(args.cache)
     entries = load_json(cache_path, {}).get("entries", {})
-    overrides = load_json(args.overrides, {})
+    overrides_path = args.overrides or default_overrides()
+    overrides = load_json(overrides_path, {}) if overrides_path else {}
 
     missing = {}
     for key, entry in entries.items():
@@ -73,7 +93,9 @@ def main():
         }
 
     ordered = dict(sorted(missing.items(), key=lambda item: item[1]["gameName"]))
-    Path(args.out).write_text(json.dumps(ordered, indent=2) + "\n", encoding="utf-8")
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(ordered, indent=2) + "\n", encoding="utf-8")
     print(f"{len(ordered)} games without a trailer -> {args.out}")
 
 
