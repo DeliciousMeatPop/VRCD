@@ -110,5 +110,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.LevelGames.VRBOX": {
+    "gameName": "VRBOX",
+    "reports": [
+      {
+        "issue": 80,
+        "reporter": "latsuha",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": "https://www.youtube.com/watch?v=DZPdRcsVHE4",
+        "suggestedTrailer": "https://www.youtube.com/watch?v=p38-SG-nGUw",
+        "reportedAt": "2026-10-17T17:05:20Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
