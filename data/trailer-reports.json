@@ -124,5 +124,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.RealitiesIO.puzzlingPlaces": {
+    "gameName": "Puzzling Places",
+    "reports": [
+      {
+        "issue": 81,
+        "reporter": "Max-gee",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=8Bmhwd_xsLU",
+        "reportedAt": "2026-10-17T22:46:11Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
