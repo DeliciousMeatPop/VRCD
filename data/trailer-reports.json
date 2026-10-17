@@ -40,5 +40,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.cmgames.unloop": {
+    "gameName": "UnLoop",
+    "reports": [
+      {
+        "issue": 72,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=1ldq9c5lNhA",
+        "reportedAt": "2026-10-17T01:55:07Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
