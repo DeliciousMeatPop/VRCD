@@ -54,5 +54,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.BucketheadEntertainment.RUMBLE2": {
+    "gameName": "RUMBLE",
+    "reports": [
+      {
+        "issue": 73,
+        "reporter": "ZAKsPop",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": "https://www.youtube.com/watch?v=QbE5JpYWhGk",
+        "suggestedTrailer": "https://www.youtube.com/watch?v=EyAilF2wJB8",
+        "reportedAt": "2026-10-17T02:00:00Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
