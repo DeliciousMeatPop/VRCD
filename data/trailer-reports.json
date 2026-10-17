@@ -82,5 +82,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.CMGames.IntoTheRadius2": {
+    "gameName": "Into The Radius 2",
+    "reports": [
+      {
+        "issue": 75,
+        "reporter": "ZAKsPop",
+        "problem": "Other",
+        "currentTrailer": "https://www.youtube.com/watch?v=cD9OZYlwRKk",
+        "suggestedTrailer": "https://www.youtube.com/watch?v=Pf16_OkA9dk",
+        "reportedAt": "2026-10-17T02:05:58Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
