@@ -40,5 +40,61 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.cmgames.unloop": {
+    "gameName": "UnLoop",
+    "reports": [
+      {
+        "issue": 72,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=1ldq9c5lNhA",
+        "reportedAt": "2026-10-17T01:55:07Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "com.BucketheadEntertainment.RUMBLE2": {
+    "gameName": "RUMBLE",
+    "reports": [
+      {
+        "issue": 73,
+        "reporter": "ZAKsPop",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": "https://www.youtube.com/watch?v=QbE5JpYWhGk",
+        "suggestedTrailer": "https://www.youtube.com/watch?v=EyAilF2wJB8",
+        "reportedAt": "2026-10-17T02:00:00Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "com.LocoMotionDevs.Elements": {
+    "gameName": "Elements Divided",
+    "reports": [
+      {
+        "issue": 74,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=9DObM8GJ2Ng",
+        "reportedAt": "2026-10-17T02:03:53Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "com.CMGames.IntoTheRadius2": {
+    "gameName": "Into The Radius 2",
+    "reports": [
+      {
+        "issue": 75,
+        "reporter": "ZAKsPop",
+        "problem": "Other",
+        "currentTrailer": "https://www.youtube.com/watch?v=cD9OZYlwRKk",
+        "suggestedTrailer": "https://www.youtube.com/watch?v=Pf16_OkA9dk",
+        "reportedAt": "2026-10-17T02:05:58Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
