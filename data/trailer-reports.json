@@ -96,5 +96,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.team9.abcdlite": {
+    "gameName": "A Black Climbing Dog",
+    "reports": [
+      {
+        "issue": 79,
+        "reporter": "latsuha",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=7SJqHpVQzKA",
+        "reportedAt": "2026-10-17T12:23:15Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
