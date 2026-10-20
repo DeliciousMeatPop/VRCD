@@ -222,5 +222,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.mrf.dm.realityguard.quest": {
+    "gameName": "RealityGuard (MR-Fix)",
+    "reports": [
+      {
+        "issue": 88,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=zlNow99rxCk",
+        "reportedAt": "2026-10-20T04:39:09Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
