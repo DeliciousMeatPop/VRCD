@@ -194,5 +194,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.framesixtylabs.astro": {
+    "gameName": "Astro Intruders",
+    "reports": [
+      {
+        "issue": 86,
+        "reporter": "danieldnl0001-dotcom",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=gUBMJ097tpY",
+        "reportedAt": "2026-10-20T01:12:27Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
