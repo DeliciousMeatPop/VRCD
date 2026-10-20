@@ -292,5 +292,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.CreativityAR.FixerUndercover": {
+    "gameName": "Fixer Undercover",
+    "reports": [
+      {
+        "issue": 93,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=eYFIxhV9YvQ",
+        "reportedAt": "2026-10-20T05:19:04Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
