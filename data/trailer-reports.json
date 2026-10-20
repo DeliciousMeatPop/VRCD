@@ -236,5 +236,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.ZenElephant.GridTsugi": {
+    "gameName": "GridTsugi",
+    "reports": [
+      {
+        "issue": 89,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=GFrKE5VCLIY",
+        "reportedAt": "2026-10-20T04:49:31Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
