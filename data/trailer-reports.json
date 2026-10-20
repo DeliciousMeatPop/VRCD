@@ -208,5 +208,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.lingjing.zhulinguaitan": {
+    "gameName": "Bamboo Grove",
+    "reports": [
+      {
+        "issue": 87,
+        "reporter": "danieldnl0001-dotcom",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=Yx_5KmBk040",
+        "reportedAt": "2026-10-20T01:27:14Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
