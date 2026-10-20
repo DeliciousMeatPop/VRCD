@@ -180,5 +180,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.SDI.arashi": {
+    "gameName": "Arashi- Castles of Sin - Final Cut",
+    "reports": [
+      {
+        "issue": 85,
+        "reporter": "danieldnl0001-dotcom",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=F4daTX9beTQ",
+        "reportedAt": "2026-10-20T01:10:46Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
