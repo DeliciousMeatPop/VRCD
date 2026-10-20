@@ -152,5 +152,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.mindwayvr.applabalpha": {
+    "gameName": "Mindway",
+    "reports": [
+      {
+        "issue": 83,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=31K9HY0CdA8",
+        "reportedAt": "2026-10-20T00:04:08Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
