@@ -278,5 +278,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.DylanVanBeek.TheDoctorsRoom": {
+    "gameName": "The Doctor's Room",
+    "reports": [
+      {
+        "issue": 92,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=P-SuXHDLqZY",
+        "reportedAt": "2026-10-20T05:16:21Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
