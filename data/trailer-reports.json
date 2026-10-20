@@ -166,5 +166,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.resolutiongames.codenamelazarus": {
+    "gameName": "Acron- Attack of the Squirrels!",
+    "reports": [
+      {
+        "issue": 84,
+        "reporter": "danieldnl0001-dotcom",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=LP29BxhvHfc",
+        "reportedAt": "2026-10-20T01:08:50Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
