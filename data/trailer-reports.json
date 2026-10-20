@@ -250,5 +250,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.fieldofvision.wordomi": {
+    "gameName": "Wordomi",
+    "reports": [
+      {
+        "issue": 90,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=vHcbnhv47rI",
+        "reportedAt": "2026-10-20T05:07:07Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
