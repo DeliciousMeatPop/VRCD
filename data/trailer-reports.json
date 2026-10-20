@@ -264,5 +264,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.FriendlyFireStudios.ALongSurvive": {
+    "gameName": "A Long Survive",
+    "reports": [
+      {
+        "issue": 91,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=jMDvYdqWPz8",
+        "reportedAt": "2026-10-20T05:12:27Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
