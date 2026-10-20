@@ -138,5 +138,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "games.hypervr.badinmate": {
+    "gameName": "Bad Inmate",
+    "reports": [
+      {
+        "issue": 82,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=EkbSZpeTll0",
+        "reportedAt": "2026-10-20T00:01:18Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
