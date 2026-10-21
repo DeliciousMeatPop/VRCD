@@ -306,5 +306,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.mrf.kluge.SynthRiders": {
+    "gameName": "Synth Riders (MR-Fix)",
+    "reports": [
+      {
+        "issue": 98,
+        "reporter": "JM-Vegan",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=zXkF_bI7rsc",
+        "reportedAt": "2026-10-21T15:58:52Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
