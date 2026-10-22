@@ -320,5 +320,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.VRFactory.VRBartender": {
+    "gameName": "BARTENDER VR SIMULATOR",
+    "reports": [
+      {
+        "issue": 99,
+        "reporter": "MrDestroer",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=kEpOdKvpDnM",
+        "reportedAt": "2026-10-22T18:40:07Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
