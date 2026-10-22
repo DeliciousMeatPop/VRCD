@@ -69,6 +69,18 @@ export function isReleaseMetadataSidecar(path: string): boolean {
 }
 
 /**
+ * True if a manifest entry is a root-level `.7z` archive. Many releases ship a
+ * payload archive (e.g. `_data.7z`) next to an install.txt; the app extracts it
+ * and then deletes it, so it is listed in the manifest but legitimately absent
+ * afterwards. A missing one is informational, not a sign of a broken extraction.
+ * Only root-level archives count — a missing `.7z` nested in a folder is still a
+ * real problem.
+ */
+export function isRootLevelArchive(path: string): boolean {
+  return !path.includes('/') && path.toLowerCase().endsWith('.7z')
+}
+
+/**
  * Parse the text of a `release.manifest`. Never throws — malformed or
  * unrecognised lines are skipped, so a partial/garbage manifest yields whatever
  * valid file rows it could find (possibly none).
