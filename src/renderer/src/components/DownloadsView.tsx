@@ -25,7 +25,8 @@ import {
   DeleteDismissRegular,
   DismissCircleRegular as ClearIcon,
   ChevronUpRegular,
-  ChevronDownRegular
+  ChevronDownRegular,
+  WarningRegular
 } from '@fluentui/react-icons'
 import { formatDistanceToNow } from 'date-fns'
 import placeholderImage from '../assets/images/game-placeholder.png'
@@ -98,6 +99,12 @@ const useStyles = makeStyles({
   }
 })
 
+/** Finished downloads that need the user's eye: failed, or completed with a manifest warning. */
+const needsAttention = (item: DownloadItem): boolean =>
+  item.status === 'Error' ||
+  item.status === 'InstallError' ||
+  (item.status === 'Completed' && !!item.manifestWarning)
+
 interface DownloadsViewProps {
   onClose: () => void
 }
@@ -126,6 +133,7 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
   const [pendingUninstall, setPendingUninstall] = useState<GameInfo | null>(null)
   const [scanResult, setScanResult] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
+  const [attentionOnly, setAttentionOnly] = useState(false)
   const [errorDetail, setErrorDetail] = useState<{
     error: string
     phase: ErrorPhase
@@ -245,6 +253,15 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
 
   const sideloadingDisabled = getSideloadingDisabled()
 
+  // Pin items needing attention to the top (stable: everything else keeps queue
+  // order), and optionally show only those.
+  const attentionCount = queue.filter(needsAttention).length
+  const showAttentionOnly = attentionOnly && attentionCount > 0
+  const visibleQueue = [
+    ...queue.filter(needsAttention),
+    ...(showAttentionOnly ? [] : queue.filter((i) => !needsAttention(i)))
+  ]
+
   return (
     <div className={styles.root}>
       <div
@@ -288,6 +305,27 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
         >
           Clear Completed
         </Button>
+        {attentionCount > 0 && (
+          <Button
+            size="small"
+            appearance={showAttentionOnly ? 'primary' : 'subtle'}
+            icon={<WarningRegular />}
+            onClick={() => setAttentionOnly((v) => !v)}
+            title={
+              showAttentionOnly
+                ? 'Show all downloads'
+                : 'Show only downloads that failed or completed with a warning'
+            }
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              color: showAttentionOnly ? undefined : tokens.colorPaletteYellowForeground1,
+              border: `1px solid ${tokens.colorPaletteYellowForeground1}`
+            }}
+          >
+            {attentionCount} need{attentionCount === 1 ? 's' : ''} attention
+          </Button>
+        )}
         {scanResult && (
           <Text
             size={200}
@@ -304,8 +342,16 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
         <Text>Download queue is empty.</Text>
       ) : (
         <div>
-          {queue.map((item) => (
-            <div key={item.releaseName} className={styles.itemRow}>
+          {visibleQueue.map((item) => (
+            <div
+              key={item.releaseName}
+              className={styles.itemRow}
+              style={
+                needsAttention(item)
+                  ? { borderLeft: `3px solid ${tokens.colorPaletteYellowForeground1}` }
+                  : undefined
+              }
+            >
               {/* Thumbnail */}
               <Image
                 src={item.thumbnailPath ? `file://${item.thumbnailPath}` : placeholderImage}
@@ -408,7 +454,14 @@ const DownloadsView: React.FC<DownloadsViewProps> = ({ onClose }) => {
                       </Text>
                     </div>
                   ) : (
-                    <Text style={{ color: tokens.colorPaletteGreenForeground1 }}>Completed</Text>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Text style={{ color: tokens.colorPaletteGreenForeground1 }}>Completed</Text>
+                      {item.manifestNote && (
+                        <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
+                          {item.manifestNote}
+                        </Text>
+                      )}
+                    </div>
                   ))}
                 {item.status === 'Cancelled' && (
                   <Text className={styles.statusText}>Cancelled</Text>
