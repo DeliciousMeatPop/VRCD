@@ -334,5 +334,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.mrf.IgniteGameStudio.APC": {
+    "gameName": "Atomic Pest Control (MR-Fix)",
+    "reports": [
+      {
+        "issue": 101,
+        "reporter": "danieldnl0001-dotcom",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": null,
+        "reportedAt": "2026-10-24T00:08:12Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
