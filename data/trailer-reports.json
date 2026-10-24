@@ -376,5 +376,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "VRFactory.Vaccine": {
+    "gameName": "FREAKY LAB VR",
+    "reports": [
+      {
+        "issue": 104,
+        "reporter": "Nekoniil",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=9VVf3zfWPxo",
+        "reportedAt": "2026-10-24T15:21:14Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
