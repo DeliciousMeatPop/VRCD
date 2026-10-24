@@ -348,5 +348,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "org.wiicompiled.quest": {
+    "gameName": "MarioKart WiiCompiled",
+    "reports": [
+      {
+        "issue": 102,
+        "reporter": "felpzzj",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=DnO2lIeBW2g",
+        "reportedAt": "2026-10-24T14:50:36Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
