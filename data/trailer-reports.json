@@ -390,5 +390,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "dev.retrocell.slimelab": {
+    "gameName": "Slime Lab",
+    "reports": [
+      {
+        "issue": 105,
+        "reporter": "Nekoniil",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=youanRZ-cac",
+        "reportedAt": "2026-10-24T21:32:56Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
