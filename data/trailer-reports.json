@@ -362,5 +362,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "jp.co.crypton.mikuvrq": {
+    "gameName": "Hatsune Miku VR",
+    "reports": [
+      {
+        "issue": 103,
+        "reporter": "Nekoniil",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=XNmATBCyqYM",
+        "reportedAt": "2026-10-24T15:15:40Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
