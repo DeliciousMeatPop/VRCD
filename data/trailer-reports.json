@@ -320,5 +320,89 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.VRFactory.VRBartender": {
+    "gameName": "BARTENDER VR SIMULATOR",
+    "reports": [
+      {
+        "issue": 99,
+        "reporter": "MrDestroer",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=kEpOdKvpDnM",
+        "reportedAt": "2026-10-22T18:40:07Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "com.mrf.IgniteGameStudio.APC": {
+    "gameName": "Atomic Pest Control (MR-Fix)",
+    "reports": [
+      {
+        "issue": 101,
+        "reporter": "danieldnl0001-dotcom",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": null,
+        "reportedAt": "2026-10-24T00:08:12Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "org.wiicompiled.quest": {
+    "gameName": "MarioKart WiiCompiled",
+    "reports": [
+      {
+        "issue": 102,
+        "reporter": "felpzzj",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=DnO2lIeBW2g",
+        "reportedAt": "2026-10-24T14:50:36Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "jp.co.crypton.mikuvrq": {
+    "gameName": "Hatsune Miku VR",
+    "reports": [
+      {
+        "issue": 103,
+        "reporter": "Nekoniil",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=XNmATBCyqYM",
+        "reportedAt": "2026-10-24T15:15:40Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "VRFactory.Vaccine": {
+    "gameName": "FREAKY LAB VR",
+    "reports": [
+      {
+        "issue": 104,
+        "reporter": "Nekoniil",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=9VVf3zfWPxo",
+        "reportedAt": "2026-10-24T15:21:14Z"
+      }
+    ],
+    "reportCount": 1
+  },
+  "dev.retrocell.slimelab": {
+    "gameName": "Slime Lab",
+    "reports": [
+      {
+        "issue": 105,
+        "reporter": "Nekoniil",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=youanRZ-cac",
+        "reportedAt": "2026-10-24T21:32:56Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
