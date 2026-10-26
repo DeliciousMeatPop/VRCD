@@ -561,7 +561,8 @@ const GameDetailsDialog: React.FC<GameDetailsDialogProps> = ({
 
             {/* Game meta */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              {/* paddingRight keeps the star clear of the absolutely-positioned close button */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, paddingRight: 32 }}>
                 <div
                   style={{
                     flex: 1,

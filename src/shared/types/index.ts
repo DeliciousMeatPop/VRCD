@@ -249,6 +249,11 @@ export interface DownloadItem {
    * user can choose to install anyway. Describes the mismatching file(s).
    */
   manifestWarning?: string
+  /**
+   * Informational only: the manifest lists root-level archive(s) (e.g. _data.7z)
+   * that were extracted and then deleted. Doesn't block auto-install.
+   */
+  manifestNote?: string
 }
 
 export interface DownloadProgress {

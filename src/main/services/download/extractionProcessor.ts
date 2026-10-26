@@ -10,7 +10,8 @@ import { getAvailableDiskSpace, getDirectorySize, formatBytes } from './utils'
 import {
   parseReleaseManifest,
   RELEASE_MANIFEST_FILENAME,
-  isReleaseMetadataSidecar
+  isReleaseMetadataSidecar,
+  isRootLevelArchive
 } from './releaseManifest'
 import { type DownloadedFile, validateDownloadCompletion } from './archiveDiscovery'
 
@@ -258,7 +259,8 @@ export class ExtractionProcessor {
       // clear any stale warning on success); the pipeline skips auto-install for
       // a warned item so the user explicitly chooses whether to install anyway.
       this.queueManager.updateItem(item.releaseName, {
-        manifestWarning: manifestCheck.ok ? undefined : manifestCheck.error
+        manifestWarning: manifestCheck.ok ? undefined : manifestCheck.error,
+        manifestNote: manifestCheck.note
       })
       if (!manifestCheck.ok) {
         console.warn(
@@ -490,7 +492,8 @@ export class ExtractionProcessor {
       // clear any stale warning on success); the pipeline skips auto-install for
       // a warned item so the user explicitly chooses whether to install anyway.
       this.queueManager.updateItem(item.releaseName, {
-        manifestWarning: manifestCheck.ok ? undefined : manifestCheck.error
+        manifestWarning: manifestCheck.ok ? undefined : manifestCheck.error,
+        manifestNote: manifestCheck.note
       })
       if (!manifestCheck.ok) {
         console.warn(
@@ -637,7 +640,7 @@ export class ExtractionProcessor {
   private async verifyAgainstReleaseManifest(
     downloadPath: string,
     releaseName: string
-  ): Promise<{ ok: boolean; error?: string }> {
+  ): Promise<{ ok: boolean; error?: string; note?: string }> {
     const manifestPath = join(downloadPath, RELEASE_MANIFEST_FILENAME)
     if (!existsSync(manifestPath)) {
       console.log(
@@ -666,6 +669,9 @@ export class ExtractionProcessor {
     }
 
     const mismatches: string[] = []
+    // Root-level archives (e.g. _data.7z) that are listed but gone: we extract
+    // and delete these ourselves, so report them as a note, not a warning.
+    const extractedArchives: string[] = []
     for (const entry of files) {
       // Skip release-metadata sidecars (release.manifest, release.add): they're
       // listed by some releases but aren't game payload and are often absent
@@ -681,22 +687,32 @@ export class ExtractionProcessor {
           mismatches.push(`${entry.path} (expected ${entry.size} B, found ${stat.size} B)`)
         }
       } catch {
-        mismatches.push(`${entry.path} (missing)`)
+        if (isRootLevelArchive(entry.path)) {
+          extractedArchives.push(entry.path)
+        } else {
+          mismatches.push(`${entry.path} (missing)`)
+        }
       }
     }
+
+    const note =
+      extractedArchives.length > 0
+        ? `Not all files listed in ${RELEASE_MANIFEST_FILENAME} are present: ${extractedArchives.join(', ')}. ` +
+          'This is expected for releases that ship an inner archive: it is extracted and then deleted after extraction.'
+        : undefined
 
     if (mismatches.length > 0) {
       const detail = mismatches.slice(0, 8).join('; ')
       const more = mismatches.length > 8 ? ` (+${mismatches.length - 8} more)` : ''
       const error = `Extracted files do not match ${RELEASE_MANIFEST_FILENAME}: ${mismatches.length} problem(s): ${detail}${more}`
       console.error(`[ExtractProc] ${error} (${releaseName})`)
-      return { ok: false, error: error.substring(0, 500) }
+      return { ok: false, error: error.substring(0, 500), note }
     }
 
     console.log(
       `[ExtractProc] Verified ${files.length} extracted file(s) against ${RELEASE_MANIFEST_FILENAME} for ${releaseName}.`
     )
-    return { ok: true }
+    return { ok: true, note }
   }
 
   // Method to check if extraction is active
