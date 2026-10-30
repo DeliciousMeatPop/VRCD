@@ -418,5 +418,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.Miragesoft.RealVrFishingQ": {
+    "gameName": "Real VR Fishing",
+    "reports": [
+      {
+        "issue": 109,
+        "reporter": "Nekoniil",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=M982HIcEaTw",
+        "reportedAt": "2026-10-30T19:53:36Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
