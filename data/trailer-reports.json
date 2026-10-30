@@ -404,5 +404,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.GlobissInteractiveLLC.BBTW": {
+    "gameName": "Battle Beyond The Wall",
+    "reports": [
+      {
+        "issue": 108,
+        "reporter": "ZAKsPop",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=0lE6V1TBIMw",
+        "reportedAt": "2026-10-30T05:31:48Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
