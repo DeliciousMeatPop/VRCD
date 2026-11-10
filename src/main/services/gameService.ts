@@ -505,10 +505,12 @@ class GameService extends EventEmitter implements GamesAPI {
       const publicApiKey = getApiKey()
       console.log('[GameService] public endpoint: api key present:', !!publicApiKey)
       if (!publicApiKey) {
-        // Not fatal: self-hosted servers may not need the header. If the sync
-        // fails, friendlyRcloneError() appends a missing-key hint.
-        console.warn(
-          '[GameService] No API key in this build (VRSRC_API_KEY_ENC); servers that require X-API-Key will reject or drop the request'
+        // JSON server config (baseUri + password) always goes out with the
+        // X-API-Key header, and the server blocks requests without it, so fail
+        // now instead of after a timeout. rclone-config mirrors take the other
+        // branch above and are not affected.
+        throw new Error(
+          'This build has no API key configured (VRSRC_API_KEY_ENC), and the server blocks requests without it. Use an official build, or add your server as an rclone config under Manage Remotes.'
         )
       }
 
