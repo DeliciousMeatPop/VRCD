@@ -14,7 +14,12 @@ import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
 import { awaitSevenZipStream, describeSevenZipError } from './sevenZipUtils'
-import { preflightHostCheck, RCLONE_TIMEOUT_ARGS, friendlyRcloneError } from './networkDiagnostics'
+import {
+  preflightHostCheck,
+  RCLONE_TIMEOUT_ARGS,
+  friendlyRcloneError,
+  isVrsrcHost
+} from './networkDiagnostics'
 
 interface VrpConfig {
   baseUri: string
@@ -504,6 +509,13 @@ class GameService extends EventEmitter implements GamesAPI {
 
       const publicApiKey = getApiKey()
       console.log('[GameService] public endpoint: api key present:', !!publicApiKey)
+      if (!publicApiKey && isVrsrcHost(baseUri)) {
+        // The vrSrc server blocks requests without X-API-Key, so fail now
+        // instead of after a timeout.
+        throw new Error(
+          'This build has no API key configured (VRSRC_API_KEY_ENC), and the vrSrc server blocks requests without it. Use an official build, or add your own server under Manage Remotes.'
+        )
+      }
       if (!publicApiKey) {
         // Not fatal: self-hosted servers may not need the header. If the sync
         // fails, friendlyRcloneError() appends a missing-key hint.
