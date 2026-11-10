@@ -14,6 +14,7 @@ import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
 import { awaitSevenZipStream, describeSevenZipError } from './sevenZipUtils'
+import { preflightHostCheck, RCLONE_TIMEOUT_ARGS, friendlyRcloneError } from './networkDiagnostics'
 
 interface VrpConfig {
   baseUri: string
@@ -366,6 +367,9 @@ class GameService extends EventEmitter implements GamesAPI {
 
       console.log(`Downloading meta.7z from ${baseUri}...`)
 
+      // Fail fast with a clear message if DNS is dead or sinkholed
+      if (!activeMirror) await preflightHostCheck(baseUri)
+
       // Get the appropriate rclone path based on platform
       const rclonePath = dependencyService.getRclonePath()
 
@@ -399,6 +403,7 @@ class GameService extends EventEmitter implements GamesAPI {
               '--tpslimit-burst',
               '3',
               '--no-check-certificate',
+              ...RCLONE_TIMEOUT_ARGS,
               '--progress'
             ]
 
@@ -493,11 +498,21 @@ class GameService extends EventEmitter implements GamesAPI {
         '--tpslimit-burst',
         '3',
         '--no-check-certificate',
+        ...RCLONE_TIMEOUT_ARGS,
         '--progress'
       ]
 
       const publicApiKey = getApiKey()
       console.log('[GameService] public endpoint: api key present:', !!publicApiKey)
+      if (!publicApiKey) {
+        // JSON server config (baseUri + password) always goes out with the
+        // X-API-Key header, and the server blocks requests without it, so fail
+        // now instead of after a timeout. rclone-config mirrors take the other
+        // branch above and are not affected.
+        throw new Error(
+          'This build has no API key configured (VRSRC_API_KEY_ENC), and the server blocks requests without it. Use an official build, or add your server as an rclone config under Manage Remotes.'
+        )
+      }
 
       const rcloneProcess = execa(rclonePath, publicArgs, {
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -537,10 +552,14 @@ class GameService extends EventEmitter implements GamesAPI {
       }
 
       // Wait for process to complete
-      const result = await rcloneProcess
+      // execa rejects on non-zero exit, so translate the failure here
+      const result = await rcloneProcess.catch((e: { exitCode?: number; stderr?: string }) => {
+        throw new Error(friendlyRcloneError(e?.exitCode, String(e?.stderr ?? e), !!publicApiKey))
+      })
 
       if (result.exitCode !== 0) {
-        throw new Error(`Rclone failed with exit code ${result.exitCode}: ${result.stderr}`)
+        console.error(`Rclone failed with exit code ${result.exitCode}: ${result.stderr}`)
+        throw new Error(friendlyRcloneError(result.exitCode, result.stderr, !!publicApiKey))
       }
 
       console.log('Download complete')
