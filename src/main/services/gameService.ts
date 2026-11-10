@@ -545,12 +545,12 @@ class GameService extends EventEmitter implements GamesAPI {
       // Wait for process to complete
       // execa rejects on non-zero exit, so translate the failure here
       const result = await rcloneProcess.catch((e: { exitCode?: number; stderr?: string }) => {
-        throw new Error(friendlyRcloneError(e?.exitCode, String(e?.stderr ?? e)))
+        throw new Error(friendlyRcloneError(e?.exitCode, String(e?.stderr ?? e), !!publicApiKey))
       })
 
       if (result.exitCode !== 0) {
         console.error(`Rclone failed with exit code ${result.exitCode}: ${result.stderr}`)
-        throw new Error(friendlyRcloneError(result.exitCode, result.stderr))
+        throw new Error(friendlyRcloneError(result.exitCode, result.stderr, !!publicApiKey))
       }
 
       console.log('Download complete')

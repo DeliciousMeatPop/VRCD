@@ -77,10 +77,22 @@ export async function preflightHostCheck(baseUri: string): Promise<void> {
 }
 
 /** Turn a raw rclone failure into something a user can act on. */
-export function friendlyRcloneError(exitCode: number | undefined, stderr: string): string {
+export function friendlyRcloneError(
+  exitCode: number | undefined,
+  stderr: string,
+  hasApiKey = true
+): string {
   const s = stderr || ''
+  // The server rejects (or silently drops) requests without the API header,
+  // so a missing key looks like a timeout or a 403.
+  const noKeyHint = hasApiKey
+    ? ''
+    : ' This build has no API key configured (VRSRC_API_KEY_ENC), and the server blocks requests without it.'
   if (/i\/o timeout|context deadline exceeded|timed out|Client\.Timeout/i.test(s)) {
-    return 'Connection to the server timed out. It may be down, blocked by your network/DNS, or needs a VPN.'
+    return (
+      'Connection to the server timed out. It may be down, blocked by your network/DNS, or needs a VPN.' +
+      noKeyHint
+    )
   }
   if (/no such host|lookup .* (failed|on)/i.test(s)) {
     return 'The server host could not be found. Check the Base URI and your DNS settings.'
@@ -89,7 +101,7 @@ export function friendlyRcloneError(exitCode: number | undefined, stderr: string
     return 'The server refused the connection. It may be offline.'
   }
   if (/\b401\b|\b403\b|unauthori[sz]ed|forbidden/i.test(s)) {
-    return 'The server rejected the request (401/403). Check your password / API key.'
+    return 'The server rejected the request (401/403). Check your password / API key.' + noKeyHint
   }
   if (/\b404\b|not found|directory not found/i.test(s)) {
     return 'meta.7z was not found on the server. Check the Base URI.'
