@@ -504,6 +504,13 @@ class GameService extends EventEmitter implements GamesAPI {
 
       const publicApiKey = getApiKey()
       console.log('[GameService] public endpoint: api key present:', !!publicApiKey)
+      if (!publicApiKey) {
+        // Not fatal: self-hosted servers may not need the header. If the sync
+        // fails, friendlyRcloneError() appends a missing-key hint.
+        console.warn(
+          '[GameService] No API key in this build (VRSRC_API_KEY_ENC); servers that require X-API-Key will reject or drop the request'
+        )
+      }
 
       const rcloneProcess = execa(rclonePath, publicArgs, {
         stdio: ['ignore', 'pipe', 'pipe'],
