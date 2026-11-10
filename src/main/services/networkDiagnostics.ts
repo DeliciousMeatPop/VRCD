@@ -111,15 +111,3 @@ export function friendlyRcloneError(
   }
   return `Download failed (rclone exit code ${exitCode ?? 'unknown'}).`
 }
-
-/** Hosts of the vrSrc server, which rejects requests lacking the X-API-Key header. */
-const VRSRC_HOSTS = ['go.srcdl1.xyz']
-
-export function isVrsrcHost(baseUri: string): boolean {
-  try {
-    const host = new URL(baseUri).hostname.toLowerCase()
-    return VRSRC_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))
-  } catch {
-    return false
-  }
-}
