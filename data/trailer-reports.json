@@ -432,5 +432,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.VictoriaVR.CQB_TrainingArena": {
+    "gameName": "com.VictoriaVR.CQB_TrainingArena",
+    "reports": [
+      {
+        "issue": 113,
+        "reporter": "cauan123mendoca-source",
+        "problem": "Wrong game",
+        "currentTrailer": null,
+        "suggestedTrailer": null,
+        "reportedAt": "2026-11-11T17:06:08Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
