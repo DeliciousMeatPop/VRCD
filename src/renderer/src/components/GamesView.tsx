@@ -619,6 +619,17 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
   // something (matching Rookie's behaviour).
   const [isWindowDragging, setIsWindowDragging] = useState(false)
 
+  // Empty / 0 MB entries are dead placeholders: never shown and never counted.
+  const realGames = useMemo(
+    () =>
+      games.filter((game) => {
+        const size = String(game.size ?? '').trim()
+        return size !== '0 MB' && size !== ''
+      }),
+    [games]
+  )
+
+  // Only the NSFW (18+) filter makes "All" differ from "displayed".
   const baseVisibleGames = useMemo(() => {
     let hideAdult = true
     try {
@@ -626,23 +637,18 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     } catch {
       /* ignore */
     }
-    return games.filter((game) => {
-      const size = String(game.size ?? '').trim()
-      if (size === '0 MB' || size === '') return false
-      if (hideAdult && String(game.name ?? '').includes('18+')) return false
-      return true
-    })
-  }, [games])
+    return realGames.filter((game) => !(hideAdult && String(game.name ?? '').includes('18+')))
+  }, [realGames])
 
   const counts = useMemo(() => {
-    const total = games.length
-    const installed = games.filter((g) => g.isInstalled).length
-    const updates = games.filter((g) => g.hasUpdate).length
+    const total = realGames.length
+    const installed = realGames.filter((g) => g.isInstalled).length
+    const updates = realGames.filter((g) => g.hasUpdate).length
     const starred = baseVisibleGames.filter((g) =>
       starredPackages.has(String(g.packageName ?? '').trim())
     ).length
     return { total, installed, updates, starred }
-  }, [baseVisibleGames, games, starredPackages])
+  }, [baseVisibleGames, realGames, starredPackages])
 
   const filteredGames = useMemo(
     () =>
