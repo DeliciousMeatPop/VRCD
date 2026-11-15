@@ -10,6 +10,7 @@ import {
   type StoreMetadata
 } from './gameMetadata/storeMetadata'
 import { getStoreMetadataProvider } from './gameMetadata/storeMetadataProvider'
+import type { TrailerScanProgress } from '@shared/types'
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -36,6 +37,28 @@ interface CacheEntry {
 interface OverrideEntry {
   url?: string | null
   youtubeId?: string
+}
+
+export interface TrailerScanTarget {
+  gameName: string
+  packageName: string
+}
+
+export interface TrailerScanOptions {
+  /** Pause between lookups that hit the network, to stay polite to the store/YouTube. */
+  delayMs?: number
+  onProgress?: (progress: TrailerScanProgress) => void
+  shouldCancel?: () => boolean
+  sleep?: (ms: number) => Promise<void>
+}
+
+export interface TrailerScanSummary {
+  total: number
+  checked: number
+  found: number
+  missing: number
+  cancelled: boolean
+  missingGames: TrailerScanTarget[]
 }
 
 export type TrailerGet = (url: string, config?: AxiosRequestConfig) => Promise<{ data: unknown }>
@@ -128,6 +151,7 @@ export class MetaStoreService {
   private remoteOverrides = new Map<string, OverrideEntry>()
   private readonly inFlight = new Map<string, Promise<string | null>>()
   private readonly cachePath: string
+  private readonly reportPath: string
   private readonly overridesPath: string
   private readonly remoteOverridesPath: string
   private readonly remoteOverridesUrl: string | null
@@ -140,6 +164,7 @@ export class MetaStoreService {
   constructor(options: MetaStoreServiceOptions = {}) {
     const dataDir = options.dataDir ?? join(app.getPath('userData'), 'vrp-data')
     this.cachePath = join(dataDir, 'meta-trailer-cache.json')
+    this.reportPath = join(dataDir, 'trailer-scan-report.json')
     this.overridesPath = join(dataDir, 'trailer-overrides.json')
     this.remoteOverridesPath = join(dataDir, 'trailer-overrides-remote.json')
     this.remoteOverridesUrl =
@@ -273,6 +298,103 @@ export class MetaStoreService {
       expiresAt
     })
     await this.persistCache()
+  }
+
+  /** Where `writeScanReport` puts the list of games with no trailer. */
+  public get scanReportPath(): string {
+    return this.reportPath
+  }
+
+  private hasFreshAnswer(gameName: string, packageName: string): boolean {
+    if (this.overrides.has(packageName) || this.remoteOverrides.has(packageName)) return true
+    const cached = this.cache.get(this.cacheKey(gameName, packageName))
+    return !!cached && cached.expiresAt > this.clock()
+  }
+
+  /**
+   * Look up a trailer for every target, one at a time with a pause after each real network
+   * lookup. Results land in the normal trailer cache, so the game list shows them afterwards.
+   * Games with an override or a fresh cached answer are counted without touching the network.
+   */
+  public async scanTrailers(
+    targets: TrailerScanTarget[],
+    options: TrailerScanOptions = {}
+  ): Promise<TrailerScanSummary> {
+    await this.loaded
+    const delayMs = options.delayMs ?? 1500
+    const sleep = options.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+    const seen = new Set<string>()
+    const unique = targets.filter((t) => {
+      if (!t.packageName || seen.has(t.packageName)) return false
+      seen.add(t.packageName)
+      return true
+    })
+    const summary: TrailerScanSummary = {
+      total: unique.length,
+      checked: 0,
+      found: 0,
+      missing: 0,
+      cancelled: false,
+      missingGames: []
+    }
+    for (const target of unique) {
+      if (options.shouldCancel?.()) {
+        summary.cancelled = true
+        break
+      }
+      const needsNetwork = !this.hasFreshAnswer(target.gameName, target.packageName)
+      let url: string | null = null
+      try {
+        url = await this.getTrailerUrl(target.gameName, target.packageName)
+      } catch (error) {
+        console.warn(`[MetaStoreService] Scan lookup failed for ${target.packageName}:`, error)
+      }
+      summary.checked++
+      if (url) summary.found++
+      else {
+        summary.missing++
+        summary.missingGames.push(target)
+      }
+      options.onProgress?.({
+        checked: summary.checked,
+        total: summary.total,
+        found: summary.found,
+        missing: summary.missing,
+        current: target.gameName
+      })
+      if (needsNetwork && delayMs > 0) await sleep(delayMs)
+    }
+    return summary
+  }
+
+  /** Write the games a scan found no trailer for, as JSON ready to copy entries from. */
+  public async writeScanReport(summary: TrailerScanSummary): Promise<string | null> {
+    try {
+      const noTrailerFound = Object.fromEntries(
+        [...summary.missingGames]
+          .sort((a, b) => a.gameName.localeCompare(b.gameName))
+          .map((g) => [g.packageName, { gameName: g.gameName }])
+      )
+      await fs.mkdir(dirname(this.reportPath), { recursive: true })
+      await fs.writeFile(
+        this.reportPath,
+        JSON.stringify(
+          {
+            generatedAt: new Date(this.clock()).toISOString(),
+            scanned: summary.checked,
+            total: summary.total,
+            cancelled: summary.cancelled,
+            noTrailerFound
+          },
+          null,
+          2
+        ) + '\n'
+      )
+      return this.reportPath
+    } catch (error) {
+      console.warn('[MetaStoreService] Failed to write trailer scan report:', error)
+      return null
+    }
   }
 
   public async getTrailerUrl(

@@ -433,6 +433,62 @@ describe('MetaStoreService', () => {
     expect(Object.values(persisted.entries)).toHaveLength(2)
     await expect(readFile(join(dataDir, 'meta-trailer-cache.json.tmp'))).rejects.toThrow()
   })
+  it('scans every game, pausing only after real lookups, and reports the misses', async () => {
+    const dataDir = await temporaryDataDir()
+    const service = new MetaStoreService({
+      dataDir,
+      storeLookup: async () => null,
+      get: async (_url, config) =>
+        String(config?.params?.search_query).startsWith('Breachers')
+          ? { data: youtubeSearchPage('Breachers - Official Trailer', 'breachers01') }
+          : { data: youtubeSearchPage() }
+    })
+    const pauses: number[] = []
+    const progress: number[] = []
+    const targets = [
+      { gameName: 'Breachers', packageName: 'com.breachers' },
+      { gameName: 'Breachers', packageName: 'com.breachers' },
+      { gameName: 'Nothing Here Game', packageName: 'com.nothing' }
+    ]
+    const summary = await service.scanTrailers(targets, {
+      delayMs: 5,
+      sleep: async (ms) => void pauses.push(ms),
+      onProgress: (p) => void progress.push(p.checked)
+    })
+    expect(summary).toMatchObject({ total: 2, checked: 2, found: 1, missing: 1, cancelled: false })
+    expect(summary.missingGames).toEqual([
+      { gameName: 'Nothing Here Game', packageName: 'com.nothing' }
+    ])
+    expect(pauses).toEqual([5, 5])
+    expect(progress).toEqual([1, 2])
+
+    // A second scan answers from the cache: no network, so no pauses.
+    pauses.length = 0
+    await service.scanTrailers(targets, { sleep: async (ms) => void pauses.push(ms) })
+    expect(pauses).toEqual([])
+
+    const reportPath = await service.writeScanReport(summary)
+    const report = JSON.parse(await readFile(reportPath!, 'utf8'))
+    expect(report.noTrailerFound).toEqual({ 'com.nothing': { gameName: 'Nothing Here Game' } })
+  })
+
+  it('stops a scan when cancelled', async () => {
+    const service = new MetaStoreService({
+      dataDir: await temporaryDataDir(),
+      storeLookup: async () => null,
+      get: async () => ({ data: youtubeSearchPage() })
+    })
+    let calls = 0
+    const summary = await service.scanTrailers(
+      [
+        { gameName: 'First Game', packageName: 'com.first' },
+        { gameName: 'Second Game', packageName: 'com.second' }
+      ],
+      { delayMs: 0, shouldCancel: () => calls++ >= 1 }
+    )
+    expect(summary).toMatchObject({ checked: 1, cancelled: true })
+  })
+
   describe('remote overrides', () => {
     const remoteService = async (
       dataDir: string,

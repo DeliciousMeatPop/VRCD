@@ -25,7 +25,8 @@ import {
   ServerConfigInfo,
   WiFiBookmark,
   LocalUploadError,
-  BackupAPIRenderer
+  BackupAPIRenderer,
+  TrailerScanProgress
 } from '@shared/types'
 import { typedIpcRenderer } from '@shared/ipc-utils'
 
@@ -122,6 +123,15 @@ const api = {
     forceSync: (): Promise<GameInfo[]> => typedIpcRenderer.invoke('games:force-sync-games'),
     getTrailerUrl: (gameName: string, packageName: string | undefined): Promise<string | null> =>
       typedIpcRenderer.invoke('games:get-trailer-url', gameName, packageName),
+    scanTrailers: () => typedIpcRenderer.invoke('games:scan-trailers'),
+    cancelTrailerScan: () => typedIpcRenderer.invoke('games:cancel-trailer-scan'),
+    revealTrailerReport: () => typedIpcRenderer.invoke('games:reveal-trailer-report'),
+    onTrailerScanProgress: (callback: (progress: TrailerScanProgress) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, progress: TrailerScanProgress): void =>
+        callback(progress)
+      typedIpcRenderer.on('games:trailer-scan-progress', listener)
+      return () => typedIpcRenderer.removeListener('games:trailer-scan-progress', listener)
+    },
     getDescription: (request) => typedIpcRenderer.invoke('games:get-description', request),
     primeDescriptions: (requests) => typedIpcRenderer.invoke('games:prime-descriptions', requests),
     onDownloadProgress: (callback: (progress: DownloadProgress) => void): (() => void) => {
