@@ -606,6 +606,51 @@ app.whenReady().then(async () => {
   typedIpcMain.handle('games:get-trailer-url', async (_event, gameName, packageName) => {
     return metaStoreService.getTrailerUrl(gameName, packageName)
   })
+  let trailerScanCancel = false
+  let trailerScanRunning = false
+  typedIpcMain.handle('games:scan-trailers', async () => {
+    if (trailerScanRunning) {
+      return { total: 0, checked: 0, found: 0, missing: 0, cancelled: false, reportPath: null }
+    }
+    trailerScanRunning = true
+    trailerScanCancel = false
+    try {
+      const games = await gameService.getGames()
+      const summary = await metaStoreService.scanTrailers(
+        games.map((g) => ({ gameName: g.name, packageName: g.packageName })),
+        {
+          shouldCancel: () => trailerScanCancel,
+          onProgress: (progress) => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              typedWebContentsSend.send(mainWindow, 'games:trailer-scan-progress', progress)
+            }
+          }
+        }
+      )
+      const reportPath = await metaStoreService.writeScanReport(summary)
+      return {
+        total: summary.total,
+        checked: summary.checked,
+        found: summary.found,
+        missing: summary.missing,
+        cancelled: summary.cancelled,
+        reportPath
+      }
+    } finally {
+      trailerScanRunning = false
+    }
+  })
+  typedIpcMain.handle('games:cancel-trailer-scan', async () => {
+    trailerScanCancel = true
+  })
+  typedIpcMain.handle('games:reveal-trailer-report', async () => {
+    try {
+      shell.showItemInFolder(metaStoreService.scanReportPath)
+      return true
+    } catch {
+      return false
+    }
+  })
   typedIpcMain.handle('games:get-description', async (_event, request) => {
     return gameDescriptionService.getDescription(request)
   })

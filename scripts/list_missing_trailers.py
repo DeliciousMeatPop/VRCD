@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """List games that CyberDeck could not find a trailer for.
 
-Reads CyberDeck's trailer cache (meta-trailer-cache.json), picks the games whose
-lookup came back empty, drops any that already have an entry in
-trailer-overrides.json (if it can find one), and writes the rest to
-missing-trailers.json next to this script. Add a trailer for each one you want
-covered in trailer-overrides.json.
+Reads CyberDeck's trailer cache (meta-trailer-cache.json) and writes
+missing-trailers.json next to this script with two lists:
 
-Only games that have been looked up are in the cache (opening a game's details
-looks its trailer up), so browse the library first for wider coverage.
+  noTrailerFound  games whose lookup came back empty
+  neverChecked    games in the library (VRP-GameList.txt) with no cache entry yet
+
+Games that already have an entry in trailer-overrides.json are left out of both.
+Add a trailer for each one you want covered in trailer-overrides.json.
+
+A game only gets a cache entry once it has been looked up (opening its details
+looks it up). To check the whole library at once, use Settings > Find missing
+trailers in CyberDeck, then run this script, or read the report it writes.
 
 Usage:
     python scripts/list_missing_trailers.py
@@ -53,6 +57,44 @@ def default_overrides():
     return None
 
 
+def load_game_list(path):
+    """Return {packageName: gameName} from VRP-GameList.txt (semicolon-separated, header row)."""
+    try:
+        lines = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return {}
+    if not lines:
+        return {}
+    columns = [c.strip() for c in lines[0].split(";")]
+    try:
+        name_i = columns.index("Game Name")
+        package_i = columns.index("Package Name")
+    except ValueError:
+        return {}
+    games = {}
+    for line in lines[1:]:
+        parts = line.split(";")
+        if len(parts) <= max(name_i, package_i):
+            continue
+        package_name = parts[package_i].strip()
+        if package_name:
+            games[package_name] = parts[name_i].strip()
+    return games
+
+
+def find_game_list(explicit, cache_path):
+    if explicit:
+        return Path(explicit)
+    folder = cache_path.parent
+    try:
+        for candidate in sorted(folder.iterdir()):
+            if candidate.name.lower().endswith("amelist.txt"):
+                return candidate
+    except OSError:
+        pass
+    return None
+
+
 def load_json(path, fallback):
     try:
         return json.loads(Path(path).read_text(encoding="utf-8"))
@@ -68,6 +110,10 @@ def main():
         help="path to trailer-overrides.json (found next to the script or in ../data by default)",
     )
     parser.add_argument(
+        "--game-list",
+        help="path to VRP-GameList.txt (auto-detected next to the cache by default)",
+    )
+    parser.add_argument(
         "--out",
         default=str(SCRIPT_DIR / "missing-trailers.json"),
         help="where to write the list (default: next to this script)",
@@ -80,7 +126,11 @@ def main():
     overrides = load_json(overrides_path, {}) if overrides_path else {}
 
     missing = {}
+    checked = set()
     for key, entry in entries.items():
+        package_name = key.split("\n", 1)[0]
+        if package_name:
+            checked.add(package_name)
         if entry.get("trailerUrl"):
             continue
         # Cache keys are "<packageName>\n<normalized title>".
@@ -93,10 +143,27 @@ def main():
         }
 
     ordered = dict(sorted(missing.items(), key=lambda item: item[1]["gameName"]))
+
+    never_checked = {}
+    game_list_path = find_game_list(args.game_list, cache_path)
+    if game_list_path and game_list_path.is_file():
+        for package_name, game_name in load_game_list(game_list_path).items():
+            if package_name not in checked and package_name not in overrides:
+                never_checked[package_name] = {"gameName": game_name}
+        never_checked = dict(sorted(never_checked.items(), key=lambda item: item[1]["gameName"]))
+    else:
+        print("Game list not found, so 'neverChecked' is empty. Pass it with --game-list.")
+
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(ordered, indent=2) + "\n", encoding="utf-8")
-    print(f"{len(ordered)} games without a trailer -> {args.out}")
+    out_path.write_text(
+        json.dumps({"noTrailerFound": ordered, "neverChecked": never_checked}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"{len(ordered)} games without a trailer, "
+        f"{len(never_checked)} never checked -> {args.out}"
+    )
 
 
 if __name__ == "__main__":
