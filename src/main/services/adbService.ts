@@ -723,12 +723,14 @@ class AdbService extends EventEmitter implements AdbAPI {
       console.log(`[AdbService Recursive] Ensuring remote directory exists: ${remoteDirPath}`)
       const mkdirOutput = await this.runShellCommand(serial, `mkdir -p "${remoteDirPath}"`)
       if (mkdirOutput === null) {
+        this.recordPushError(remoteDirPath, 'could not create remote directory (mkdir failed)')
         console.error(
           `[AdbService Recursive] Failed to create remote directory ${remoteDirPath} (runShellCommand indicated failure).`
         )
         return false
       }
     } catch (error) {
+      this.recordPushError(remoteDirPath, error)
       console.error(
         `[AdbService Recursive] Exception while creating remote directory ${remoteDirPath}:`,
         error
@@ -743,6 +745,7 @@ class AdbService extends EventEmitter implements AdbAPI {
         withFileTypes: true
       })
     } catch (readDirError) {
+      this.recordPushError(localDirPath, readDirError)
       console.error(
         `[AdbService Recursive] Failed to read local directory ${localDirPath}:`,
         readDirError
@@ -764,6 +767,7 @@ class AdbService extends EventEmitter implements AdbAPI {
           const filePushSuccess = await new Promise<boolean>((resolve) => {
             transfer.on('end', () => resolve(true))
             transfer.on('error', (err: Error) => {
+              this.recordPushError(remoteEntryPath, err)
               console.error(
                 `[AdbService Recursive] Error pushing file ${localEntryPath} to ${remoteEntryPath}:`,
                 err
@@ -779,6 +783,7 @@ class AdbService extends EventEmitter implements AdbAPI {
             return false
           }
         } catch (filePushError) {
+          this.recordPushError(remoteEntryPath, filePushError)
           console.error(
             `[AdbService Recursive] Exception during push of file ${localEntryPath}:`,
             filePushError
@@ -806,6 +811,14 @@ class AdbService extends EventEmitter implements AdbAPI {
     return true
   }
 
+  /** Most recent push failure (file + reason), for diagnostics in backup logs. */
+  public lastPushError: string | null = null
+
+  private recordPushError(target: string, err: unknown): void {
+    const msg = err instanceof Error ? err.message : String(err)
+    this.lastPushError = `${target}: ${msg}`
+  }
+
   async pushFileOrFolder(
     serial: string,
     localPath: string,
@@ -816,6 +829,7 @@ class AdbService extends EventEmitter implements AdbAPI {
       throw new Error('[ADB Service] adb service not initialized!')
     }
 
+    this.lastPushError = null
     // let finalRemotePath = remotePath // Will be determined in the try block
     // Initialize with normalized remotePath to ensure it's always defined for logging in catch block
     let finalRemotePath: string = remotePath.replace(/\\/g, '/')

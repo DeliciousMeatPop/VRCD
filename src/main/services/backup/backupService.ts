@@ -372,7 +372,11 @@ class BackupService {
           await adbService.runShellCommand(deviceId, `mkdir -p "${r.remotePath}"`)
           const ok = await adbService.pushFileOrFolder(deviceId, localDirAbs, r.remotePath)
           if (!ok) {
-            await this.log(backupId, `Restore FAILED: push returned false for ${r.localDir}.`)
+            await this.log(
+              backupId,
+              `Restore FAILED: push returned false for ${r.localDir}.` +
+                (adbService.lastPushError ? ` Last adb error: ${adbService.lastPushError}` : '')
+            )
             return { ok: false, error: 'Failed to push save data to the device.' }
           }
           // Post-restore sanity check: does the device actually have the files?
