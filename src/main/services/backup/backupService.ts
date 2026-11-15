@@ -259,8 +259,15 @@ class BackupService {
       const fileCount = roots.reduce((n, r) => n + r.fileCount, 0)
       const totalBytes = roots.reduce((n, r) => n + r.totalBytes, 0)
 
-      if (fileCount === 0) {
-        await this.log(id, 'Backup aborted: no files copied from any source.')
+      // Files that are all 0 bytes (e.g. empty placeholders) hold no progress, so a
+      // "successful" backup of them can never restore anything.
+      if (fileCount === 0 || totalBytes === 0) {
+        await this.log(
+          id,
+          fileCount === 0
+            ? 'Backup aborted: no files copied from any source.'
+            : `Backup aborted: ${fileCount} file(s) copied but all are empty (0 bytes).`
+        )
         await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
         let hint: string
         if (anyCacheSkipped) {
@@ -347,6 +354,15 @@ class BackupService {
 
     try {
       await this.log(backupId, `Restore started to ${deviceId} (${roots.length} root(s))`)
+
+      // A running game can rewrite or ignore the restored files (and overwrite them
+      // again on exit), so stop it first. Best-effort — never blocks the restore.
+      try {
+        await adbService.runShellCommand(deviceId, `am force-stop ${entry.packageName}`)
+        await this.log(backupId, `Stopped ${entry.packageName} before restoring.`)
+      } catch {
+        /* app may not be installed/running; the push below reports real problems */
+      }
 
       for (const r of roots) {
         const localDirAbs = join(this.backupDir(backupId), ...r.localDir.split('/'))
