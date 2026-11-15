@@ -460,5 +460,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.Visonary.Bad_Passengers.vr": {
+    "gameName": "Bad Passengers",
+    "reports": [
+      {
+        "issue": 117,
+        "reporter": "sirbloodking-hue",
+        "problem": "Other",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=te87JZjVzGE",
+        "reportedAt": "2026-11-15T17:22:20Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
