@@ -8,4 +8,4 @@ out
 .env.*
 !.env.example
 pkg/
-*.tsbuildinfo
+*.tsbuildinfoscripts/trailer-review-ignored.json
