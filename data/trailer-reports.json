@@ -446,5 +446,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.rustltd.h3vr2": {
+    "gameName": "Hot Dogs, Horseshoes & Hand Grenades 2",
+    "reports": [
+      {
+        "issue": 116,
+        "reporter": "Crazy-Scamp",
+        "problem": "Other",
+        "currentTrailer": null,
+        "suggestedTrailer": null,
+        "reportedAt": "2026-11-15T17:02:37Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
