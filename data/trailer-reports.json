@@ -488,5 +488,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.resolutiongames.cookinggame": {
+    "gameName": "Cook-Out",
+    "reports": [
+      {
+        "issue": 123,
+        "reporter": "sirbloodking-hue",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": "https://www.youtube.com/watch?v=_1yuiJfrpR0",
+        "suggestedTrailer": "https://www.youtube.com/watch?v=3rzwk1J7qLw",
+        "reportedAt": "2026-11-16T20:57:27Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
