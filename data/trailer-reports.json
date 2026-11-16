@@ -474,5 +474,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.BRDYStudios.CosmicXR": {
+    "gameName": "Cosmic XR - Space In Your Room",
+    "reports": [
+      {
+        "issue": 122,
+        "reporter": "sirbloodking-hue",
+        "problem": "Other",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=L6dKh9ENsaY",
+        "reportedAt": "2026-11-16T20:54:34Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
