@@ -502,5 +502,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.CortopiaStudios.draxPrototype": {
+    "gameName": "Teenage Mutant Ninja Turtles Empire City",
+    "reports": [
+      {
+        "issue": 127,
+        "reporter": "MASKVR92",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=TK2PFmvvVf0",
+        "reportedAt": "2026-11-19T23:49:37Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
