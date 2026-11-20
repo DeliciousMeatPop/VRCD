@@ -516,5 +516,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.ThreePoundGames.Grokit": {
+    "gameName": "Grokit",
+    "reports": [
+      {
+        "issue": 128,
+        "reporter": "MASKVR92",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=8C1te6uE5a0",
+        "reportedAt": "2026-11-20T20:10:59Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
