@@ -530,5 +530,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.SDI.TWD": {
+    "gameName": "The Walking Dead- Saints & Sinners",
+    "reports": [
+      {
+        "issue": 129,
+        "reporter": "johnnkevinn",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=PwQx872oy4A",
+        "reportedAt": "2026-11-20T20:11:03Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
