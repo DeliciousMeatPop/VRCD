@@ -1,5 +1,5 @@
 import { join, dirname } from 'path'
-import { promises as fs, readdirSync } from 'fs'
+import { promises as fs, readdirSync, readFileSync } from 'fs'
 import { execa } from 'execa'
 import { app, BrowserWindow, dialog } from 'electron'
 import { existsSync } from 'fs'
@@ -14,6 +14,7 @@ import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
 import { awaitSevenZipStream, describeSevenZipError } from './sevenZipUtils'
+import { isPortGame, parsePortList } from './portDetection'
 import { preflightHostCheck, RCLONE_TIMEOUT_ARGS, friendlyRcloneError } from './networkDiagnostics'
 
 interface VrpConfig {
@@ -840,6 +841,7 @@ class GameService extends EventEmitter implements GamesAPI {
     const descriptionLanguageIndex = columns.indexOf('Description Language')
 
     // Batch-read thumbnail directory once instead of 2600+ existsSync calls
+    const portList = this.loadPortList()
     const thumbnailDir = join(this.metaPath, 'thumbnails')
     let thumbnailSet: Set<string>
     try {
@@ -913,6 +915,7 @@ class GameService extends EventEmitter implements GamesAPI {
           thumbnailPath: thumbnailExists ? thumbnailPath : '',
           notePath,
           isInstalled: false,
+          ...(isPortGame({ packageName, releaseName }, portList) ? { isPort: true } : {}),
           ...(libraryDescription ? { libraryDescription } : {}),
           ...(libraryDescriptionSourceLabel ? { libraryDescriptionSourceLabel } : {}),
           ...(libraryDescriptionSourceUrl ? { libraryDescriptionSourceUrl } : {}),
@@ -930,6 +933,18 @@ class GameService extends EventEmitter implements GamesAPI {
     this.decorateAndUpdateSnapshot(games)
     this.games = games
     console.log(`Loaded ${games.length} games`)
+  }
+
+  /** Bundled (or dev-tree) hand-maintained ports.json for the Ports filter. */
+  private loadPortList(): Set<string> {
+    try {
+      const p = app.isPackaged
+        ? join(process.resourcesPath, 'ports.json')
+        : join(app.getAppPath(), 'resources', 'ports.json')
+      return parsePortList(JSON.parse(readFileSync(p, 'utf-8')))
+    } catch {
+      return new Set()
+    }
   }
 
   async forceSync(): Promise<GameInfo[]> {

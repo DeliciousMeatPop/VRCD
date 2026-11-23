@@ -32,6 +32,8 @@ extraResources:
     to: ServerInfo.json
   - from: resources/custom-notes.json
     to: custom-notes.json
+  - from: resources/ports.json
+    to: ports.json
   - from: resources/sounds
     to: sounds
     filter:

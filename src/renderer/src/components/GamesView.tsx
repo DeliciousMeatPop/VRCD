@@ -107,7 +107,7 @@ const FIXED_COLUMNS_WIDTH =
   COLUMN_WIDTHS.SIZE +
   COLUMN_WIDTHS.LAST_UPDATED
 
-type FilterType = 'all' | 'installed' | 'update' | 'starred'
+type FilterType = 'all' | 'installed' | 'update' | 'starred' | 'port'
 
 // Parse "1.2 GB" / "500 MB" / "100 KB" to bytes for numeric sort
 const parseSizeBytes = (s: string): number => {
@@ -647,14 +647,17 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
     const starred = baseVisibleGames.filter((g) =>
       starredPackages.has(String(g.packageName ?? '').trim())
     ).length
-    return { total, installed, updates, starred }
+    const ports = baseVisibleGames.filter((g) => g.isPort).length
+    return { total, installed, updates, starred, ports }
   }, [baseVisibleGames, realGames, starredPackages])
 
   const filteredGames = useMemo(
     () =>
       activeFilter === 'starred'
         ? baseVisibleGames.filter((game) => isStarred(game.packageName ?? ''))
-        : baseVisibleGames,
+        : activeFilter === 'port'
+          ? baseVisibleGames.filter((game) => game.isPort)
+          : baseVisibleGames,
     [activeFilter, baseVisibleGames, isStarred]
   )
 
@@ -698,6 +701,7 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
           ]
         case 'all':
         case 'starred':
+        case 'port':
         default:
           return otherFilters
       }
@@ -2895,6 +2899,14 @@ const GamesView: React.FC<GamesViewProps> = ({ onBackToDevices, onTransfers, onS
                 className={activeFilter === 'starred' ? 'active' : ''}
               >
                 {'Starred'} ({counts.starred})
+              </button>
+              <button
+                onClick={() => setActiveFilter('port')}
+                className={activeFilter === 'port' ? 'active' : ''}
+                title="Ports: APKs that need Steam game files (vrsrc server)"
+                disabled={counts.ports === 0}
+              >
+                {'Ports'} ({counts.ports})
               </button>
             </div>
             <span className="game-count">

@@ -11,6 +11,7 @@ import { getMatrixUsername, isFirstLaunchToday } from '../utils/matrixUsername'
 import { shouldShowMatrixShell } from '../hooks/useExtrasSettings'
 import { playSound } from '../hooks/useSoundEffects'
 import AdbShortcuts from './AdbShortcuts'
+import { runSafetyFix, SAFETY_FIX_LABEL } from '../utils/safetyFix'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -719,6 +720,24 @@ export function AdbShellDialog({
     setTimeout(() => inputRef.current?.focus(), 50)
   }
 
+  // Runs the safety check fix without ever echoing the underlying commands.
+  const handleSafetyFix = async (): Promise<void> => {
+    if (isRunning || !animDone) return
+    setIsRunning(true)
+    setHistoryIndex(-1)
+    setHistory((prev) => [
+      ...prev,
+      { command: SAFETY_FIX_LABEL, output: 'Running the safety fix...', error: false }
+    ])
+    const result = await runSafetyFix((c) => window.api.adb.runShellCommand(deviceId, c))
+    setHistory((prev) => [
+      ...prev,
+      { command: SAFETY_FIX_LABEL, output: result.message, error: result.failed.length > 0 }
+    ])
+    setIsRunning(false)
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       runCommand()
@@ -779,7 +798,13 @@ export function AdbShellDialog({
           <DialogContent style={S.content}>
             {/* Quick command shortcuts — only after the matrix animation finishes
                 so they don't appear over the intro */}
-            {animDone && <AdbShortcuts onRun={(cmd) => runCommand(cmd)} disabled={isRunning} />}
+            {animDone && (
+              <AdbShortcuts
+                onRun={(cmd) => runCommand(cmd)}
+                onSafetyFix={handleSafetyFix}
+                disabled={isRunning}
+              />
+            )}
 
             {/* Terminal area — wraps both the animation overlay and the terminal output */}
             <div ref={containerRef} style={{ position: 'relative' }}>
