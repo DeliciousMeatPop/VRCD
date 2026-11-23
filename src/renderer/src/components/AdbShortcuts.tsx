@@ -22,6 +22,8 @@ interface PresetCategory {
 
 interface AdbShortcutsProps {
   onRun: (command: string) => void
+  /** Runs the (hidden) safety check fix macro. */
+  onSafetyFix?: () => void
   disabled?: boolean
 }
 
@@ -451,7 +453,7 @@ const ShortcutEditor: React.FC<ShortcutEditorProps> = ({ initial, onSave, onCanc
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const AdbShortcuts: React.FC<AdbShortcutsProps> = ({ onRun, disabled }) => {
+const AdbShortcuts: React.FC<AdbShortcutsProps> = ({ onRun, onSafetyFix, disabled }) => {
   const [custom, setCustom] = useState<CustomShortcut[]>(() => readCustom())
   const [collapsed, setCollapsed] = useState(() => readCollapsed())
   const [editorOpen, setEditorOpen] = useState(false)
@@ -585,6 +587,29 @@ const AdbShortcuts: React.FC<AdbShortcutsProps> = ({ onRun, disabled }) => {
                 ))}
               </div>
             ))}
+
+            {onSafetyFix && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    color: 'rgba(var(--vrcd-neon-raw),0.45)',
+                    fontSize: '10px',
+                    letterSpacing: '0.16em',
+                    minWidth: '90px',
+                    flexShrink: 0
+                  }}
+                >
+                  SAFETY
+                </span>
+                <Pill
+                  onClick={onSafetyFix}
+                  disabled={disabled}
+                  title="Disable Meta's app safety binary check so ports and modded APKs aren't flagged. Runs 9 commands; only the result is shown."
+                >
+                  SAFETY CHECK FIX
+                </Pill>
+              </div>
+            )}
 
             <div
               style={{

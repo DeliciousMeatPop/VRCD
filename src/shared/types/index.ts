@@ -82,6 +82,8 @@ export interface GameInfo {
   thumbnailPath: string
   notePath: string
   isInstalled: boolean
+  /** True for a port: an APK that needs Steam (PC) game files to run. */
+  isPort?: boolean
   /** Optional first-party synopsis supplied by the configured library. */
   libraryDescription?: string
   libraryDescriptionSourceLabel?: string
