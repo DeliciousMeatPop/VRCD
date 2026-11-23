@@ -1,4 +1,24 @@
 {
   "_readme": "Games shown under the Ports filter (APK needs Steam files). Add package names or release names to the list below.",
-  "ports": []
+  "ports": [
+    "com.drbeef.beefraiderxr",
+    "com.lvonasek.csvr",
+    "com.drbeef.doom3quest",
+    "com.drbeef.lambda1vr",
+    "com.sourcevrport.hl2vr",
+    "com.drbeef.jkxr",
+    "com.portalVR.source",
+    "com.lvonasek.preyvr",
+    "com.drbeef.quake2quest",
+    "com.drbeef.ioq3quest",
+    "com.drbeef.quake4",
+    "com.drbeef.quakequest",
+    "com.drbeef.questzdoom",
+    "com.Zhes.RickAndMortyVR",
+    "com.drbeef.rtcwquest",
+    "com.simpsonsHitAndRun.vr",
+    "com.ghwstvr.ut99quest",
+    "com.baggyg.wrathquest",
+    "com.CreaTeam.Sclerosis"
+  ]
 }
