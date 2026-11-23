@@ -1,5 +1,4 @@
 {
-  "_readme": "Games flagged as 'Ports' (APK needs Steam files). include = force-flag, exclude = never flag. Match on package name or release name. Games are also auto-flagged when their release note mentions needing Steam files.",
-  "include": [],
-  "exclude": []
+  "_readme": "Games shown under the Ports filter (APK needs Steam files). Add package names or release names to the list below.",
+  "ports": []
 }

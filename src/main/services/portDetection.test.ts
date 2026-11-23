@@ -1,47 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { isPortGame, noteLooksLikePort, parsePortOverrides } from './portDetection'
+import { isPortGame, parsePortList } from './portDetection'
 
-const none = { include: [], exclude: [] }
 const game = { packageName: 'com.example.port', releaseName: 'Example Port v1 -user' }
 
-describe('noteLooksLikePort', () => {
-  it('flags notes that need Steam files', () => {
-    expect(noteLooksLikePort('You must copy the Steam files into the game folder.')).toBe(true)
-    expect(noteLooksLikePort('Requires Steam version of the game.')).toBe(true)
-    expect(noteLooksLikePort('Own the game on Steam, then add your files')).toBe(true)
-  })
-  it('ignores unrelated notes', () => {
-    expect(noteLooksLikePort('')).toBe(false)
-    expect(noteLooksLikePort('Install the APK and enjoy.')).toBe(false)
-    expect(noteLooksLikePort('Also available on SteamVR')).toBe(false)
-  })
-})
-
-describe('parsePortOverrides', () => {
-  it('lowercases, trims and drops "_" breadcrumbs and junk', () => {
-    expect(
-      parsePortOverrides({ include: [' Com.A ', '_doc', 5], exclude: ['B'], other: 1 })
-    ).toEqual({ include: ['com.a'], exclude: ['b'] })
+describe('parsePortList', () => {
+  it('lowercases, trims, drops junk and "_" entries', () => {
+    expect([...parsePortList({ ports: [' Com.A ', '_doc', 5, ''] })]).toEqual(['com.a'])
   })
   it('tolerates bad payloads', () => {
-    expect(parsePortOverrides(null)).toEqual(none)
-    expect(parsePortOverrides([])).toEqual(none)
+    expect(parsePortList(null).size).toBe(0)
+    expect(parsePortList({ ports: 'x' }).size).toBe(0)
+    expect(parsePortList([]).size).toBe(0)
   })
 })
 
 describe('isPortGame', () => {
-  it('uses the note when there is no override', () => {
-    expect(isPortGame(game, 'needs Steam files', none)).toBe(true)
-    expect(isPortGame(game, 'plain note', none)).toBe(false)
-    expect(isPortGame(game, null, none)).toBe(false)
-  })
-  it('include forces a port, exclude beats everything', () => {
-    expect(isPortGame(game, '', { include: ['com.example.port'], exclude: [] })).toBe(true)
-    expect(
-      isPortGame(game, 'needs Steam files', { include: [], exclude: ['example port v1 -user'] })
-    ).toBe(false)
-    expect(
-      isPortGame(game, '', { include: ['com.example.port'], exclude: ['com.example.port'] })
-    ).toBe(false)
+  it('matches on package or release name', () => {
+    expect(isPortGame(game, new Set(['com.example.port']))).toBe(true)
+    expect(isPortGame(game, new Set(['example port v1 -user']))).toBe(true)
+    expect(isPortGame(game, new Set(['other']))).toBe(false)
   })
 })

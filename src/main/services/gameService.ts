@@ -14,7 +14,7 @@ import EventEmitter from 'events'
 import { typedWebContentsSend } from '@shared/ipc-utils'
 import SevenZip from 'node-7z'
 import { awaitSevenZipStream, describeSevenZipError } from './sevenZipUtils'
-import { isPortGame, parsePortOverrides, type PortOverrides } from './portDetection'
+import { isPortGame, parsePortList } from './portDetection'
 import { preflightHostCheck, RCLONE_TIMEOUT_ARGS, friendlyRcloneError } from './networkDiagnostics'
 
 interface VrpConfig {
@@ -841,7 +841,7 @@ class GameService extends EventEmitter implements GamesAPI {
     const descriptionLanguageIndex = columns.indexOf('Description Language')
 
     // Batch-read thumbnail directory once instead of 2600+ existsSync calls
-    const portOverrides = this.loadPortOverrides()
+    const portList = this.loadPortList()
     const thumbnailDir = join(this.metaPath, 'thumbnails')
     let thumbnailSet: Set<string>
     try {
@@ -915,13 +915,7 @@ class GameService extends EventEmitter implements GamesAPI {
           thumbnailPath: thumbnailExists ? thumbnailPath : '',
           notePath,
           isInstalled: false,
-          ...(isPortGame(
-            { packageName, releaseName },
-            this.readMetaNoteSync(notePath),
-            portOverrides
-          )
-            ? { isPort: true }
-            : {}),
+          ...(isPortGame({ packageName, releaseName }, portList) ? { isPort: true } : {}),
           ...(libraryDescription ? { libraryDescription } : {}),
           ...(libraryDescriptionSourceLabel ? { libraryDescriptionSourceLabel } : {}),
           ...(libraryDescriptionSourceUrl ? { libraryDescriptionSourceUrl } : {}),
@@ -941,24 +935,15 @@ class GameService extends EventEmitter implements GamesAPI {
     console.log(`Loaded ${games.length} games`)
   }
 
-  /** Bundled (or dev-tree) ports.json: force-include / exclude for the Port filter. */
-  private loadPortOverrides(): PortOverrides {
+  /** Bundled (or dev-tree) hand-maintained ports.json for the Ports filter. */
+  private loadPortList(): Set<string> {
     try {
       const p = app.isPackaged
         ? join(process.resourcesPath, 'ports.json')
         : join(app.getAppPath(), 'resources', 'ports.json')
-      return parsePortOverrides(JSON.parse(readFileSync(p, 'utf-8')))
+      return parsePortList(JSON.parse(readFileSync(p, 'utf-8')))
     } catch {
-      return { include: [], exclude: [] }
-    }
-  }
-
-  private readMetaNoteSync(notePath: string): string | null {
-    if (!notePath) return null
-    try {
-      return readFileSync(notePath, 'utf-8')
-    } catch {
-      return null
+      return new Set()
     }
   }
 
