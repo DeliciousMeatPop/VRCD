@@ -558,5 +558,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.state.conquer.puzzle.strategy": {
+    "gameName": "Sword Battle",
+    "reports": [
+      {
+        "issue": 134,
+        "reporter": "SnipeTVBRSG",
+        "problem": "Wrong game",
+        "currentTrailer": null,
+        "suggestedTrailer": null,
+        "reportedAt": "2026-11-26T00:48:42Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
