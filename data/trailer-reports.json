@@ -572,5 +572,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.dreamdev.dhcyberfusion.metaquestapplab": {
+    "gameName": "Death Horizon- Cyberfusion",
+    "reports": [
+      {
+        "issue": 135,
+        "reporter": "SnipeTVBRSG",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=GeZJ_mPDiwU",
+        "reportedAt": "2026-11-26T17:05:16Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
