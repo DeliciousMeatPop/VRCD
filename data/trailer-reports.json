@@ -586,5 +586,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.resolutiongames.demeo": {
+    "gameName": "Demeo",
+    "reports": [
+      {
+        "issue": 136,
+        "reporter": "SnipeTVBRSG",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=hcOYqDIslP8",
+        "reportedAt": "2026-11-26T17:13:04Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
