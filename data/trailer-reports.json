@@ -544,5 +544,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "com.MagicProStudio.SupermarketManagerVR": {
+    "gameName": "Supermarket Manager VR",
+    "reports": [
+      {
+        "issue": 133,
+        "reporter": "SnipeTVBRSG",
+        "problem": "Not a trailer (gameplay, review, music, etc.)",
+        "currentTrailer": null,
+        "suggestedTrailer": "https://www.youtube.com/watch?v=D3v5MkRXNUU",
+        "reportedAt": "2026-11-26T00:42:50Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
