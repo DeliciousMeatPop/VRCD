@@ -600,5 +600,19 @@
       }
     ],
     "reportCount": 1
+  },
+  "app.visionplayer": {
+    "gameName": "Vision Player Pro",
+    "reports": [
+      {
+        "issue": 138,
+        "reporter": "knry78-icloud",
+        "problem": "No trailer is shown but one exists",
+        "currentTrailer": null,
+        "suggestedTrailer": null,
+        "reportedAt": "2026-11-27T20:58:48Z"
+      }
+    ],
+    "reportCount": 1
   }
 }
